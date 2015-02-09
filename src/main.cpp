@@ -129,7 +129,7 @@ void setup_scene ()
 		mat_invalid
 	_end;
 	spheres [1] = sphere_t _begin
-		vec3 (0, 1, 0),
+		vec3 (0, 1.5, 0),
 		1.0,
 		mat_plastic
 	_end;
@@ -260,13 +260,29 @@ hit_t raytrace_iteration (_in(ray_t) ray, _in(int) ignored_material)
 
 // small offset to add to ray when retracing to avoid self-intersection
 #define BIAS 1e-5
+#define MAX_DEPTH 2
 
-void raytrace_all (_in(ray_t) ray, _inout(vec3) color)
+vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 {
 	hit_t hit = raytrace_iteration (ray, mat_invalid);
-	if (hit.t >= max_dist) return;
+	
+	if (hit.t >= max_dist) {
+		return setup_background (ray);
+	}
+	
+#ifdef __cplusplus
+	// reflection
+	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
+		ray_t refl = ray_t _begin
+			hit.origin + BIAS,
+			reflect (ray.direction, hit.normal)
+		_end;
+		
+		return raytrace_all (refl, depth + 1);
+	}
+#endif
 
-	color = illuminate (hit);
+	vec3 color = illuminate (hit);
 
 #if 1 // shadow ray
 	ray_t trace = ray_t _begin
@@ -278,6 +294,8 @@ void raytrace_all (_in(ray_t) ray, _inout(vec3) color)
 		color *= 0.1;
 	}
 #endif
+
+	return color;
 }
 
 ray_t get_primary_ray (_in(vec3) cam_local_point, _in(vec3) cam_origin, _in(vec3) cam_look_at)
@@ -327,9 +345,7 @@ void main()
 
 	setup_scene();
 
-	vec3 color = setup_background (ray);
-
-	raytrace_all (ray, color);
+	vec3 color = raytrace_all (ray, 0);
 
 	gl_FragColor = vec4 (corect_gamma (color), 1);
 }
