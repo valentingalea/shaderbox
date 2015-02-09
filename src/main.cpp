@@ -129,7 +129,7 @@ void setup_scene ()
 		mat_invalid
 	_end;
 	spheres [1] = sphere_t _begin
-		vec3 (0, 1.5, 0),
+		vec3 (0, 1, 0),
 		1.0,
 		mat_plastic
 	_end;
@@ -259,8 +259,8 @@ hit_t raytrace_iteration (_in(ray_t) ray, _in(int) ignored_material)
 }
 
 // small offset to add to ray when retracing to avoid self-intersection
-#define BIAS 1e-5
-#define MAX_DEPTH 2
+#define BIAS 1e-4
+#define MAX_DEPTH 3
 
 vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 {
@@ -271,7 +271,8 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	}
 	
 #ifdef __cplusplus
-	// reflection
+#if 0
+// reflection
 	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
 		ray_t refl = ray_t _begin
 			hit.origin + BIAS,
@@ -282,9 +283,29 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	}
 #endif
 
+// refraction
+	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
+		vec3 dir;
+		if (dot (ray.direction, hit.normal) < 0) {
+			// going inside
+			dir = refract (ray.direction, hit.normal, 1., 1.);
+		} else {
+			// going outside
+			dir = refract (ray.direction, -hit.normal, 1., 1.);
+		}
+			
+		ray_t trans = ray_t _begin
+			hit.origin + dir * BIAS,
+			dir
+		_end;
+		
+		return raytrace_all (trans, depth + 1);
+	}
+#endif
+
 	vec3 color = illuminate (hit);
 
-#if 1 // shadow ray
+#if 0 // shadow ray
 	ray_t trace = ray_t _begin
 		hit.origin + BIAS,
 		normalize (lights [0].origin - hit.origin)
@@ -336,7 +357,7 @@ void main()
 	// TODO: refactor this mess
 	vec2 start = vec2(0, 2);
 	vec2 mouse =
-		2. * (iMouse.x > BIAS ? iResolution.xy / iMouse.xy : start) - 1.;
+		2. * (iMouse.x > 0. ? iResolution.xy / iMouse.xy : start) - 1.;
 	eye =
 		rotate_around_y (mouse.x * 3.14159265359 * 10.) *
 		vec3 (0, mouse.y, 4);
@@ -368,8 +389,8 @@ void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit)
 	float t0 = tca - thc;
 	float t1 = tca + thc;
 
-	float t = min (t0, t1); //NOTE: always choose the "inside"
-	if (t < hit.t) {
+	if (t0 < 0.) t0 = t1;
+	if (t0 < hit.t) {
 #else // TODO: wrong for some reason... t gets weird values at intersection
 // analytical solution
 // based on combining the
@@ -387,9 +408,9 @@ void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit)
 
 	if (discr > 0.0 && t > 0.0 && t < hit.t) {
 #endif
-		vec3 impact = ray.origin + ray.direction * t;
+		vec3 impact = ray.origin + ray.direction * t0;
 
-		hit.t = t;
+		hit.t = t0;
 		hit.material_id = sphere.material;
 		hit.material_param = 1.;
 		hit.origin = impact;
