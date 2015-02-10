@@ -55,6 +55,8 @@ bool g_cancelDraw = false;
 //! Quit!
 bool g_quit = false;
 
+#include "..\lib\gif-h\gif.h"
+//#define WRITE_GIF
 
 //! Thread used for rendering; it invokes the shader
 static int renderThread(void*)
@@ -93,9 +95,16 @@ static int renderThread(void*)
 
                     auto color = glsl_sandbox::clamp(shader.gl_FragColor, 0.0f, 1.0f);
 
-                    *ptr++ = static_cast<uint8_t>(255 * color.x + 0.5f);
-                    *ptr++ = static_cast<uint8_t>(255 * color.y + 0.5f);
-                    *ptr++ = static_cast<uint8_t>(255 * color.z + 0.5f);
+#ifdef WRITE_GIF
+					*ptr++ = 0;
+                    *ptr++ = static_cast<uint8_t>(255 * color.r + 0.5f);
+                    *ptr++ = static_cast<uint8_t>(255 * color.g + 0.5f);
+                    *ptr++ = static_cast<uint8_t>(255 * color.b + 0.5f);
+#else
+					*ptr++ = static_cast<uint8_t>(255 * color.r + 0.5f);
+					*ptr++ = static_cast<uint8_t>(255 * color.g + 0.5f);
+					*ptr++ = static_cast<uint8_t>(255 * color.b + 0.5f);
+#endif
                 }
             }
         }
@@ -120,8 +129,6 @@ static int renderThread(void*)
         }
     }
 }
-
-
 
 int main(int argc, char* argv[])
 {
@@ -160,15 +167,34 @@ int main(int argc, char* argv[])
     cout << "space - blit now! (show incomplete render)\n";
     cout << "esc   - quit\n\n";
 
+#ifdef WRITE_GIF
+	char gif_file[128];
+	sprintf_s(gif_file, 128, "output.gif");
+	GifWriter gif;
+	if (!GifBegin(&gif, gif_file, initialResolution.x, initialResolution.y, 0)) return 1;
+#endif
+
     // it doesn't need cleaning up
     SDL_Surface* screen = nullptr;
 
     try 
     {
+#ifdef WRITE_GIF
+		int bit_depth = 32;
+		int mask_r = 0xff000000;
+		int mask_g = 0x00ff0000;
+		int mask_b = 0x0000ff00;
+#else
+		int bit_depth = 24;
+		int mask_r = 0x000000ff;
+		int mask_g = 0x0000ff00;
+		int mask_b = 0x00ff0000;
+#endif
+
         // a function to resize the screen; throws if unsuccessful
         auto resizeOrCreateScreen = [&](int w, int h) -> void
         {
-            screen = SDL_SetVideoMode( w, h, 24, SDL_SWSURFACE | SDL_RESIZABLE);
+            screen = SDL_SetVideoMode( w, h, bit_depth, SDL_SWSURFACE | SDL_RESIZABLE);
             if ( !screen )
             {
                 throw std::runtime_error("Unable to set video mode");
@@ -178,7 +204,7 @@ int main(int argc, char* argv[])
         // a function used to resize the surface
         auto resizeOrCreateSurface = [&](int w, int h) -> void
         {
-            g_surface.reset( SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 ) );
+            g_surface.reset( SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, bit_depth, mask_r, mask_g, mask_b, 0 ) );
             if ( !g_surface )
             {
                 throw std::runtime_error("Unable to create surface");
@@ -316,6 +342,9 @@ int main(int argc, char* argv[])
             {
                 ++frame;
                 SDL_Flip( screen );
+#ifdef WRITE_GIF
+				GifWriteFrame(&gif, reinterpret_cast<const uint8_t *>(screen->pixels), screen->w, screen->h, 100 / 33);
+#endif
             }
 
             cout << "frame: " << frame << "\t time: " << time << "\t timescale: " << timeScale << "         \r";
@@ -340,7 +369,12 @@ int main(int argc, char* argv[])
     }
 
     SDL_Quit();
-    return 0; 
+
+#ifdef WRITE_GIF
+	GifEnd(&gif);
+#endif
+
+    return 0;
 }
 
 
