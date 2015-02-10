@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
                     {
                         // transfer variables (resolution is transfered elsewhere)
                         glsl_sandbox::time = time;
-                        glsl_sandbox::mouse = mousePosition / vec2(screen->w, screen->h);
+                        glsl_sandbox::mouse = mousePosition;
                         // reset flags
                         g_cancelDraw = g_frameReady = false;
                         SDL_CondSignal( m_frameReceivedEvent.get() );
