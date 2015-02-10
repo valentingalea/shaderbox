@@ -1,6 +1,6 @@
 #include "main_pre.h"
-#define SCREEN_WIDTH 100
-#define SCREEN_HEIGHT 100
+#define SCREEN_WIDTH 400
+#define SCREEN_HEIGHT 400
 /// GLSL begin //////////////////////////////////////////////////////////////////
 #ifdef __cplusplus
 #define _in(T) const T &
@@ -203,7 +203,7 @@ vec3 illum_point_light_cook_torrance(
 		min(
 			(2. * NdotH * NdotV) / VdotH,
 			(2. * NdotH * NdotL) / VdotH
-	)
+		)
 	);
 
 	// roughness term
@@ -243,14 +243,14 @@ vec3 illuminate (_in(hit_t) hit)
 	return accum;
 }
 
-hit_t raytrace_iteration (_in(ray_t) ray, _in(int) ignored_material)
+hit_t raytrace_iteration (_in(ray_t) ray)
 {
 	hit_t hit = no_hit;
 
 	intersect_plane (ray, planes [ground], hit);
 
 	for (int i = 0; i < num_spheres; ++i) {
-		if (spheres [i].material != mat_invalid && spheres [i].material != ignored_material) {
+		if (spheres [i].material != mat_invalid) {
 			intersect_sphere(ray, spheres [i], hit);
 		}
 	}
@@ -258,13 +258,13 @@ hit_t raytrace_iteration (_in(ray_t) ray, _in(int) ignored_material)
 	return hit;
 }
 
-// small offset to add to ray when retracing to avoid self-intersection
-#define BIAS 1e-4
+#define BIAS 1e-4 // small offset to add to ray when retracing to avoid self-intersection
+#define PI 3.14159265359
 #define MAX_DEPTH 3
 
 vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 {
-	hit_t hit = raytrace_iteration (ray, mat_invalid);
+	hit_t hit = raytrace_iteration (ray);
 	
 	if (hit.t >= max_dist) {
 		return setup_background (ray);
@@ -283,17 +283,19 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	}
 #endif
 
+#if 0
 // refraction
 	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
 		vec3 dir;
+		float ior_outside = 1.;
+		float ior_inside = 1.;
+
 		if (dot (ray.direction, hit.normal) < 0) {
-			// going inside
-			dir = refract (ray.direction, hit.normal, 1., 1.);
+			dir = normalize (refract (ray.direction, hit.normal, ior_outside, ior_inside));
 		} else {
-			// going outside
-			dir = refract (ray.direction, -hit.normal, 1., 1.);
+			dir = normalize (refract (ray.direction, -hit.normal, ior_inside, ior_outside));
 		}
-			
+
 		ray_t trans = ray_t _begin
 			hit.origin + dir * BIAS,
 			dir
@@ -301,6 +303,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 		
 		return raytrace_all (trans, depth + 1);
 	}
+#endif
 #endif
 
 	vec3 color = illuminate (hit);
@@ -354,15 +357,13 @@ void main()
 	// TODO: draw fancy diagram 
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
-	// TODO: refactor this mess
-	vec2 start = vec2(0, 2);
-	vec2 mouse =
-		2. * (iMouse.x > 0. ? iResolution.xy / iMouse.xy : start) - 1.;
-	eye =
-		rotate_around_y (mouse.x * 3.14159265359 * 10.) *
-		vec3 (0, mouse.y, 4);
+	// TODO: make mouse y rotation work
+	vec2 mouse = 2. * (iMouse.x > 0. ? iResolution.xy / iMouse.xy : vec2(0)) - 1.;
+	mat3 rot_y = rotate_around_y(mouse.x * PI * 10.);
+	eye = rot_y * vec3 (0, 2, 4);
+	vec3 look_at = vec3(0, 1, 0);
 
-	ray_t ray = get_primary_ray (point_cam, eye, vec3 (0, 1, 0));
+	ray_t ray = get_primary_ray (point_cam, eye, look_at);
 
 	setup_scene();
 
