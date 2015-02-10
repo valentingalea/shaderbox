@@ -56,6 +56,7 @@ bool g_cancelDraw = false;
 bool g_quit = false;
 
 #include "..\lib\gif-h\gif.h"
+#include <time.h>
 //#define WRITE_GIF
 
 //! Thread used for rendering; it invokes the shader
@@ -168,8 +169,14 @@ int main(int argc, char* argv[])
     cout << "esc   - quit\n\n";
 
 #ifdef WRITE_GIF
+	time_t rawtime;
+	time (&rawtime);
+	tm timeinfo;
+	localtime_s(&timeinfo, &rawtime);
+
 	char gif_file[128];
-	sprintf_s(gif_file, 128, "output.gif");
+	strftime(gif_file, 128, "anim-%Y-%m-%d-%H-%M-%S.gif\0", &timeinfo);
+
 	GifWriter gif;
 	if (!GifBegin(&gif, gif_file, initialResolution.x, initialResolution.y, 0)) return 1;
 #endif
