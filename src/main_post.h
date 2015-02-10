@@ -55,9 +55,11 @@ bool g_cancelDraw = false;
 //! Quit!
 bool g_quit = false;
 
+//#define WRITE_GIF
+#ifdef WRITE_GIF
 #include "..\lib\gif-h\gif.h"
 #include <time.h>
-//#define WRITE_GIF
+#endif
 
 //! Thread used for rendering; it invokes the shader
 static int renderThread(void*)
