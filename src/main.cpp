@@ -260,7 +260,7 @@ hit_t raytrace_iteration (_in(ray_t) ray)
 
 #define BIAS 1e-4 // small offset to add to ray when retracing to avoid self-intersection
 #define PI 3.14159265359
-#define MAX_DEPTH 1
+#define MAX_DEPTH 3
 
 vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 {
@@ -483,7 +483,9 @@ vec3 refract (_in(vec3) incident, _in(vec3) normal, _in(float) n1, _in(float) n2
 	float n = n1 / n2;
 	float cosi = dot (normal, incident);
 	float sint2 = n * n * (1. - cosi * cosi);
-	if (sint2 > 1.) return vec3 (0); // Total Internal Reflection
+	if (sint2 > 1.) {
+		return reflect (incident, normal); // Total Internal Reflection
+	}
 	return n * incident + (n * cosi - sqrt (1. - sint2)) * normal;
 }
 
