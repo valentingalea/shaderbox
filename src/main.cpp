@@ -129,7 +129,7 @@ void setup_scene ()
 		mat_invalid
 	_end;
 	spheres [1] = sphere_t _begin
-		vec3 (0, 0, 0),
+		vec3 (0, 2, 0),
 		1.0,
 		mat_plastic
 	_end;
@@ -247,7 +247,7 @@ hit_t raytrace_iteration (_in(ray_t) ray)
 {
 	hit_t hit = no_hit;
 
-//	intersect_plane (ray, planes [ground], hit);
+	intersect_plane (ray, planes [ground], hit);
 
 	for (int i = 0; i < num_spheres; ++i) {
 		if (spheres [i].material != mat_invalid) {
@@ -315,7 +315,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 		hit.origin + BIAS,
 		normalize (lights [0].origin - hit.origin)
 	_end;
-	hit_t sh = raytrace_iteration (trace, mat_debug);
+	hit_t sh = raytrace_iteration (trace);
 	if (sh.t < length (lights [0].origin - hit.origin)) {
 		color *= 0.1;
 	}
@@ -362,8 +362,8 @@ void main()
 	// TODO: make mouse y rotation work
 //	vec2 mouse = 2. * (iMouse.x > 0. ? iResolution.xy / iMouse.xy : vec2(0)) - 1.;
 //	mat3 rot_y = rotate_around_y(mouse.x * PI * 10.);
-	eye = vec3 (0, 0, 3);
-	vec3 look_at = vec3(0, 0, 0);
+	eye = rotate_around_x (iGlobalTime * 10.) * vec3 (0, 0, 5);
+	vec3 look_at = vec3(0, 1, 0);
 
 	ray_t ray = get_primary_ray (point_cam, eye, look_at);
 
@@ -483,10 +483,10 @@ float get_fresnel_term(_in(float) n1, _in(float) n2, _in(float) VdotH)
 vec3 refract (_in(vec3) incident, _in(vec3) normal, _in(float) n1, _in(float) n2)
 {
 	float n = n1 / n2;
-	float cosi =- dot ( normal, incident);
+	float cosi = -dot ( normal, incident);
 	float sint2 = n * n * (1. - cosi * cosi);
 	if (sint2 > 1.) {
-		return vec3 (0);//reflect (incident, normal); // Total Internal Reflection
+		return reflect (incident, normal); // Total Internal Reflection
 	}
 	return n * incident + (n * cosi - sqrt (1. - sint2)) * normal;
 }
