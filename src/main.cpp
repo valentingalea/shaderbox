@@ -288,16 +288,18 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
 		vec3 dir;
 		float ior_outside = 1.;
-		float ior_inside = 2.333;
+		float ior_inside = 1.333;
 
 		if (dot (ray.direction, hit.normal) < 0) {
 			dir = normalize (refract (ray.direction, hit.normal, ior_outside, ior_inside));
+			//return abs (dir);
 		} else {
 			dir = normalize (refract (ray.direction, -hit.normal, ior_inside, ior_outside));
+			//return abs (dir);
 		}
 
 		ray_t trans = ray_t _begin
-			hit.origin + dir * (BIAS + 2),
+			hit.origin + dir * (BIAS),
 			dir
 		_end;
 		
@@ -481,10 +483,10 @@ float get_fresnel_term(_in(float) n1, _in(float) n2, _in(float) VdotH)
 vec3 refract (_in(vec3) incident, _in(vec3) normal, _in(float) n1, _in(float) n2)
 {
 	float n = n1 / n2;
-	float cosi = dot (normal, incident);
+	float cosi =- dot ( normal, incident);
 	float sint2 = n * n * (1. - cosi * cosi);
 	if (sint2 > 1.) {
-		return reflect (incident, normal); // Total Internal Reflection
+		return vec3 (0);//reflect (incident, normal); // Total Internal Reflection
 	}
 	return n * incident + (n * cosi - sqrt (1. - sint2)) * normal;
 }
