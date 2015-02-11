@@ -121,7 +121,7 @@ void setup_scene ()
 	_end;
 
 	mat3 rot = rotate_around_y(-50. * iGlobalTime);
-	vec3 L = rot * vec3 (0, 1, 2);
+	vec3 L = rot * vec3 (0, 3, 2);
 
 	spheres [0] = sphere_t _begin
 		vec3 (2, 1, 0),
@@ -130,7 +130,7 @@ void setup_scene ()
 	_end;
 	spheres [1] = sphere_t _begin
 		vec3 (0, 2, 0),
-		1.0,
+		1.5,
 		mat_plastic
 	_end;
 	spheres [2] = sphere_t _begin
@@ -233,7 +233,7 @@ vec3 illuminate (_in(hit_t) hit)
 	vec3 V = normalize (eye - hit.origin); // view direction
 
 	for (int i = 0; i < num_lights; ++i) {
-#if 0
+#if 1
 		accum += illum_point_light_blinn_phong (V, lights [i], hit, mat);
 #else
 		accum += illum_point_light_cook_torrance (V, lights [i], hit, mat);
@@ -243,14 +243,15 @@ vec3 illuminate (_in(hit_t) hit)
 	return accum;
 }
 
-hit_t raytrace_iteration (_in(ray_t) ray)
+hit_t raytrace_iteration (_in(ray_t) ray, _in(int) mat_ignored)
 {
 	hit_t hit = no_hit;
 
 	intersect_plane (ray, planes [ground], hit);
 
 	for (int i = 0; i < num_spheres; ++i) {
-		if (spheres [i].material != mat_invalid) {
+		if (spheres [i].material != mat_invalid
+		&& spheres [i].material != mat_ignored) {
 			intersect_sphere(ray, spheres [i], hit);
 		}
 	}
@@ -264,15 +265,14 @@ hit_t raytrace_iteration (_in(ray_t) ray)
 
 vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 {
-	hit_t hit = raytrace_iteration (ray);
+	hit_t hit = raytrace_iteration (ray, mat_invalid);
 	
 	if (hit.t >= max_dist) {
 		return setup_background (ray);
 	}
 	
 #ifdef __cplusplus
-#if 0
-// reflection
+#if 0 // reflection
 	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
 		ray_t refl = ray_t _begin
 			hit.origin + BIAS,
@@ -283,12 +283,11 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	}
 #endif
 
-#if 1
-// refraction
+#if 0 // refraction
 	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
 		vec3 dir;
 		float ior_outside = 1.;
-		float ior_inside = 1.333;
+		float ior_inside = 1.5;
 
 		if (dot (ray.direction, hit.normal) < 0) {
 			dir = normalize (refract (ray.direction, hit.normal, ior_outside, ior_inside));
@@ -310,13 +309,15 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 
 	vec3 color = illuminate (hit);
 
-#if 0 // shadow ray
-	ray_t trace = ray_t _begin
-		hit.origin + BIAS,
-		normalize (lights [0].origin - hit.origin)
+#if 1 // shadow ray
+	vec3 sh_line = lights [0].origin - hit.origin;
+	vec3 sh_dir = normalize (sh_line);
+	ray_t sh_trace = ray_t _begin
+		hit.origin + sh_dir * BIAS,
+		sh_dir
 	_end;
-	hit_t sh = raytrace_iteration (trace);
-	if (sh.t < length (lights [0].origin - hit.origin)) {
+	hit_t sh_hit = raytrace_iteration (sh_trace, mat_debug);
+	if (sh_hit.t < length (sh_line)) {
 		color *= 0.1;
 	}
 #endif
@@ -362,7 +363,9 @@ void main()
 	// TODO: make mouse y rotation work
 //	vec2 mouse = 2. * (iMouse.x > 0. ? iResolution.xy / iMouse.xy : vec2(0)) - 1.;
 //	mat3 rot_y = rotate_around_y(mouse.x * PI * 10.);
-	eye = rotate_around_x (iGlobalTime * 10.) * vec3 (0, 0, 5);
+	eye = 
+	//rotate_around_x (iGlobalTime * 5.) * 
+	vec3 (0, 3, 5);
 	vec3 look_at = vec3(0, 1, 0);
 
 	ray_t ray = get_primary_ray (point_cam, eye, look_at);
