@@ -1,6 +1,6 @@
 #include "main_pre.h"
-#define SCREEN_WIDTH 100
-#define SCREEN_HEIGHT 100
+#define SCREEN_WIDTH 300
+#define SCREEN_HEIGHT 300
 /// GLSL begin //////////////////////////////////////////////////////////////////
 #ifdef __cplusplus
 #define _in(T) const T &
@@ -82,13 +82,19 @@ vec3 eye;
 // the API
 void intersect_sphere (_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit);
 void intersect_plane (_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit);
-float get_fresnel_term (_in(float) n1, _in(float) n2, _in(float) VdotH);
-vec3 refract (_in(vec3) incident, _in(vec3) normal, _in(float) n1, _in(float) n2);
+float fresnel_factor (_in(float) n1, _in(float) n2, _in(float) VdotH);
 mat3 rotate_around_y (_in(float) angle_degrees);
 mat3 rotate_around_x (_in(float) angle_degrees);
 vec3 corect_gamma (_in(vec3) color);
 _rvalue_ref(material_t) get_material (_in(int) index);
+
+// GLSL/HLSL utilities ported to C++
 float saturate(_in(float) value) { return clamp(value, 0., 1.); }
+#ifdef __cplusplus
+vec3 faceforward(_in(vec3) N, _in(vec3) I, _in(vec3) Nref);
+vec3 reflect(_in(vec3) incident, _in(vec3) normal);
+vec3 refract(_in(vec3) incident, _in(vec3) normal, _in(float) n);
+#endif
 
 void setup_scene ()
 {
@@ -107,11 +113,11 @@ void setup_scene ()
 #define cb_mat_blue 3
 #define cb_mat_reflect 4
 #define cb_mat_refract 5
-	materials [cb_mat_white] = material_t _begin vec3 (.8, .8, .8), .5, .0, 1. _end;
-	materials [cb_mat_red] = material_t _begin vec3(1., 0, 0), .5, .0, 1. _end;
-	materials [cb_mat_blue] = material_t _begin vec3(0, 0, 1.), .5, .0, 1. _end;
-	materials [cb_mat_reflect] = material_t _begin vec3(.5, .5, .5), .5, .0, 1. _end;
-	materials [cb_mat_refract] = material_t _begin vec3(.5, .5, .5), .5, .0, 1. _end;
+	materials[cb_mat_white] = material_t _begin vec3(.8, .8, .8), .5, .0, 1. _end;
+	materials[cb_mat_red] = material_t _begin vec3(1., 0, 0), .5, .0, 1. _end;
+	materials[cb_mat_blue] = material_t _begin vec3(0, 0, 1.), .5, .0, 1. _end;
+	materials[cb_mat_reflect] = material_t _begin vec3(.5, .5, .5), .5, .0, 1. _end;
+	materials[cb_mat_refract] = material_t _begin vec3(.5, .5, .5), .5, .0, 1. _end;
 
 #define cb_plane_ground 0
 #define cb_plane_behind 1
@@ -119,8 +125,8 @@ void setup_scene ()
 #define cb_plane_ceiling 3
 #define cb_plane_left 4
 #define cb_plane_right 5
-#define cb_plane_dist 2
-	planes[cb_plane_ground] = plane_t _begin vec3(0, -1, 0), 0, cb_mat_white _end;
+#define cb_plane_dist 2.
+	planes[cb_plane_ground] = plane_t _begin vec3(0, -1, 0), 0., cb_mat_white _end;
 	planes[cb_plane_ceiling] = plane_t _begin vec3(0, 1, 0), 2. * cb_plane_dist, cb_mat_white _end;
 	planes[cb_plane_behind] = plane_t _begin vec3(0, 0, -1), -cb_plane_dist, cb_mat_white _end;
 	planes[cb_plane_front] = plane_t _begin vec3(0, 0, 1), cb_plane_dist, cb_mat_white _end;
@@ -130,17 +136,16 @@ void setup_scene ()
 #define cb_sphere_light 0
 #define cb_sphere_left 1
 #define cb_sphere_right 2
-#define cb_sphere_radius .75
 	spheres[cb_sphere_light] = sphere_t _begin vec3(0, 2.5 * cb_plane_dist + 0.4, 0), 1.5, mat_debug _end;
-	spheres[cb_sphere_left] = sphere_t _begin vec3(cb_sphere_radius, cb_sphere_radius, -cb_sphere_radius), cb_sphere_radius, cb_mat_reflect _end;
-	spheres[cb_sphere_right] = sphere_t _begin vec3(-cb_sphere_radius, cb_sphere_radius, cb_sphere_radius), cb_sphere_radius, cb_mat_refract _end;
+	spheres[cb_sphere_left] = sphere_t _begin vec3(0.75, 1, -0.75), 1., cb_mat_reflect _end;
+	spheres[cb_sphere_right] = sphere_t _begin vec3(-0.75, 0.75, 0.75), 0.75, cb_mat_refract _end;
 
 	lights[0] = point_light_t _begin vec3(0, 2 * cb_plane_dist - 0.2, 0), vec3 (1., 1., 1.) _end;
 }
 
-vec3 setup_background(_in(ray_t) ray)
+vec3 background(_in(ray_t) ray)
 {
-#if 1
+#if 0
 	vec3 sun_dir = normalize(vec3(0, 0.5 * sin (iGlobalTime/2.), -1)); // sin(iGlobalTime), 1, cos(iGlobalTime)));
 	vec3 sun_color = vec3 (2, 2, 0);
 	float sun_grad = max(0., dot(ray.direction, sun_dir));
@@ -153,14 +158,6 @@ vec3 setup_background(_in(ray_t) ray)
 #endif
 }
 
-//     R       V    N    H      L         L dir to light       
-//      ^      ^    ^    ^     ^          V dir to eye
-//        .     \   |   /    .            N normal
-//          .    \  |  /   .              H half between L and V
-//            .   \ | /  .                R reflected
-//              .  \|/ .                  O hit point             
-// -----------------O----------------
-//               surface
 vec3 illum_point_light_blinn_phong(
     _in(vec3) V, _in(point_light_t) light, _in(hit_t) hit, _in(material_t) mat)
 {
@@ -207,7 +204,7 @@ vec3 illum_point_light_cook_torrance(
 	float rough_term = rough_a * exp(rough_exp);
 
 	// Fresnel term
-	float fresnel_term = get_fresnel_term (1., mat.refraction_index, VdotH);
+	float fresnel_term = fresnel_factor (1., mat.refraction_index, VdotH);
 
 	float specular = (geo_term * rough_term * fresnel_term) / (NdotV * NdotL);
 	return NdotL * (specular + (mat.base_color * hit.material_param));
@@ -263,7 +260,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	hit_t hit = raytrace_iteration (ray, mat_invalid);
 	
 	if (hit.t >= max_dist) {
-		return setup_background (ray);
+		return background (ray);
 	}
 	
 #ifdef __cplusplus
@@ -285,9 +282,9 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 		float ior_inside = 1.5;
 
 		if (dot (ray.direction, hit.normal) < 0) {
-			dir = normalize (refract (ray.direction, hit.normal, ior_outside, ior_inside));
+			dir = normalize (refract (ray.direction, hit.normal, ior_outside / ior_inside));
 		} else {
-			dir = normalize (refract (ray.direction, -hit.normal, ior_inside, ior_outside));
+			dir = normalize (refract (ray.direction, -hit.normal, ior_inside / ior_outside));
 		}
 
 		ray_t trans = ray_t _begin
@@ -354,9 +351,9 @@ void main()
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
 	// TODO: make mouse y rotation work
-	//vec2 mouse = 2. * (iMouse.x > 0. ? iResolution.xy / iMouse.xy : vec2(0)) - 1.;
-	//mat3 rot_y = rotate_around_y(mouse.x * PI * 10.);
-	eye = vec3 (0, cb_plane_dist, 2.333 * cb_plane_dist);
+	vec2 mouse = iMouse.x < BIAS ? vec2(0) : iResolution.xy / iMouse.xy;
+	mat3 rot_y = rotate_around_y(mouse.x * 10.);
+	eye = rot_y * vec3 (0, cb_plane_dist, 2.333 * cb_plane_dist);
 	vec3 look_at = vec3(0, cb_plane_dist, 0);
 
 	ray_t ray = get_primary_ray (point_cam, eye, look_at);
@@ -437,35 +434,12 @@ void intersect_plane(_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit)
 			hit.material_id = p.material;
 			hit.material_param = 1.; // cb; // Disabled for now
 			hit.origin = impact;
-			hit.normal = -p.direction; // TODO: why?
+			hit.normal = faceforward(p.direction, ray.direction, p.direction);
 		}
 	}
 }
 
-// Fresnel effect says that reflection
-// increases on a surface with the angle of view
-// and the transmission acts the reverse way
-// ex: soap bubble - the edges are highly reflected and colorful
-// while the middle is transparent
-// ex: water of a lake: close to shore you see thru,
-// farther away you see only the reflections on the water
-//
-// how much reflection and how much transmission
-// is given by Fresnel equations which can be
-// approximated with the Schilck eq
-//
-// the direction of the refracted (aka transmitted)
-// ray is given by the Snell eq given the
-// indices of refraction of the mediums
-//
-// http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-14-interaction-light-matter/optics-reflection-and-refraction/
-// http://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf77
-//    
-// indices of refraction    
-// gold ---- air ---- ice --- water --- beer --- alumim --- glass --- salt --- PET --- asphalt --- lead --- diamond ---- iron ---
-// 0.470    1.000    1.309    1.333     1.345     1.390     1.500    1.516    1.575     1.645      2.010     2.420      2.950
-//
-float get_fresnel_term(_in(float) n1, _in(float) n2, _in(float) VdotH)
+float fresnel_factor(_in(float) n1, _in(float) n2, _in(float) VdotH)
 {
 // using Schlick’s approximation    
 	float Rn = (n1 - n2) / (n1 + n2);
@@ -474,20 +448,28 @@ float get_fresnel_term(_in(float) n1, _in(float) n2, _in(float) VdotH)
 	return R0 - (1. - R0) * (F * F * F * F * F);
 }
 
-vec3 refract (_in(vec3) incident, _in(vec3) normal, _in(float) n1, _in(float) n2)
+#ifdef __cplusplus
+vec3 faceforward(_in(vec3) N, _in(vec3) I, _in(vec3) Nref)
 {
-	float n = n1 / n2;
+	return dot(Nref, I) < 0 ? N : -N;
+}
+
+vec3 reflect(_in(vec3) incident, _in(vec3) normal)
+{
+	return incident - 2. * dot(normal, incident) * normal;
+}
+
+vec3 refract (_in(vec3) incident, _in(vec3) normal, _in(float) n)
+{
 	float cosi = -dot ( normal, incident);
 	float sint2 = n * n * (1. - cosi * cosi);
 	if (sint2 > 1.) {
-		return reflect (incident, normal); // Total Internal Reflection
+		return reflect (incident, normal); // Total Internal Reflection - TODO: is this ok?
 	}
 	return n * incident + (n * cosi - sqrt (1. - sint2)) * normal;
 }
+#endif
 
-//
-// Utils
-//
 mat3 rotate_around_y(_in(float) angle_degrees)
 {
 	float angle = radians(angle_degrees);
@@ -523,6 +505,50 @@ _rvalue_ref(material_t) get_material(_in(int) index)
 
 	return _move(mat);
 }
+
+//
+// Notes & documentation
+//
+
+//     R       V    N    H      L         L dir to light       
+//      ^      ^    ^    ^     ^          V dir to eye
+//        .     \   |   /    .            N normal
+//          .    \  |  /   .              H half between L and V
+//            .   \ | /  .                R reflected
+//  n1          .  \|/ .                  O hit point             
+// -----------------O----------------     T refracted
+//  n2             .                      n1 index of refraction of outgoing medium
+//                .                       n2 index of refraction of incoming medium
+//               .
+//              .
+//             .
+//           \/_ T
+//
+
+// Fresnel effect says that reflection
+// increases on a surface with the angle of view
+// and the transmission acts the reverse way
+// ex: soap bubble - the edges are highly reflected and colorful
+// while the middle is transparent
+// ex: water of a lake: close to shore you see thru,
+// farther away you see only the reflections on the water
+//
+// how much reflection and how much transmission
+// is given by Fresnel equations which can be
+// approximated with the Schilck eq
+//
+// the direction of the refracted (aka transmitted)
+// ray is given by the Snell eq given the
+// indices of refraction of the mediums
+//
+// http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-14-interaction-light-matter/optics-reflection-and-refraction/
+// http://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf
+//    
+// indices of refraction    
+// gold ---- air ---- ice --- water --- beer --- alumim --- glass --- salt --- PET --- asphalt --- lead --- diamond ---- iron ---
+// 0.470    1.000    1.309    1.333     1.345     1.390     1.500    1.516    1.575     1.645      2.010     2.420      2.950
+//
+
 /// GLSL end //////////////////////////////////////////////////////////////////
 
 	// be a dear a clean up
