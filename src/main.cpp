@@ -62,8 +62,7 @@ hit_t no_hit = hit_t _begin
 	(max_dist + 1.0), -1, 1., vec3 (0), vec3 (0)
 _end;
 
-#define num_planes 1
-#define ground 0
+#define num_planes 6
 plane_t planes[num_planes];
 
 #define num_spheres 3
@@ -73,11 +72,9 @@ sphere_t spheres[num_spheres];
 point_light_t lights[num_lights];
 vec3 ambient_light = vec3 (.01, .01, .01);
 
-#define num_materials 3
+#define num_materials 10
 #define mat_invalid -1
 #define mat_debug 0
-#define mat_ground 1
-#define mat_plastic 2
 material_t materials[num_materials];
 
 vec3 eye;
@@ -101,48 +98,44 @@ void setup_scene ()
 		1.000, // metallic
 		1.000  // refraction index
 	_end;	
-	materials [mat_ground] = material_t _begin
-		vec3 (.9, .6, .1), // base color
-		0.100, // roughness
-		1.000, // metallic
-		1.300  // refraction index
-	_end;
-	materials [mat_plastic] = material_t _begin
-		vec3 (0., 1., 0.), // base color
-		0.100, // roughness
-		1.000, // metallic
-		1.300  // refraction index 
-	_end;
 
-	planes[ground] = plane_t _begin
-		vec3 (0, -1, 0), // TODO: why does the normal need to be facing down???
-		0.0,
-		mat_ground
-	_end;
+//
+// Cornell box
+//
+#define cb_mat_white 1
+#define cb_mat_red 2
+#define cb_mat_blue 3
+#define cb_mat_reflect 4
+#define cb_mat_refract 5
+	materials [cb_mat_white] = material_t _begin vec3 (.8, .8, .8), .5, .0, 1. _end;
+	materials [cb_mat_red] = material_t _begin vec3(1., 0, 0), .5, .0, 1. _end;
+	materials [cb_mat_blue] = material_t _begin vec3(0, 0, 1.), .5, .0, 1. _end;
+	materials [cb_mat_reflect] = material_t _begin vec3(.5, .5, .5), .5, .0, 1. _end;
+	materials [cb_mat_refract] = material_t _begin vec3(.5, .5, .5), .5, .0, 1. _end;
 
-	mat3 rot = rotate_around_y(-50. * iGlobalTime);
-	vec3 L = rot * vec3 (0, 3, 2);
+#define cb_plane_ground 0
+#define cb_plane_behind 1
+#define cb_plane_front 2
+#define cb_plane_ceiling 3
+#define cb_plane_left 4
+#define cb_plane_right 5
+#define cb_plane_dist 2
+	planes[cb_plane_ground] = plane_t _begin vec3(0, -1, 0), 0, cb_mat_white _end;
+	planes[cb_plane_ceiling] = plane_t _begin vec3(0, 1, 0), 2. * cb_plane_dist, cb_mat_white _end;
+	planes[cb_plane_behind] = plane_t _begin vec3(0, 0, -1), -cb_plane_dist, cb_mat_white _end;
+	planes[cb_plane_front] = plane_t _begin vec3(0, 0, 1), cb_plane_dist, cb_mat_white _end;
+	planes[cb_plane_left] = plane_t _begin vec3(1, 0, 0), cb_plane_dist, cb_mat_red _end;
+	planes[cb_plane_right] = plane_t _begin vec3(-1, 0, 0), -cb_plane_dist, cb_mat_blue _end;
 
-	spheres [0] = sphere_t _begin
-		vec3 (2, 1, 0),
-		1.0,
-		mat_invalid
-	_end;
-	spheres [1] = sphere_t _begin
-		vec3 (0, 2, 0),
-		1.5,
-		mat_plastic
-	_end;
-	spheres [2] = sphere_t _begin
-		L,
-		0.2,
-		mat_debug
-	_end;
+#define cb_sphere_light 0
+#define cb_sphere_left 1
+#define cb_sphere_right 2
+#define cb_sphere_radius .75
+	spheres[cb_sphere_light] = sphere_t _begin vec3(0, 2.5 * cb_plane_dist + 0.4, 0), 1.5, mat_debug _end;
+	spheres[cb_sphere_left] = sphere_t _begin vec3(cb_sphere_radius, cb_sphere_radius, -cb_sphere_radius), cb_sphere_radius, cb_mat_reflect _end;
+	spheres[cb_sphere_right] = sphere_t _begin vec3(-cb_sphere_radius, cb_sphere_radius, cb_sphere_radius), cb_sphere_radius, cb_mat_refract _end;
 
-	lights [0] = point_light_t _begin
-		L,
-		vec3 (1., 1., 1.)
-	_end;
+	lights[0] = point_light_t _begin vec3(0, 2 * cb_plane_dist - 0.2, 0), vec3 (1., 1., 1.) _end;
 }
 
 vec3 setup_background(_in(ray_t) ray)
@@ -247,7 +240,9 @@ hit_t raytrace_iteration (_in(ray_t) ray, _in(int) mat_ignored)
 {
 	hit_t hit = no_hit;
 
-	intersect_plane (ray, planes [ground], hit);
+	for (int i = 0; i < num_planes; ++i) {
+		intersect_plane(ray, planes [i], hit);
+	}
 
 	for (int i = 0; i < num_spheres; ++i) {
 		if (spheres [i].material != mat_invalid
@@ -272,10 +267,10 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	}
 	
 #ifdef __cplusplus
-#if 0 // reflection
-	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
+#if 1 // reflection
+	if (hit.material_id == cb_mat_reflect && depth < MAX_DEPTH) {
 		ray_t refl = ray_t _begin
-			hit.origin + BIAS,
+			hit.origin,
 			reflect (ray.direction, hit.normal)
 		_end;
 		
@@ -283,18 +278,16 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	}
 #endif
 
-#if 0 // refraction
-	if (hit.material_id == mat_plastic && depth < MAX_DEPTH) {
+#if 1 // refraction
+	if (hit.material_id == cb_mat_refract && depth < MAX_DEPTH) {
 		vec3 dir;
 		float ior_outside = 1.;
 		float ior_inside = 1.5;
 
 		if (dot (ray.direction, hit.normal) < 0) {
 			dir = normalize (refract (ray.direction, hit.normal, ior_outside, ior_inside));
-			//return abs (dir);
 		} else {
 			dir = normalize (refract (ray.direction, -hit.normal, ior_inside, ior_outside));
-			//return abs (dir);
 		}
 
 		ray_t trans = ray_t _begin
@@ -361,12 +354,10 @@ void main()
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
 	// TODO: make mouse y rotation work
-//	vec2 mouse = 2. * (iMouse.x > 0. ? iResolution.xy / iMouse.xy : vec2(0)) - 1.;
-//	mat3 rot_y = rotate_around_y(mouse.x * PI * 10.);
-	eye = 
-	//rotate_around_x (iGlobalTime * 5.) * 
-	vec3 (0, 3, 5);
-	vec3 look_at = vec3(0, 1, 0);
+	//vec2 mouse = 2. * (iMouse.x > 0. ? iResolution.xy / iMouse.xy : vec2(0)) - 1.;
+	//mat3 rot_y = rotate_around_y(mouse.x * PI * 10.);
+	eye = vec3 (0, cb_plane_dist, 2.333 * cb_plane_dist);
+	vec3 look_at = vec3(0, cb_plane_dist, 0);
 
 	ray_t ray = get_primary_ray (point_cam, eye, look_at);
 
@@ -444,7 +435,7 @@ void intersect_plane(_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit)
 
 			hit.t = t;
 			hit.material_id = p.material;
-			hit.material_param = cb;
+			hit.material_param = 1.; // cb; // Disabled for now
 			hit.origin = impact;
 			hit.normal = -p.direction; // TODO: why?
 		}
