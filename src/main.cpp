@@ -27,9 +27,11 @@ struct ray_t {
 
 struct material_t {
 	vec3 base_color;
-	float roughness;
 	float metallic;
-	float refraction_index;
+	float roughness;
+	float ior; // index of refraction
+	float reflectivity;
+	float translucency;
 };
 
 struct sphere_t {
@@ -98,12 +100,7 @@ vec3 refract(_in(vec3) incident, _in(vec3) normal, _in(float) n);
 
 void setup_scene ()
 {
-	materials [mat_debug] = material_t _begin
-		vec3 (1., 1., 1.), // base color
-		1.000, // roughness
-		1.000, // metallic
-		1.000  // refraction index
-	_end;	
+	materials [mat_debug] = material_t _begin vec3 (1., 1., 1.), 0., 0., 1., 0., 0. _end;	
 
 //
 // Cornell box
@@ -113,11 +110,11 @@ void setup_scene ()
 #define cb_mat_blue 3
 #define cb_mat_reflect 4
 #define cb_mat_refract 5
-	materials[cb_mat_white] = material_t _begin vec3(.8, .8, .8), .5, .0, 1. _end;
-	materials[cb_mat_red] = material_t _begin vec3(1., 0, 0), .5, .0, 1. _end;
-	materials[cb_mat_blue] = material_t _begin vec3(0, 0, 1.), .5, .0, 1. _end;
-	materials[cb_mat_reflect] = material_t _begin vec3(.5, .5, .5), .5, .0, 1. _end;
-	materials[cb_mat_refract] = material_t _begin vec3(.5, .5, .5), .5, .0, 1. _end;
+	materials[cb_mat_white] = material_t _begin vec3(0.7913), .0, .5, 1., 0., 0. _end;
+	materials[cb_mat_red] = material_t _begin vec3(0.6795, 0.0612, 0.0529), 0., .5, 1., 0., 0. _end;
+	materials[cb_mat_blue] = material_t _begin vec3(0.1878, 0.1274, 0.4287), 0., .5, 1., 0., 0. _end;
+	materials[cb_mat_reflect] = material_t _begin vec3(.5), .0, .0, 1.0, 1., 0. _end;
+	materials[cb_mat_refract] = material_t _begin vec3(.5), .0, .0, 1.5, 0., 1. _end;
 
 #define cb_plane_ground 0
 #define cb_plane_behind 1
@@ -140,7 +137,7 @@ void setup_scene ()
 	spheres[cb_sphere_left] = sphere_t _begin vec3(0.75, 1, -0.75), 1., cb_mat_reflect _end;
 	spheres[cb_sphere_right] = sphere_t _begin vec3(-0.75, 0.75, 0.75), 0.75, cb_mat_refract _end;
 
-	lights[0] = point_light_t _begin vec3(0, 2 * cb_plane_dist - 0.2, 0), vec3 (1., 1., 1.) _end;
+	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 0), vec3 (1., 1., 1.) _end;
 }
 
 vec3 background(_in(ray_t) ray)
@@ -204,7 +201,7 @@ vec3 illum_point_light_cook_torrance(
 	float rough_term = rough_a * exp(rough_exp);
 
 	// Fresnel term
-	float fresnel_term = fresnel_factor (1., mat.refraction_index, VdotH);
+	float fresnel_term = fresnel_factor (1., mat.ior, VdotH);
 
 	float specular = (geo_term * rough_term * fresnel_term) / (NdotV * NdotL);
 	return NdotL * (specular + (mat.base_color * hit.material_param));
@@ -223,7 +220,7 @@ vec3 illuminate (_in(hit_t) hit)
 	vec3 V = normalize (eye - hit.origin); // view direction
 
 	for (int i = 0; i < num_lights; ++i) {
-#if 1
+#if 0
 		accum += illum_point_light_blinn_phong (V, lights [i], hit, mat);
 #else
 		accum += illum_point_light_cook_torrance (V, lights [i], hit, mat);
