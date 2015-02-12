@@ -255,41 +255,49 @@ hit_t raytrace_iteration (_in(ray_t) ray, _in(int) mat_ignored)
 vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 {
 	hit_t hit = raytrace_iteration (ray, mat_invalid);
-	
+
 	if (hit.t >= max_dist) {
 		return background (ray);
 	}
-	
+
 #ifdef __cplusplus
-#if 1 // reflection
-	if (hit.material_id == cb_mat_reflect && depth < MAX_DEPTH) {
-		ray_t refl = ray_t _begin
-			hit.origin,
-			reflect (ray.direction, hit.normal)
-		_end;
-		
-		return raytrace_all (refl, depth + 1);
-	}
-#endif
+#if 1
+	_rvalue_ref(material_t) mat = get_material(hit.material_id);
 
-#if 1 // refraction
-	if (hit.material_id == cb_mat_refract && depth < MAX_DEPTH) {
-		vec3 dir;
-		float ior_outside = 1.;
-		float ior_inside = 1.5;
+	if ((mat.reflectivity > 0. || mat.translucency > 0.) && depth < MAX_DEPTH) {
+		vec3 refl_color = vec3(0);
+		vec3 trans_color = vec3(0);
 
-		if (dot (ray.direction, hit.normal) < 0) {
-			dir = normalize (refract (ray.direction, hit.normal, ior_outside / ior_inside));
-		} else {
-			dir = normalize (refract (ray.direction, -hit.normal, ior_inside / ior_outside));
+	// reflection
+		if (mat.reflectivity > 0.) {
+			vec3 refl_dir = reflect(ray.direction, hit.normal);
+			ray_t refl_ray = ray_t _begin
+				hit.origin + refl_dir * BIAS,
+				refl_dir
+			_end;
+			refl_color = raytrace_all(refl_ray, depth + 1);
 		}
 
-		ray_t trans = ray_t _begin
-			hit.origin + dir * (BIAS),
-			dir
-		_end;
-		
-		return raytrace_all (trans, depth + 1);
+	// refraction (or transmission)
+		if (mat.translucency > 0.) {
+			bool outside = dot (ray.direction, hit.normal) < 0;
+			float eta = 1. / mat.ior;
+			vec3 trans_dir;
+			if (outside) {
+				trans_dir = normalize (refract (ray.direction, hit.normal, eta));
+			}
+			else {
+				eta = 1. / eta;
+				trans_dir = normalize (refract (ray.direction, -hit.normal, eta));
+			}
+			ray_t trans_ray = ray_t _begin
+				hit.origin + trans_dir * BIAS,
+				trans_dir
+			_end;
+			trans_color = raytrace_all (trans_ray, depth + 1);
+		}
+
+		return refl_color + trans_color;
 	}
 #endif
 #endif
