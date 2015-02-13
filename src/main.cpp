@@ -265,21 +265,28 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	_rvalue_ref(material_t) mat = get_material(hit.material_id);
 
 	if ((mat.reflectivity > 0. || mat.translucency > 0.) && depth < MAX_DEPTH) {
-		vec3 refl_color = vec3(0);
-		vec3 trans_color = vec3(0);
+		vec3 color = vec3(0);
+		
+		//TODO: Proper Fresnel
+		//float facing_ratio = -dot (ray.direction, hit.normal);
+        //float fresnel_effect = mix(pow(1 - facing_ratio, 2), 1, 0.1);
+        //return vec3 (fresnel_effect);
+        float kr = 1.; //fresnel_effect;
+        float kt = 1.; //- kr;
 
 	// reflection
-		if (mat.reflectivity > 0.) {
+		if (kr * mat.reflectivity > 0.) {
 			vec3 refl_dir = reflect(ray.direction, hit.normal);
 			ray_t refl_ray = ray_t _begin
 				hit.origin + refl_dir * BIAS,
 				refl_dir
 			_end;
-			refl_color = raytrace_all(refl_ray, depth + 1);
+			color += kr * mat.reflectivity *
+			raytrace_all(refl_ray, depth + 1);
 		}
 
 	// refraction (or transmission)
-		if (mat.translucency > 0.) {
+		if (kt * mat.translucency > 0.) {
 			bool outside = dot (ray.direction, hit.normal) < 0;
 			float eta = 1. / mat.ior;
 			vec3 trans_dir;
@@ -294,10 +301,11 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 				hit.origin + trans_dir * BIAS,
 				trans_dir
 			_end;
-			trans_color = raytrace_all (trans_ray, depth + 1);
+			color += kt * mat.translucency *
+			raytrace_all (trans_ray, depth + 1);
 		}
 
-		return refl_color + trans_color;
+		return color;
 	}
 #endif
 #endif
