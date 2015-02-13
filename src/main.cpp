@@ -1,6 +1,6 @@
 #include "main_pre.h"
-#define SCREEN_WIDTH 300
-#define SCREEN_HEIGHT 300
+#define SCREEN_WIDTH 100
+#define SCREEN_HEIGHT 100
 /// GLSL begin //////////////////////////////////////////////////////////////////
 #ifdef __cplusplus
 #define _in(T) const T &
@@ -138,6 +138,11 @@ void setup_scene ()
 	spheres[cb_sphere_right] = sphere_t _begin vec3(-0.75, 0.75, 0.75), 0.75, cb_mat_refract _end;
 
 	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 0), vec3 (1., 1., 1.) _end;
+	
+	float _sin = sin (iGlobalTime);
+	float _cos = cos (iGlobalTime);
+	spheres[cb_sphere_left].origin += vec3 (_sin, abs (_sin), _cos);
+	spheres[cb_sphere_right].origin += vec3 (_sin, abs (_cos), _cos);
 }
 
 vec3 background(_in(ray_t) ray)
@@ -220,7 +225,7 @@ vec3 illuminate (_in(hit_t) hit)
 	vec3 V = normalize (eye - hit.origin); // view direction
 
 	for (int i = 0; i < num_lights; ++i) {
-#if 0
+#if 1
 		accum += illum_point_light_blinn_phong (V, lights [i], hit, mat);
 #else
 		accum += illum_point_light_cook_torrance (V, lights [i], hit, mat);
