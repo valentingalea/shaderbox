@@ -8,8 +8,8 @@
 #define _out(T) T &
 #define _begin {
 #define _end }
-#define _rvalue_ref(T) T &&
-#define _move(T) std::move(T)
+#define _rvalue_ref(T) T
+#define _move(T) T
 #else
 #define _in(T) const in T
 #define _inout(T) inout T
