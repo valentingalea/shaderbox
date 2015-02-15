@@ -201,10 +201,10 @@ vec3 illum_point_light_cook_torrance(
 {
 	vec3 L = normalize(light.origin - hit.origin);
 	vec3 H = normalize(L + V);
-	float NdotL = saturate (dot (hit.normal, L));
-	float NdotH = saturate (dot (hit.normal, H));
-	float NdotV = saturate (dot (hit.normal, V));
-	float VdotH = saturate (dot (V, H));
+	float NdotL = dot (hit.normal, L);
+	float NdotH = dot (hit.normal, H);
+	float NdotV = dot (hit.normal, V);
+	float VdotH = dot (V, H);
 
 	// geometric term
 	float geo_term = min(
@@ -226,7 +226,7 @@ vec3 illum_point_light_cook_torrance(
 	float fresnel_term = fresnel_factor (1., mat.ior, VdotH);
 
 	float specular = (geo_term * rough_term * fresnel_term) / (PI * NdotV * NdotL);
-	return NdotL * (specular + (mat.base_color * hit.material_param));
+	return max(0., NdotL) * (specular + (mat.base_color * hit.material_param));
 }
 
 vec3 illuminate (_in(hit_t) hit)
@@ -242,7 +242,7 @@ vec3 illuminate (_in(hit_t) hit)
 	vec3 V = normalize (eye - hit.origin); // view direction
 
 	for (int i = 0; i < num_lights; ++i) {
-#if 1
+#if 0
 		accum += illum_point_light_blinn_phong (V, lights [i], hit, mat);
 #else
 		accum += illum_point_light_cook_torrance (V, lights [i], hit, mat);
