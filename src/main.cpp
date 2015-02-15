@@ -177,6 +177,20 @@ vec3 background(_in(ray_t) ray)
 #endif
 }
 
+//     R       V    N    H      L         L dir to light       
+//      ^      ^    ^    ^     ^          V dir to eye
+//        .     \   |   /    .            N normal
+//          .    \  |  /   .              H half between L and V
+//            .   \ | /  .                R reflected
+//  n1          .  \|/ .                  O hit point             
+// -----------------O----------------     T refracted
+//  n2             .                      n1 index of refraction of outgoing medium
+//                .                       n2 index of refraction of incoming medium
+//               .
+//              .
+//             .
+//           \/_ T
+//
 vec3 illum_point_light_blinn_phong(
     _in(vec3) V, _in(point_light_t) light, _in(hit_t) hit, _in(material_t) mat)
 {
@@ -293,6 +307,17 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	}
 
 #if 1
+	// 
+	//             _.-""""-._                 R0 primary ray
+	//           .'          `h2---R2-->h3    R1 inside ray
+	//          /     R1 ..... \              R2 outside ray
+	//         |     ....       |             h1 enter hit point 
+	//  -R0--->h1....           |             h2 exit hit point
+	//         |                |             h3 shade point (will also be at h1)
+	//          \              /              n1 ior of outside medium
+	//       n1  `._ n2     _.'               n2 ior of inside medium
+	//              `-....-'
+	//                 
 	_rvalue_ref(material_t) mat = get_material(hit.material_id);
 
 	if (mat.reflectivity > 0. || mat.translucency > 0.) {
@@ -381,12 +406,21 @@ void main()
 	// assuming screen width is larger than height 
 	vec2 aspect_ratio = vec2(iResolution.x / iResolution.y, 1);
 
-	// FOV //TODO: more info about this	
+	// field of view
 	float fov = tan(radians (30.0));
 
 	// convert to camera space [-1, +1]
 	// and z is negative because of cross product and the need for x to be to the right 
-	// TODO: draw fancy diagram 
+	//
+	//      R   ^ +Y                  ^ +Y             E eye/ray origin
+	//       .  |\                    |     . R        R primary ray
+	//         .| \                   |   .            @ fov angle
+	//   -Z     | .\   +Z             | .
+	//    ------0---E--->   +X -------0-------> -X
+	//          | @/                  |
+	//          | /                   |
+	//          |/                    | -Y
+	//           -Y
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
 	// TODO: make mouse y rotation work
@@ -404,9 +438,6 @@ void main()
 	gl_FragColor = vec4 (corect_gamma (color), 1);
 }
 
-//
-// Intersections
-//
 void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit)
 {
 #if 1
@@ -478,6 +509,29 @@ void intersect_plane(_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit)
 	}
 }
 
+// Fresnel effect says that reflection
+// increases on a surface with the angle of view
+// and the transmission acts the reverse way
+// ex: soap bubble - the edges are highly reflected and colorful
+// while the middle is transparent
+// ex: water of a lake: close to shore you see thru,
+// farther away you see only the reflections on the water
+//
+// how much reflection and how much transmission
+// is given by Fresnel equations which can be
+// approximated with the Schilck eq
+//
+// the direction of the refracted (aka transmitted)
+// ray is given by the Snell eq given the
+// indices of refraction of the mediums
+//
+// http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-14-interaction-light-matter/optics-reflection-and-refraction/
+// http://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf
+//    
+// indices of refraction    
+// gold ---- air ---- ice --- water --- beer --- alumim --- glass --- salt --- PET --- asphalt --- lead --- diamond ---- iron ---
+// 0.470    1.000    1.309    1.333     1.345     1.390     1.500    1.516    1.575     1.645      2.010     2.420      2.950
+//
 float fresnel_factor(_in(float) n1, _in(float) n2, _in(float) VdotH)
 {
 // using Schlick’s approximation    
@@ -544,50 +598,6 @@ _rvalue_ref(material_t) get_material(_in(int) index)
 
 	return _move(mat);
 }
-
-//
-// Notes & documentation
-//
-
-//     R       V    N    H      L         L dir to light       
-//      ^      ^    ^    ^     ^          V dir to eye
-//        .     \   |   /    .            N normal
-//          .    \  |  /   .              H half between L and V
-//            .   \ | /  .                R reflected
-//  n1          .  \|/ .                  O hit point             
-// -----------------O----------------     T refracted
-//  n2             .                      n1 index of refraction of outgoing medium
-//                .                       n2 index of refraction of incoming medium
-//               .
-//              .
-//             .
-//           \/_ T
-//
-
-// Fresnel effect says that reflection
-// increases on a surface with the angle of view
-// and the transmission acts the reverse way
-// ex: soap bubble - the edges are highly reflected and colorful
-// while the middle is transparent
-// ex: water of a lake: close to shore you see thru,
-// farther away you see only the reflections on the water
-//
-// how much reflection and how much transmission
-// is given by Fresnel equations which can be
-// approximated with the Schilck eq
-//
-// the direction of the refracted (aka transmitted)
-// ray is given by the Snell eq given the
-// indices of refraction of the mediums
-//
-// http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-14-interaction-light-matter/optics-reflection-and-refraction/
-// http://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf
-//    
-// indices of refraction    
-// gold ---- air ---- ice --- water --- beer --- alumim --- glass --- salt --- PET --- asphalt --- lead --- diamond ---- iron ---
-// 0.470    1.000    1.309    1.333     1.345     1.390     1.500    1.516    1.575     1.645      2.010     2.420      2.950
-//
-
 /// GLSL end //////////////////////////////////////////////////////////////////
 
 	// be a dear a clean up
