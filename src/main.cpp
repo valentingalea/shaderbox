@@ -270,6 +270,18 @@ hit_t raytrace_iteration (_in(ray_t) ray, _in(int) mat_ignored)
 	return hit;
 }
 
+vec3 raytrace_render(_in(ray_t) ray)
+{
+	hit_t hit = raytrace_iteration(ray, mat_invalid);
+
+	if (hit.t >= max_dist) {
+		return background(ray);
+	}
+	else {
+		return illuminate(hit);
+	}
+}
+
 #define MAX_DEPTH 3
 
 vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
@@ -280,54 +292,48 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 		return background (ray);
 	}
 
-#ifdef __cplusplus
-#if 0
+#if 1
 	_rvalue_ref(material_t) mat = get_material(hit.material_id);
 
-	if ((mat.reflectivity > 0. || mat.translucency > 0.) && depth < MAX_DEPTH) {
+	if (mat.reflectivity > 0. || mat.translucency > 0.) {
 		vec3 color = vec3(0);
-		
-		//TODO: Proper Fresnel
-		//float facing_ratio = -dot (ray.direction, hit.normal);
-        //float fresnel_effect = mix(pow(1 - facing_ratio, 2), 1, 0.1);
-        //return vec3 (fresnel_effect);
-        float kr = 1.; //fresnel_effect;
-        float kt = 1.; //- kr;
 
-	// reflection
+		//TODO: proper fresnel
+		float kr = 1.;
+		float kt = 1.;
+
+		// reflection with 1 depth
 		if (kr * mat.reflectivity > 0.) {
 			vec3 refl_dir = reflect(ray.direction, hit.normal);
 			ray_t refl_ray = ray_t _begin
 				hit.origin + refl_dir * BIAS,
 				refl_dir
-			_end;
-			color += kr * mat.reflectivity *
-			raytrace_all(refl_ray, depth + 1);
+				_end;
+			color += kr * mat.reflectivity * raytrace_render(refl_ray);
 		}
 
-	// refraction (or transmission)
+		// refraction (or transmission) with 1 depth
 		if (kt * mat.translucency > 0.) {
-			bool outside = dot (ray.direction, hit.normal) < 0;
-			float eta = 1. / mat.ior;
-			vec3 trans_dir;
-			if (outside) {
-				trans_dir = normalize (refract (ray.direction, hit.normal, eta));
-			}
-			else {
-				eta = 1. / eta;
-				trans_dir = normalize (refract (ray.direction, -hit.normal, eta));
-			}
-			ray_t trans_ray = ray_t _begin
-				hit.origin + trans_dir * BIAS,
-				trans_dir
-			_end;
-			color += kt * mat.translucency *
-			raytrace_all (trans_ray, depth + 1);
+			float eta = 1./*air*/ / mat.ior;
+			vec3 inside_dir = normalize(refract(ray.direction, hit.normal, eta));
+			ray_t inside_ray = ray_t _begin
+				hit.origin + inside_dir * BIAS,
+				inside_dir
+				_end;
+			hit_t inside_hit = raytrace_iteration(inside_ray, mat_invalid);
+
+			eta = mat.ior / 1./*air*/;
+			vec3 outgoing_dir = normalize(refract(inside_dir, -inside_hit.normal, eta));
+			ray_t outgoing_ray = ray_t _begin
+				inside_hit.origin + outgoing_dir * BIAS,
+				outgoing_dir
+				_end;
+
+			color += kt * mat.translucency * raytrace_render(outgoing_ray);
 		}
 
 		return color;
 	}
-#endif
 #endif
 
 	vec3 color = illuminate (hit);
