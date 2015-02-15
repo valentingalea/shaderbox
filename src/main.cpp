@@ -292,7 +292,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 		return background (ray);
 	}
 
-#if 1
+#if 0
 	_rvalue_ref(material_t) mat = get_material(hit.material_id);
 
 	if (mat.reflectivity > 0. || mat.translucency > 0.) {
@@ -484,7 +484,7 @@ float fresnel_factor(_in(float) n1, _in(float) n2, _in(float) VdotH)
 	float Rn = (n1 - n2) / (n1 + n2);
 	float R0 = Rn * Rn; // reflection coefficient for light incoming parallel to the normal
 	float F = 1. - VdotH;
-	return R0 - (1. - R0) * (F * F * F * F * F);
+	return R0 + (1. - R0) * (F * F * F * F * F);
 }
 
 #ifdef __cplusplus
