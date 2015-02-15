@@ -81,6 +81,9 @@ material_t materials[num_materials];
 
 vec3 eye;
 
+#define BIAS 1e-4 // small offset to add to ray when retracing to avoid self-intersection
+#define PI 3.14159265359
+
 // the API
 void intersect_sphere (_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit);
 void intersect_plane (_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit);
@@ -110,11 +113,25 @@ void setup_scene ()
 #define cb_mat_blue 3
 #define cb_mat_reflect 4
 #define cb_mat_refract 5
-	materials[cb_mat_white] = material_t _begin vec3(0.7913), .0, .5, 1., 0., 0. _end;
-	materials[cb_mat_red] = material_t _begin vec3(0.6795, 0.0612, 0.0529), 0., .5, 1., 0., 0. _end;
-	materials[cb_mat_blue] = material_t _begin vec3(0.1878, 0.1274, 0.4287), 0., .5, 1., 0., 0. _end;
-	materials[cb_mat_reflect] = material_t _begin vec3(.5), .0, .0, 1.0, 1., 0. _end;
-	materials[cb_mat_refract] = material_t _begin vec3(.5), .0, .0, 1.5, 0., 1. _end;
+	materials[cb_mat_white] = material_t _begin
+		vec3(0.7913), .0, .5, 1., 0., 0.
+	_end;
+	materials[cb_mat_red] = material_t _begin
+		vec3(0.6795, 0.0612, 0.0529),
+		0., .5, 1., 0., 0.
+	_end;
+	materials[cb_mat_blue] = material_t _begin
+		vec3(0.1878, 0.1274, 0.4287),
+		0., .5, 1., 0., 0.
+	_end;
+	materials[cb_mat_reflect] = material_t _begin
+		vec3(0.95, 0.64, 0.54),
+		1., .1, 1.0, 1., 0.
+	_end;
+	materials[cb_mat_refract] = material_t _begin
+		vec3(1., 0.77, 0.345),
+		1., .1, 1.5, 0., 1.
+	_end;
 
 #define cb_plane_ground 0
 #define cb_plane_behind 1
@@ -208,7 +225,7 @@ vec3 illum_point_light_cook_torrance(
 	// Fresnel term
 	float fresnel_term = fresnel_factor (1., mat.ior, VdotH);
 
-	float specular = (geo_term * rough_term * fresnel_term) / (NdotV * NdotL);
+	float specular = (geo_term * rough_term * fresnel_term) / (PI * NdotV * NdotL);
 	return NdotL * (specular + (mat.base_color * hit.material_param));
 }
 
@@ -225,7 +242,7 @@ vec3 illuminate (_in(hit_t) hit)
 	vec3 V = normalize (eye - hit.origin); // view direction
 
 	for (int i = 0; i < num_lights; ++i) {
-#if 1
+#if 0
 		accum += illum_point_light_blinn_phong (V, lights [i], hit, mat);
 #else
 		accum += illum_point_light_cook_torrance (V, lights [i], hit, mat);
@@ -253,8 +270,6 @@ hit_t raytrace_iteration (_in(ray_t) ray, _in(int) mat_ignored)
 	return hit;
 }
 
-#define BIAS 1e-4 // small offset to add to ray when retracing to avoid self-intersection
-#define PI 3.14159265359
 #define MAX_DEPTH 3
 
 vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
@@ -266,7 +281,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	}
 
 #ifdef __cplusplus
-#if 1
+#if 0
 	_rvalue_ref(material_t) mat = get_material(hit.material_id);
 
 	if ((mat.reflectivity > 0. || mat.translucency > 0.) && depth < MAX_DEPTH) {
