@@ -8,16 +8,12 @@
 #define _out(T) T &
 #define _begin {
 #define _end }
-#define _rvalue_ref(T) T
-#define _move(T) T
 #else
 #define _in(T) const in T
 #define _inout(T) inout T
 #define _out(T) out T
 #define _begin (
 #define _end )
-#define _rvalue_ref(T) T
-#define _move(T) T
 #endif
 
 struct ray_t {
@@ -91,7 +87,7 @@ float fresnel_factor (_in(float) n1, _in(float) n2, _in(float) VdotH);
 mat3 rotate_around_y (_in(float) angle_degrees);
 mat3 rotate_around_x (_in(float) angle_degrees);
 vec3 corect_gamma (_in(vec3) color);
-_rvalue_ref(material_t) get_material (_in(int) index);
+material_t get_material (_in(int) index);
 
 // GLSL/HLSL utilities ported to C++
 float saturate(_in(float) value) { return clamp(value, 0., 1.); }
@@ -247,7 +243,7 @@ vec3 illum_point_light_cook_torrance(
 
 vec3 illuminate (_in(hit_t) hit)
 {
-	_rvalue_ref(material_t) mat = get_material(hit.material_id);
+	material_t mat = get_material(hit.material_id);
 
 	// special case for debug stuff - just solid paint it
 	if (hit.material_id == mat_debug) {
@@ -318,7 +314,7 @@ vec3 raytrace_all (_in(ray_t) ray)
 	//       n1  `._ n2     _.'               n2 ior of inside medium
 	//              `-....-'
 	//                 
-	_rvalue_ref(material_t) mat = get_material(hit.material_id);
+	material_t mat = get_material(hit.material_id);
 
 	if (mat.reflectivity > 0. || mat.translucency > 0.) {
 		vec3 color = vec3(0);
@@ -611,9 +607,9 @@ vec3 corect_gamma(_in(vec3) color)
 	return vec3 (pow(color.r, gamma), pow(color.g, gamma),pow(color.b, gamma));
 }
 
-_rvalue_ref(material_t) get_material(_in(int) index)
+material_t get_material(_in(int) index)
 {
-	_rvalue_ref(material_t) mat = _move(materials[0]);
+	material_t mat;
 
 	for (int i = 0; i < num_materials; ++i) {
 		if (i == index) {
@@ -622,7 +618,7 @@ _rvalue_ref(material_t) get_material(_in(int) index)
 		}
 	}
 
-	return _move(mat);
+	return mat;
 }
 /// GLSL end //////////////////////////////////////////////////////////////////
 
