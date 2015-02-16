@@ -130,7 +130,7 @@ void setup_scene ()
 	_end;
 	materials[cb_mat_refract] = material_t _begin
 		vec3(1., 0.77, 0.345),
-		1., .1, 1.5, 0., 1.
+		1., .1, 1.1, 0., 1.
 	_end;
 
 #define cb_plane_ground 0
@@ -156,16 +156,18 @@ void setup_scene ()
 
 	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 0), vec3 (1., 1., 1.) _end;
 	
+#if 0
 	float _sin = sin (iGlobalTime);
 	float _cos = cos (iGlobalTime);
 	spheres[cb_sphere_left].origin += vec3 (_sin - 0.5, abs (_sin), _cos);
 	spheres[cb_sphere_right].origin += vec3 (_sin + 0.5, abs (_cos), _cos);
+#endif
 }
 
 vec3 background(_in(ray_t) ray)
 {
 #if 0
-	vec3 sun_dir = normalize(vec3(0, 0.5 * sin (iGlobalTime/2.), -1)); // sin(iGlobalTime), 1, cos(iGlobalTime)));
+	vec3 sun_dir = normalize(vec3(0, 0.5 * sin (iGlobalTime/2.), -1));
 	vec3 sun_color = vec3 (2, 2, 0);
 	float sun_grad = max(0., dot(ray.direction, sun_dir));
 	float sky_grad = dot(ray.direction, vec3 (0, 1, 0));
@@ -296,9 +298,7 @@ vec3 raytrace_render(_in(ray_t) ray)
 	}
 }
 
-#define MAX_DEPTH 3
-
-vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
+vec3 raytrace_all (_in(ray_t) ray)
 {
 	hit_t hit = raytrace_iteration (ray, mat_invalid);
 
@@ -310,7 +310,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 	// 
 	//             _.-""""-._                 R0 primary ray
 	//           .'          `h2---R2-->h3    R1 inside ray
-	//          /     R1 ..... \              R2 outside ray
+	//          /     R1 ....> \              R2 outside ray
 	//         |     ....       |             h1 enter hit point 
 	//  -R0--->h1....           |             h2 exit hit point
 	//         |                |             h3 shade point (will also be at h1)
@@ -333,7 +333,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 			ray_t refl_ray = ray_t _begin
 				hit.origin + refl_dir * BIAS,
 				refl_dir
-				_end;
+			_end;
 			color += kr * mat.reflectivity * raytrace_render(refl_ray);
 		}
 
@@ -344,7 +344,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 			ray_t inside_ray = ray_t _begin
 				hit.origin + inside_dir * BIAS,
 				inside_dir
-				_end;
+			_end;
 			hit_t inside_hit = raytrace_iteration(inside_ray, mat_invalid);
 
 			eta = mat.ior / 1./*air*/;
@@ -352,7 +352,7 @@ vec3 raytrace_all (_in(ray_t) ray, _in(int) depth)
 			ray_t outgoing_ray = ray_t _begin
 				inside_hit.origin + outgoing_dir * BIAS,
 				outgoing_dir
-				_end;
+			_end;
 
 			color += kt * mat.translucency * raytrace_render(outgoing_ray);
 		}
@@ -396,44 +396,70 @@ ray_t get_primary_ray (_in(vec3) cam_local_point, _in(vec3) cam_origin, _in(vec3
 	_end;
 }
 
-void main()
+void main ()
 {
-	// gl_FragCoord is in raster space [0..resolution]
-	// convert to NDC [0..1]
-	// add 0.5 to select center of "pixel"
-	vec2 point_ndc = (gl_FragCoord.xy + 0.5) / iResolution.xy;
+// The pipeline transform
+//
+// 1. gl_FragCoord is in raster space [0..resolution]
+// 2. convert to NDC [0..1] by dividing to the resolution
+// 3. convert to camera space:
+//  a. xy gets [-1, +1] by 2 * NDC - 1; z fixed at -1
+//  c. apply aspect & fov
+//  d. apply the look-at algoritm which will
+//     produce the 3 camera axis:
+//
+//      R   ^ +Y                  ^ +Y             E eye/ray origin
+//       .  |\                    |     . R        R primary ray
+//         .| \                   |   .            @ fov angle
+//   -Z     | .\   +Z             | .
+//    ------0---E--->   +X -------0-------> -X
+//          | @/                  |
+//          | /                   |
+//          |/                    | -Y
+//           -Y
+//
+// NOTE: everything is expressed in this space, NOT world
+
+	// trackball
+	vec2 mouse = iMouse.x < BIAS ? vec2(0) : 2. * (iResolution.xy / iMouse.xy) - 1.;
+	mat3 rot_y = rotate_around_y(mouse.x * 30.);
+	eye = rot_y * vec3(0, cb_plane_dist, 2.333 * cb_plane_dist);
+	vec3 look_at = vec3(0, cb_plane_dist, 0);
 
 	// assuming screen width is larger than height 
 	vec2 aspect_ratio = vec2(iResolution.x / iResolution.y, 1);
-
 	// field of view
-	float fov = tan(radians (30.0));
+	float fov = tan(radians(30.0));
 
-	// convert to camera space [-1, +1]
-	// and z is negative because of cross product and the need for x to be to the right 
-	//
-	//      R   ^ +Y                  ^ +Y             E eye/ray origin
-	//       .  |\                    |     . R        R primary ray
-	//         .| \                   |   .            @ fov angle
-	//   -Z     | .\   +Z             | .
-	//    ------0---E--->   +X -------0-------> -X
-	//          | @/                  |
-	//          | /                   |
-	//          |/                    | -Y
-	//           -Y
-	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
-
-	// TODO: make mouse y rotation work
-	vec2 mouse = iMouse.x < BIAS ? vec2(0) : iResolution.xy / iMouse.xy;
-	mat3 rot_y = rotate_around_y(mouse.x * 10.);
-	eye = rot_y * vec3 (0, cb_plane_dist, 2.333 * cb_plane_dist);
-	vec3 look_at = vec3(0, cb_plane_dist, 0);
-
-	ray_t ray = get_primary_ray (point_cam, eye, look_at);
+	// antialising
+#if 1
+#define MSAA_PASSES 4
+	float offset = 0.25;
+	float ofst_x = offset * aspect_ratio.x;
+	float ofst_y = offset;
+	vec2 msaa[MSAA_PASSES];
+	msaa[0] = vec2(-ofst_x, -ofst_y);
+	msaa[1] = vec2(-ofst_x, +ofst_y);
+	msaa[2] = vec2(+ofst_x, -ofst_y);
+	msaa[3] = vec2(+ofst_x, +ofst_y);
+#else
+#define MSAA_PASSES 1
+	vec2 msaa[MSAA_PASSES];
+	msaa[0] = vec2(0.5);
+#endif
 
 	setup_scene();
 
-	vec3 color = raytrace_all (ray, 0);
+	vec3 color = vec3(0);
+
+	for (int i = 0; i < MSAA_PASSES; i++) {
+		vec2 point_ndc = (gl_FragCoord.xy + msaa[i]) / iResolution.xy;
+		vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
+
+		ray_t ray = get_primary_ray(point_cam, eye, look_at);
+
+		color += raytrace_all(ray) / float(MSAA_PASSES);
+	}
 
 	gl_FragColor = vec4 (corect_gamma (color), 1);
 }
