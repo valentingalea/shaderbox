@@ -519,8 +519,10 @@ void intersect_plane(_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit)
 		if (t >= 0.0 && t < hit.t)
 		{
 			vec3 impact = ray.origin + ray.direction * t;
-			vec2 pattern = floor (impact.xz * 0.5);
-			float cb = mod (pattern.x + pattern.y, 2.0);
+
+			// checkboard pattern			
+			//vec2 pattern = floor (impact.xz * 0.5);
+			//float cb = mod (pattern.x + pattern.y, 2.0);
 
 			hit.t = t;
 			hit.material_id = p.material;
