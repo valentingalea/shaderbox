@@ -126,7 +126,7 @@ void setup_scene ()
 	_end;
 	materials[cb_mat_refract] = material_t _begin
 		vec3(1., 0.77, 0.345),
-		1., .1, 1.1, 0., 1.
+		1., .05, 1.1, 0., 0.
 	_end;
 
 #define cb_plane_ground 0
@@ -152,11 +152,11 @@ void setup_scene ()
 
 	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 0), vec3 (1., 1., 1.) _end;
 	
-#if 0
+#if 1
 	float _sin = sin (iGlobalTime);
 	float _cos = cos (iGlobalTime);
 	spheres[cb_sphere_left].origin += vec3 (_sin - 0.5, abs (_sin), _cos);
-	spheres[cb_sphere_right].origin += vec3 (_sin + 0.5, abs (_cos), _cos);
+//	spheres[cb_sphere_right].origin += vec3 (_sin + 0.5, abs (_cos), _cos);
 #endif
 }
 
