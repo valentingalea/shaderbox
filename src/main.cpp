@@ -219,16 +219,11 @@ vec3 illum_point_light_cook_torrance(
 	float VdotH = dot (V, H);
 
 	// geometric term
-	float geo_term = min(
-		1.,
-		min(
-			(2. * NdotH * NdotV) / VdotH,
-			(2. * NdotH * NdotL) / VdotH
-		)
-	);
+	float geo_a = (2. * NdotH * NdotV) / VdotH;
+	float geo_b = (2. * NdotH * NdotL) / VdotH;
+	float geo_term = min(1., min(geo_a, geo_b));
 
-	// roughness term
-	// using Beckmann Distribution
+	// roughness term -using Beckmann Distribution
 	float rough_sq = mat.roughness * mat.roughness;
 	float rough_a = 1. / (rough_sq * NdotH * NdotH * NdotH * NdotH);
 	float rough_exp = (NdotH * NdotH - 1.) / (rough_sq * NdotH * NdotH);
@@ -254,7 +249,7 @@ vec3 illuminate (_in(hit_t) hit)
 	vec3 V = normalize (eye - hit.origin); // view direction
 
 	for (int i = 0; i < num_lights; ++i) {
-#if 1
+#if 0
 		accum += illum_point_light_blinn_phong (V, lights [i], hit, mat);
 #else
 		accum += illum_point_light_cook_torrance (V, lights [i], hit, mat);
