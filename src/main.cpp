@@ -1,6 +1,6 @@
 #include "main_pre.h"
-#define SCREEN_WIDTH 200
-#define SCREEN_HEIGHT 200
+#define SCREEN_WIDTH 100
+#define SCREEN_HEIGHT 100
 /// GLSL begin //////////////////////////////////////////////////////////////////
 #ifdef __cplusplus
 #define _in(T) const T &
@@ -150,7 +150,7 @@ void setup_scene ()
 	spheres[cb_sphere_left] = sphere_t _begin vec3(0.75, 1, -0.75), 1., cb_mat_reflect _end;
 	spheres[cb_sphere_right] = sphere_t _begin vec3(-0.75, 0.75, 0.75), 0.75, cb_mat_refract _end;
 
-	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 0), vec3 (1., 1., 1.) _end;
+	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 2), vec3 (1., 1., 1.) _end;
 	
 #if 1
 	float _sin = sin (iGlobalTime);
@@ -254,7 +254,7 @@ vec3 illuminate (_in(hit_t) hit)
 	vec3 V = normalize (eye - hit.origin); // view direction
 
 	for (int i = 0; i < num_lights; ++i) {
-#if 0
+#if 1
 		accum += illum_point_light_blinn_phong (V, lights [i], hit, mat);
 #else
 		accum += illum_point_light_cook_torrance (V, lights [i], hit, mat);
@@ -392,6 +392,71 @@ ray_t get_primary_ray (_in(vec3) cam_local_point, _in(vec3) cam_origin, _in(vec3
 	_end;
 }
 
+float sdPlane( vec3 p )
+{
+	return p.y;
+}
+
+float sdSphere( vec3 p, float s )
+{
+    return length(p)-s;
+}
+
+float sdBox( vec3 p, vec3 b )
+{
+  vec3 d = abs(p) - b;
+  return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+}
+
+float udRoundBox( vec3 p, vec3 b, float r )
+{
+  return length(max(abs(p)-b,0.0))-r;
+}
+
+float sdTorus( vec3 p, vec2 t )
+{
+  return length( vec2(length(p.xz)-t.x,p.y) )-t.y;
+}
+
+float opS( float d1, float d2 )
+{
+    return max(-d2,d1);
+}
+
+vec2 opU( vec2 d1, vec2 d2 )
+{
+	return (d1.x<d2.x) ? d1 : d2;
+}
+
+vec3 opRep( vec3 p, vec3 c )
+{
+    return mod(p,c)-0.5*c;
+}
+
+float sdf (_in(vec3) p)
+{
+	return
+	opS(
+	sdBox (p, vec3 (1)),
+	sdSphere (p, 1.25)
+	);
+	//sdPlane (p);
+	//sdTorus (p, vec2 (1, .1));
+}
+
+vec3 sdf_normal (_in(vec3) p)
+{
+	float dt = 0.05;
+	vec3 x = vec3 (dt, 0, 0);
+	vec3 y = vec3 (0, dt, 0);
+	vec3 z = vec3 (0, 0, dt);
+	return normalize (vec3 (
+		sdf (p+x) - sdf (p-x),
+		sdf (p+y) - sdf (p-y),
+		sdf (p+z) - sdf (p-z)
+	));
+}
+
 void main ()
 {
 // The pipeline transform
@@ -428,7 +493,7 @@ void main ()
 	float fov = tan(radians(30.0));
 
 	// antialising
-#if 1
+#if 0
 #define MSAA_PASSES 4
 	float offset = 0.25;
 	float ofst_x = offset * aspect_ratio.x;
@@ -444,9 +509,9 @@ void main ()
 	msaa[0] = vec2(0.5);
 #endif
 
-	setup_scene();
-
+#if 0
 	vec3 color = vec3(0);
+	setup_scene();
 
 	for (int i = 0; i < MSAA_PASSES; i++) {
 		vec2 point_ndc = (gl_FragCoord.xy + msaa[i]) / iResolution.xy;
@@ -456,6 +521,36 @@ void main ()
 
 		color += raytrace_all(ray) / float(MSAA_PASSES);
 	}
+#else
+	float q = iGlobalTime * 24.;
+	mat3 rot = rotate_around_y (q);
+
+	eye = rot * vec3 (0, 0, 4);
+	look_at = vec3 (0);
+	vec2 point_ndc = (gl_FragCoord.xy + 0.5) / iResolution.xy;
+	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
+	ray_t ray = get_primary_ray(point_cam, eye, look_at);
+	
+	vec3 color = background (ray);
+	setup_scene ();
+	
+	float t = 0;
+	for (int i = 0; i < 50; i++) {
+		vec3 p = ray.origin + ray.direction * t;
+		float d = sdf (p);
+		if (t > 10.) break;
+		if (d < BIAS) {
+			vec3 n = sdf_normal (p);
+			hit_t h = hit_t _begin
+				t, cb_mat_refract, 1., p, n
+			_end;
+			color = //vec3 (i/50.);
+			illuminate (h);
+			break;
+		}
+		t += d;
+	}
+#endif
 
 	gl_FragColor = vec4 (corect_gamma (color), 1);
 }
