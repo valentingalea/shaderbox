@@ -418,9 +418,9 @@ float opS(float d1, float d2)
 	return max(-d2, d1);
 }
 
-vec2 opU(vec2 d1, vec2 d2)
+float opU(float d1, float d2)
 {
-	return (d1.x < d2.x) ? d1 : d2;
+	return min(d1, d2);
 }
 
 vec3 opRep(vec3 p, vec3 c)
@@ -428,14 +428,16 @@ vec3 opRep(vec3 p, vec3 c)
 	return mod(p, c) - 0.5*c;
 }
 
-float sdf (_in(vec3) p)
+float sdf(_in(vec3) p)
 {
 	return
+	opU(
 		opS(
-			sdBox (p, vec3 (1)),
-			sdSphere (p, 1.25)
-		)
-	;
+			sdBox(p, vec3(1)),
+			sdSphere(p, 1.25)
+		),
+		sdTorus(p, vec2(2., 0.3))
+	);
 }
 
 vec3 sdf_normal (_in(vec3) p)
