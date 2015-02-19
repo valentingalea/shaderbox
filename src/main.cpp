@@ -430,14 +430,26 @@ vec3 opRep(vec3 p, vec3 c)
 
 float sdf(_in(vec3) p)
 {
-	return
-	opU(
-		opS(
-			sdBox(p, vec3(1)),
-			sdSphere(p, 1.25)
-		),
-		sdTorus(p, vec2(2., 0.3))
+	float s = sin (iGlobalTime);
+	float c = cos (iGlobalTime);
+	
+	float op1 = opS(
+		sdBox(p, vec3(1)),
+		sdSphere(p, 1.25)
 	);
+
+	float op2 = opU (
+		sdSphere (p + vec3 (s, 0, 0), 0.5),
+		sdSphere (p + vec3 (0, 0, c), 0.5)
+	);
+	
+	float op3 =
+		sdSphere (p + vec3 (0, -c, 0), 0.5)
+	;
+	
+	float op4 = opU (op1, op2);
+	
+	return opU (op3, op4);
 }
 
 vec3 sdf_normal (_in(vec3) p)
@@ -510,7 +522,7 @@ void main ()
 	float fov = tan(radians(30.0));
 
 	// antialising
-#if 1
+#if 0
 #define MSAA_PASSES 4
 	float offset = 0.25;
 	float ofst_x = offset * aspect_ratio.x;
@@ -535,7 +547,7 @@ void main ()
 #else
 	float q = iGlobalTime * 24.;
 	mat3 rot_y = rotate_around_y(q);
-	mat3 rot_x = rotate_around_x(-q);
+	mat3 rot_x = rotate_around_x(q);
 	vec3 eye = rot_x * rot_y * vec3(0, 0, 4);
 	vec3 look_at = vec3(0);
 #endif
