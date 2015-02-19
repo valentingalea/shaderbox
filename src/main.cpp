@@ -387,43 +387,49 @@ ray_t get_primary_ray (_in(vec3) cam_local_point, _in(vec3) cam_origin, _in(vec3
 	_end;
 }
 
-float sdPlane(vec3 p)
+float sd_plane(vec3 p)
 {
 	return p.y;
 }
 
-float sdSphere(vec3 p, float s)
+float sd_sphere(vec3 p, float s)
 {
 	return length(p) - s;
 }
 
-float sdBox(vec3 p, vec3 b)
+float sd_box(vec3 p, vec3 b)
 {
 	vec3 d = abs(p) - b;
 	return min(max(d.x, max(d.y, d.z)), 0.0) + length(max(d, 0.0));
 }
 
-float udRoundBox(vec3 p, vec3 b, float r)
+float ud_round_box(vec3 p, vec3 b, float r)
 {
 	return length(max(abs(p) - b, 0.0)) - r;
 }
 
-float sdTorus(vec3 p, vec2 t)
+float sd_torus(vec3 p, vec2 t)
 {
 	return length(vec2(length(p.xz) - t.x, p.y)) - t.y;
 }
 
-float opS(float d1, float d2)
+float op_smin(float a, float b, float k)
+{
+	float h = clamp(0.5 + 0.5*(b - a) / k, 0.0, 1.0);
+	return mix(b, a, h) - k*h*(1.0 - h);
+}
+
+float op_sub(float d1, float d2)
 {
 	return max(-d2, d1);
 }
 
-float opU(float d1, float d2)
+float op_add(float d1, float d2)
 {
 	return min(d1, d2);
 }
 
-vec3 opRep(vec3 p, vec3 c)
+vec3 op_mul(vec3 p, vec3 c)
 {
 	return mod(p, c) - 0.5*c;
 }
@@ -433,23 +439,20 @@ float sdf(_in(vec3) p)
 	float s = sin (iGlobalTime);
 	float c = cos (iGlobalTime);
 	
-	float op1 = opS(
-		sdBox(p, vec3(1)),
-		sdSphere(p, 1.25)
+	float op1 = op_sub(
+		sd_box(p, vec3(1)),
+		sd_sphere(p, 1.25)
 	);
-
-	float op2 = opU (
-		sdSphere (p + vec3 (s, 0, 0), 0.5),
-		sdSphere (p + vec3 (0, 0, c), 0.5)
+	float op2 = op_add (
+		sd_sphere (p + vec3 (s, 0, 0), 0.5),
+		sd_sphere (p + vec3 (0, 0, c), 0.5)
 	);
-	
 	float op3 =
-		sdSphere (p + vec3 (0, -c, 0), 0.5)
+		sd_sphere (p + vec3 (0, -c, 0), 0.5)
 	;
+	float op4 = op_add (op1, op2);
 	
-	float op4 = opU (op1, op2);
-	
-	return opU (op3, op4);
+	return op_add (op3, op4);
 }
 
 vec3 sdf_normal (_in(vec3) p)
