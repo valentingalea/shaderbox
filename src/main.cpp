@@ -152,7 +152,7 @@ void setup_scene ()
 
 	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 2), vec3 (1., 1., 1.) _end;
 	
-#if 1
+#if 0
 	float _sin = sin (iGlobalTime);
 	float _cos = cos (iGlobalTime);
 	spheres[cb_sphere_left].origin += vec3 (_sin - 0.5, abs (_sin), _cos);
@@ -424,9 +424,9 @@ float op_sub(float d1, float d2)
 	return max(-d2, d1);
 }
 
-float op_add(float d1, float d2)
+vec2 op_add(vec2 d1, vec2 d2)
 {
-	return min(d1, d2);
+	return d1.x < d2.x ? d1 : d2;
 }
 
 vec3 op_mul(vec3 p, vec3 c)
@@ -434,23 +434,29 @@ vec3 op_mul(vec3 p, vec3 c)
 	return mod(p, c) - 0.5*c;
 }
 
-float sdf(_in(vec3) p)
+vec2 sdf(_in(vec3) p)
 {
 	float s = sin (iGlobalTime);
 	float c = cos (iGlobalTime);
 	
-	float op1 = op_sub(
+	vec2 op1 = vec2 (op_sub (
 		sd_box(p, vec3(1)),
-		sd_sphere(p, 1.25)
+		sd_sphere(p, 1.25)),
+		cb_mat_red
 	);
-	float op2 = op_add (
-		sd_sphere (p + vec3 (s, 0, 0), 0.5),
-		sd_sphere (p + vec3 (0, 0, c), 0.5)
+	vec2 op2 = op_add (
+		vec2 (
+			sd_sphere (p + vec3 (s, 0, 0), 0.5),
+			cb_mat_blue),
+		vec2 (
+			sd_sphere (p + vec3 (0, 0, c), 0.5),
+			cb_mat_red)
 	);
-	float op3 =
-		sd_sphere (p + vec3 (0, -c, 0), 0.5)
-	;
-	float op4 = op_add (op1, op2);
+	vec2 op3 = vec2 (
+		sd_sphere (p + vec3 (0, -c, 0), 0.5),
+		cb_mat_white
+	);
+	vec2 op4 = op_add (op1, op2);
 	
 	return op_add (op3, op4);
 }
@@ -462,9 +468,9 @@ vec3 sdf_normal (_in(vec3) p)
 	vec3 y = vec3 (0, dt, 0);
 	vec3 z = vec3 (0, 0, dt);
 	return normalize (vec3 (
-		sdf (p+x) - sdf (p-x),
-		sdf (p+y) - sdf (p-y),
-		sdf (p+z) - sdf (p-z)
+		sdf (p+x).r - sdf (p-x).r,
+		sdf (p+y).r - sdf (p-y).r,
+		sdf (p+z).r - sdf (p-z).r
 	));
 }
 
@@ -475,13 +481,13 @@ vec3 raymarch(_in(ray_t) ray)
 	for (int i = 0; i < 50; i++) {
 		vec3 p = ray.origin + ray.direction * t;
 
-		float d = sdf(p);
+		vec2 d = sdf(p);
 		if (t > 10.) break;
 
-		if (d < BIAS) {
+		if (d.x < BIAS) {
 			vec3 n = sdf_normal(p);
 			hit_t h = hit_t _begin
-				t, cb_mat_red, 1., p, n
+				t, d.y, 1., p, n
 				_end;
 
 			return
@@ -489,7 +495,7 @@ vec3 raymarch(_in(ray_t) ray)
 			illuminate(h);
 		}
 
-		t += d;
+		t += d.x;
 	}
 
 	return background(ray);
