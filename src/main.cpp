@@ -484,10 +484,10 @@ vec3 raymarch(_in(ray_t) ray)
 		vec2 d = sdf(p);
 		if (t > 10.) break;
 
-		if (d.x < BIAS) {
+		if (d.x < 0.002) {
 			vec3 n = sdf_normal(p);
 			hit_t h = hit_t _begin
-				t, d.y, 1., p, n
+				t, int(d.y), 1., p, n
 				_end;
 
 			return
