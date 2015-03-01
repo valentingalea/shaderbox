@@ -122,11 +122,11 @@ void setup_scene ()
 	_end;
 	materials[cb_mat_reflect] = material_t _begin
 		vec3(0.95, 0.64, 0.54),
-		1., .1, 1.0, 1., 0.
+		1., .1, 1.0, 0., 0.
 	_end;
 	materials[cb_mat_refract] = material_t _begin
 		vec3(1., 0.77, 0.345),
-		1., .05, 1.1, 0., 0.
+		1., .05, 1.333, 0., 1.
 	_end;
 
 #define cb_plane_ground 0
@@ -147,16 +147,16 @@ void setup_scene ()
 #define cb_sphere_left 1
 #define cb_sphere_right 2
 	spheres[cb_sphere_light] = sphere_t _begin vec3(0, 2.5 * cb_plane_dist + 0.4, 0), 1.5, mat_debug _end;
-	spheres[cb_sphere_left] = sphere_t _begin vec3(0.75, 1, -0.75), 1., cb_mat_reflect _end;
+	spheres[cb_sphere_left] = sphere_t _begin vec3(0.75, 1, -0.75), 0.5, cb_mat_reflect _end;
 	spheres[cb_sphere_right] = sphere_t _begin vec3(-0.75, 0.75, 0.75), 0.75, cb_mat_refract _end;
 
 	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 2), vec3 (1., 1., 1.) _end;
 	
-#if 0
+#if 1
 	float _sin = sin (iGlobalTime);
 	float _cos = cos (iGlobalTime);
-	spheres[cb_sphere_left].origin += vec3 (_sin - 0.5, abs (_sin), _cos);
-//	spheres[cb_sphere_right].origin += vec3 (_sin + 0.5, abs (_cos), _cos);
+//	spheres[cb_sphere_left].origin += vec3 (_sin - 0.5, abs (_sin), _cos);
+	spheres[cb_sphere_right].origin += vec3 (_sin + 0.5, abs (_cos), _cos);
 #endif
 }
 
@@ -315,9 +315,13 @@ vec3 raytrace_all (_in(ray_t) ray)
 		vec3 color = vec3(0);
 
 		//TODO: proper fresnel
-		float kr = 1.;
-		float kt = 1.;
-
+        float facingratio = -dot(ray.direction, hit.normal);
+        // change the mix value to tweak the effect
+        float fresneleffect = mix(pow(1 - facingratio, 4), 1, 0.1);
+		
+		float kr = fresneleffect;
+		float kt = 1. - kr;
+//return vec3 (kr);
 		// reflection with 1 depth
 		if (kr * mat.reflectivity > 0.) {
 			vec3 refl_dir = reflect(ray.direction, hit.normal);
@@ -413,6 +417,12 @@ float sd_torus(vec3 p, vec2 t)
 	return length(vec2(length(p.xz) - t.x, p.y)) - t.y;
 }
 
+float sd_cylinder(vec3 p, vec2 h)
+{
+	vec2 d = abs(vec2(length(p.xz),p.y)) - h;
+	return min(max(d.x,d.y),0.0) + length(max(d,0.0));
+}
+
 float op_smin(float a, float b, float k)
 {
 	float h = clamp(0.5 + 0.5*(b - a) / k, 0.0, 1.0);
@@ -432,6 +442,15 @@ vec2 op_add(vec2 d1, vec2 d2)
 vec3 op_mul(vec3 p, vec3 c)
 {
 	return mod(p, c) - 0.5*c;
+}
+
+vec3 op_bend( vec3 p )
+{
+	float c = cos(20.0*p.y);
+	float s = sin(20.0*p.y);
+	mat2 m = mat2(c,-s,s,c);
+	vec3 q = vec3(m*p.xy,p.z);
+	return q;
 }
 
 vec2 sdf(_in(vec3) p)
@@ -461,6 +480,35 @@ vec2 sdf(_in(vec3) p)
 	return op_add (op3, op4);
 }
 
+vec2 sdf2 (_in(vec3) p)
+{
+	float op = op_smin(
+		//vec2 (
+			sd_sphere (p + vec3 (0, 0, 0), 0.8),
+		//	cb_mat_blue),
+		//vec2 (
+			sd_sphere (p - vec3 (0, 0.7, 0), 0.6),
+		//	cb_mat_red)
+		.5
+	);
+	
+	vec2 egg = vec2 (op, cb_mat_red);
+	
+	vec2 left_leg = vec2 (
+	 sd_cylinder (
+	 
+	p - vec3 (0.6, -1, 0), vec2 (.1, 1)), cb_mat_blue);
+
+	vec2 right_leg = 
+	vec2 (
+	sd_cylinder (
+	p - vec3 (-0.6, -1, 0), vec2 (.1, 1)), cb_mat_blue);
+	
+	vec2 legs = op_add (left_leg, right_leg);
+	
+	return op_add (egg, legs);
+}
+
 vec3 sdf_normal (_in(vec3) p)
 {
 	float dt = 0.05;
@@ -481,7 +529,7 @@ vec3 raymarch(_in(ray_t) ray)
 	for (int i = 0; i < 50; i++) {
 		vec3 p = ray.origin + ray.direction * t;
 
-		vec2 d = sdf(p);
+		vec2 d = sdf2(p);
 		if (t > 10.) break;
 
 		if (d.x < 0.002) {
@@ -557,7 +605,7 @@ void main ()
 	float q = iGlobalTime * 24.;
 	mat3 rot_y = rotate_around_y(q);
 	mat3 rot_x = rotate_around_x(q);
-	vec3 eye = rot_x * rot_y * vec3(0, 0, 4);
+	vec3 eye =  rot_y * vec3(0, 0, 4);
 	vec3 look_at = vec3(0);
 #endif
 
