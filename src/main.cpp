@@ -57,7 +57,7 @@ struct hit_t {
 
 #define max_dist 999.0
 hit_t no_hit = hit_t _begin
-	(max_dist + 1.0), -1, 1., vec3 (0), vec3 (0)
+(max_dist + 1.0), -1, 1., vec3(0), vec3(0)
 _end;
 
 #define num_planes 6
@@ -68,7 +68,7 @@ sphere_t spheres[num_spheres];
 
 #define num_lights 1
 point_light_t lights[num_lights];
-vec3 ambient_light = vec3 (.01, .01, .01);
+vec3 ambient_light = vec3(.01, .01, .01);
 
 #define num_materials 10
 #define mat_invalid -1
@@ -81,13 +81,14 @@ vec3 eye;
 #define PI 3.14159265359
 
 // the API
-void intersect_sphere (_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit);
-void intersect_plane (_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit);
-float fresnel_factor (_in(float) n1, _in(float) n2, _in(float) VdotH);
-mat3 rotate_around_y (_in(float) angle_degrees);
-mat3 rotate_around_x (_in(float) angle_degrees);
-vec3 corect_gamma (_in(vec3) color);
-material_t get_material (_in(int) index);
+void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit);
+void intersect_plane(_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit);
+float fresnel_factor(_in(float) n1, _in(float) n2, _in(float) VdotH);
+mat3 rotate_around_z(_in(float) angle_degrees);
+mat3 rotate_around_y(_in(float) angle_degrees);
+mat3 rotate_around_x(_in(float) angle_degrees);
+vec3 corect_gamma(_in(vec3) color);
+material_t get_material(_in(int) index);
 
 // GLSL/HLSL utilities ported to C++
 float saturate(_in(float) value) { return clamp(value, 0., 1.); }
@@ -97,37 +98,42 @@ vec3 reflect(_in(vec3) incident, _in(vec3) normal);
 vec3 refract(_in(vec3) incident, _in(vec3) normal, _in(float) n);
 #endif
 
-void setup_scene ()
+void setup_scene()
 {
-	materials [mat_debug] = material_t _begin vec3 (1., 1., 1.), 0., 0., 1., 0., 0. _end;	
+	materials[mat_debug] = material_t _begin vec3(1., 1., 1.), 0., 0., 1., 0., 0. _end;
 
-//
-// Cornell box
-//
+	//
+	// Cornell box
+	//
 #define cb_mat_white 1
 #define cb_mat_red 2
 #define cb_mat_blue 3
 #define cb_mat_reflect 4
 #define cb_mat_refract 5
+#define cb_mat_green 6
 	materials[cb_mat_white] = material_t _begin
 		vec3(0.7913), .0, .5, 1., 0., 0.
-	_end;
+		_end;
 	materials[cb_mat_red] = material_t _begin
 		vec3(0.6795, 0.0612, 0.0529),
 		0., .5, 1., 0., 0.
-	_end;
+		_end;
 	materials[cb_mat_blue] = material_t _begin
 		vec3(0.1878, 0.1274, 0.4287),
 		0., .5, 1., 0., 0.
-	_end;
+		_end;
 	materials[cb_mat_reflect] = material_t _begin
 		vec3(0.95, 0.64, 0.54),
 		1., .1, 1.0, 0., 0.
-	_end;
+		_end;
 	materials[cb_mat_refract] = material_t _begin
 		vec3(1., 0.77, 0.345),
 		1., .05, 1.333, 0., 1.
-	_end;
+		_end;
+	materials[cb_mat_green] = material_t _begin
+		vec3(13. / 255., 104. / 255., 0. / 255.),
+		0., .85, 1., 0., 0.
+		_end;
 
 #define cb_plane_ground 0
 #define cb_plane_behind 1
@@ -150,12 +156,15 @@ void setup_scene ()
 	spheres[cb_sphere_left] = sphere_t _begin vec3(0.75, 1, -0.75), 0.5, cb_mat_reflect _end;
 	spheres[cb_sphere_right] = sphere_t _begin vec3(-0.75, 0.75, 0.75), 0.75, cb_mat_refract _end;
 
-	lights[0] = point_light_t _begin vec3(0, 2. * cb_plane_dist - 0.2, 2), vec3 (1., 1., 1.) _end;
-	
-#if 1
+	lights[0] = point_light_t _begin
+		vec3(0, 2. * cb_plane_dist - 0.2, 2),
+		vec3(1., 1., 1.)
+		_end;
+
+#if 0
 	float _sin = sin (iGlobalTime);
 	float _cos = cos (iGlobalTime);
-//	spheres[cb_sphere_left].origin += vec3 (_sin - 0.5, abs (_sin), _cos);
+	//	spheres[cb_sphere_left].origin += vec3 (_sin - 0.5, abs (_sin), _cos);
 	spheres[cb_sphere_right].origin += vec3 (_sin + 0.5, abs (_cos), _cos);
 #endif
 }
@@ -163,15 +172,15 @@ void setup_scene ()
 vec3 background(_in(ray_t) ray)
 {
 #if 0
-	vec3 sun_dir = normalize(vec3(0, 0.5 * sin (iGlobalTime/2.), -1));
-	vec3 sun_color = vec3 (2, 2, 0);
+	vec3 sun_dir = normalize(vec3(0, 0.5 * sin(iGlobalTime / 2.), -1));
+	vec3 sun_color = vec3(2, 2, 0);
 	float sun_grad = max(0., dot(ray.direction, sun_dir));
-	float sky_grad = dot(ray.direction, vec3 (0, 1, 0));
+	float sky_grad = dot(ray.direction, vec3(0, 1, 0));
 	return
 		pow(sun_grad, 250.) * sun_color +
-		pow (sky_grad, 2.) * vec3 (.3, .3, 3.);
+		pow(sky_grad, 2.) * vec3(.3, .3, 3.);
 #else
-	return vec3 (.1, .1, .7);
+	return vec3(.1, .1, .7);
 #endif
 }
 
@@ -190,19 +199,19 @@ vec3 background(_in(ray_t) ray)
 //           \/_ T
 //
 vec3 illum_point_light_blinn_phong(
-    _in(vec3) V, _in(point_light_t) light, _in(hit_t) hit, _in(material_t) mat)
+	_in(vec3) V, _in(point_light_t) light, _in(hit_t) hit, _in(material_t) mat)
 {
-	vec3 L = normalize (light.origin - hit.origin);
+	vec3 L = normalize(light.origin - hit.origin);
 
-	vec3 diffuse = max(0., dot (L, hit.normal)) * (mat.base_color * hit.material_param) * light.color;
+	vec3 diffuse = max(0., dot(L, hit.normal)) * (mat.base_color * hit.material_param) * light.color;
 
-    float spec_factor = 50.;
+	float spec_factor = 50.;
 #if 0 // Blinn specular
 	vec3 H = normalize(L + V);
-	vec3 specular = pow (max (0., dot (H, hit.normal)), spec_factor) * light.color; // * specular color
+	vec3 specular = pow(max(0., dot(H, hit.normal)), spec_factor) * light.color; // * specular color
 #else // Phong specular
 	vec3 R = reflect(-L, hit.normal);
-	vec3 specular = pow (max (0., dot (R, V)), spec_factor) * light.color; // * specular color
+	vec3 specular = pow(max(0., dot(R, V)), spec_factor) * light.color; // * specular color
 #endif
 
 	return diffuse + specular;
@@ -213,10 +222,10 @@ vec3 illum_point_light_cook_torrance(
 {
 	vec3 L = normalize(light.origin - hit.origin);
 	vec3 H = normalize(L + V);
-	float NdotL = dot (hit.normal, L);
-	float NdotH = dot (hit.normal, H);
-	float NdotV = dot (hit.normal, V);
-	float VdotH = dot (V, H);
+	float NdotL = dot(hit.normal, L);
+	float NdotH = dot(hit.normal, H);
+	float NdotV = dot(hit.normal, V);
+	float VdotH = dot(V, H);
 
 	// geometric term
 	float geo_a = (2. * NdotH * NdotV) / VdotH;
@@ -230,47 +239,47 @@ vec3 illum_point_light_cook_torrance(
 	float rough_term = rough_a * exp(rough_exp);
 
 	// Fresnel term
-	float fresnel_term = fresnel_factor (1., mat.ior, VdotH);
+	float fresnel_term = fresnel_factor(1., mat.ior, VdotH);
 
 	float specular = (geo_term * rough_term * fresnel_term) / (PI * NdotV * NdotL);
 	return max(0., NdotL) * (specular + (mat.base_color * hit.material_param));
 }
 
-vec3 illuminate (_in(hit_t) hit)
+vec3 illuminate(_in(hit_t) hit)
 {
 	material_t mat = get_material(hit.material_id);
 
 	// special case for debug stuff - just solid paint it
 	if (hit.material_id == mat_debug) {
-		return materials [mat_debug].base_color;
+		return materials[mat_debug].base_color;
 	}
 
 	vec3 accum = ambient_light; // really cheap equivalent for indirect light 
-	vec3 V = normalize (eye - hit.origin); // view direction
+	vec3 V = normalize(eye - hit.origin); // view direction
 
 	for (int i = 0; i < num_lights; ++i) {
 #if 0
-		accum += illum_point_light_blinn_phong (V, lights [i], hit, mat);
+		accum += illum_point_light_blinn_phong(V, lights[i], hit, mat);
 #else
-		accum += illum_point_light_cook_torrance (V, lights [i], hit, mat);
+		accum += illum_point_light_cook_torrance(V, lights[i], hit, mat);
 #endif
 	}
 
 	return accum;
 }
 
-hit_t raytrace_iteration (_in(ray_t) ray, _in(int) mat_ignored)
+hit_t raytrace_iteration(_in(ray_t) ray, _in(int) mat_ignored)
 {
 	hit_t hit = no_hit;
 
 	for (int i = 0; i < num_planes; ++i) {
-		intersect_plane(ray, planes [i], hit);
+		intersect_plane(ray, planes[i], hit);
 	}
 
 	for (int i = 0; i < num_spheres; ++i) {
-		if (spheres [i].material != mat_invalid
-		&& spheres [i].material != mat_ignored) {
-			intersect_sphere(ray, spheres [i], hit);
+		if (spheres[i].material != mat_invalid
+			&& spheres[i].material != mat_ignored) {
+			intersect_sphere(ray, spheres[i], hit);
 		}
 	}
 
@@ -289,15 +298,15 @@ vec3 raytrace_render(_in(ray_t) ray)
 	}
 }
 
-vec3 raytrace_all (_in(ray_t) ray)
+vec3 raytrace_all(_in(ray_t) ray)
 {
-	hit_t hit = raytrace_iteration (ray, mat_invalid);
+	hit_t hit = raytrace_iteration(ray, mat_invalid);
 
 	if (hit.t >= max_dist) {
-		return background (ray);
+		return background(ray);
 	}
 
-#if 1
+#if 0
 	// 
 	//             _.-""""-._                 R0 primary ray
 	//           .'          `h2---R2-->h3    R1 inside ray
@@ -315,20 +324,20 @@ vec3 raytrace_all (_in(ray_t) ray)
 		vec3 color = vec3(0);
 
 		//TODO: proper fresnel
-        float facingratio = -dot(ray.direction, hit.normal);
-        // change the mix value to tweak the effect
-        float fresneleffect = mix(pow(1 - facingratio, 4), 1, 0.1);
-		
+		float facingratio = -dot(ray.direction, hit.normal);
+		// change the mix value to tweak the effect
+		float fresneleffect = mix(pow(1 - facingratio, 4), 1, 0.1);
+
 		float kr = fresneleffect;
 		float kt = 1. - kr;
-//return vec3 (kr);
+		//return vec3 (kr);
 		// reflection with 1 depth
 		if (kr * mat.reflectivity > 0.) {
 			vec3 refl_dir = reflect(ray.direction, hit.normal);
 			ray_t refl_ray = ray_t _begin
 				hit.origin + refl_dir * BIAS,
 				refl_dir
-			_end;
+				_end;
 			color += kr * mat.reflectivity * raytrace_render(refl_ray);
 		}
 
@@ -339,7 +348,7 @@ vec3 raytrace_all (_in(ray_t) ray)
 			ray_t inside_ray = ray_t _begin
 				hit.origin + inside_dir * BIAS,
 				inside_dir
-			_end;
+				_end;
 			hit_t inside_hit = raytrace_iteration(inside_ray, mat_invalid);
 
 			eta = mat.ior / 1./*air*/;
@@ -347,7 +356,7 @@ vec3 raytrace_all (_in(ray_t) ray)
 			ray_t outgoing_ray = ray_t _begin
 				inside_hit.origin + outgoing_dir * BIAS,
 				outgoing_dir
-			_end;
+				_end;
 
 			color += kt * mat.translucency * raytrace_render(outgoing_ray);
 		}
@@ -356,17 +365,17 @@ vec3 raytrace_all (_in(ray_t) ray)
 	}
 #endif
 
-	vec3 color = illuminate (hit);
+	vec3 color = illuminate(hit);
 
 #if 1 // shadow ray
-	vec3 sh_line = lights [0].origin - hit.origin;
-	vec3 sh_dir = normalize (sh_line);
+	vec3 sh_line = lights[0].origin - hit.origin;
+	vec3 sh_dir = normalize(sh_line);
 	ray_t sh_trace = ray_t _begin
 		hit.origin + sh_dir * BIAS,
 		sh_dir
-	_end;
-	hit_t sh_hit = raytrace_iteration (sh_trace, mat_debug);
-	if (sh_hit.t < length (sh_line)) {
+		_end;
+	hit_t sh_hit = raytrace_iteration(sh_trace, mat_debug);
+	if (sh_hit.t < length(sh_line)) {
 		color *= 0.1;
 	}
 #endif
@@ -374,30 +383,43 @@ vec3 raytrace_all (_in(ray_t) ray)
 	return color;
 }
 
-ray_t get_primary_ray (_in(vec3) cam_local_point, _in(vec3) cam_origin, _in(vec3) cam_look_at)
+ray_t get_primary_ray(_in(vec3) cam_local_point, _in(vec3) cam_origin, _in(vec3) cam_look_at)
 {
-	vec3 fwd = normalize (cam_look_at - cam_origin);
-	vec3 up = vec3 (0, 1, 0);
-	vec3 right = cross (up, fwd);
-	up = cross (fwd, right);
+	vec3 fwd = normalize(cam_look_at - cam_origin);
+	vec3 up = vec3(0, 1, 0);
+	vec3 right = cross(up, fwd);
+	up = cross(fwd, right);
 
 	return ray_t _begin
 		cam_origin,
-		normalize (
-			fwd +
-			up * cam_local_point.y +
-			right * cam_local_point.x
+		normalize(
+		fwd +
+		up * cam_local_point.y +
+		right * cam_local_point.x
 		)
-	_end;
+		_end;
 }
 
-float sd_plane(vec3 p)
+vec3 solve(vec3 p, float l1, float l2, vec3 dir)
 {
-	return p.y;
+	vec3 q = p*(0.5 + 0.5*(l1*l1 - l2*l2) / dot(p, p));
+
+	float s = l1*l1 - dot(q, q);
+	s = max(s, 0.0);
+	q += sqrt(s)*normalize(cross(p, dir));
+
+	return q;
+
+}
+
+vec3 solve(vec3 a, vec3 b, float l1, float l2, vec3 dir)
+{
+	return a + solve(b - a, l1, l2, dir);
 }
 
 float sd_sphere(vec3 p, float s)
 {
+	// distance to center of sphere offset by the radius
 	return length(p) - s;
 }
 
@@ -417,10 +439,16 @@ float sd_torus(vec3 p, vec2 t)
 	return length(vec2(length(p.xz) - t.x, p.y)) - t.y;
 }
 
-float sd_cylinder(vec3 p, vec2 h)
+float sd_y_cylinder(vec3 p, vec2 c)
 {
-	vec2 d = abs(vec2(length(p.xz),p.y)) - h;
-	return min(max(d.x,d.y),0.0) + length(max(d,0.0));
+#if 1
+	// distance to the Y axis, offset (aka inflated) by the cylinder radius
+	// then intersected with 2 cutting planes
+	return max(length(p.xz) - c.r, abs(p.y) - c.g / 2.);
+#else // iq
+	vec2 d = abs(vec2(length(p.xz), p.y)) - c;
+	return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
+#endif
 }
 
 float op_smin(float a, float b, float k)
@@ -444,82 +472,132 @@ vec3 op_mul(vec3 p, vec3 c)
 	return mod(p, c) - 0.5*c;
 }
 
-vec3 op_bend( vec3 p )
+float sd_plane(vec3 p, vec3 n, float d)
 {
-	float c = cos(20.0*p.y);
-	float s = sin(20.0*p.y);
-	mat2 m = mat2(c,-s,s,c);
-	vec3 q = vec3(m*p.xy,p.z);
-	return q;
+	// distance from point to plane
+	// http://mathworld.wolfram.com/Point-PlaneDistance.html
+	return dot(n, p) + d;
+}
+
+float sd_cylinder(vec3 P, vec3 P0, vec3 P1, float R)
+{
+	// distance to segment -- http://geomalgorithms.com/a02-_lines.html
+	// then cut it with 2 planes at the ends
+	// then offset it with radius    
+	vec3 dir = normalize(P1 - P0);
+	float dist = length(cross(dir, P - P0));
+	float plane_1 = sd_plane(P, dir, length(P1));
+	float plane_2 = sd_plane(P, -dir, length(P0));
+	return op_sub(op_sub(dist, plane_1), plane_2) - R;
 }
 
 vec2 sdf(_in(vec3) p)
 {
-	float s = sin (iGlobalTime);
-	float c = cos (iGlobalTime);
-	
-	vec2 op1 = vec2 (op_sub (
-		sd_box(p, vec3(1)),
-		sd_sphere(p, 1.25)),
-		cb_mat_red
-	);
-	vec2 op2 = op_add (
-		vec2 (
-			sd_sphere (p + vec3 (s, 0, 0), 0.5),
-			cb_mat_blue),
-		vec2 (
-			sd_sphere (p + vec3 (0, 0, c), 0.5),
-			cb_mat_red)
-	);
-	vec2 op3 = vec2 (
-		sd_sphere (p + vec3 (0, -c, 0), 0.5),
-		cb_mat_white
-	);
-	vec2 op4 = op_add (op1, op2);
-	
-	return op_add (op3, op4);
-}
+	lights[0] = point_light_t _begin
+		vec3(-1, 0, -0.5),
+		vec3(1., 1., 1.)
+		_end;
 
-vec2 sdf2 (_in(vec3) p)
-{
+	int material = mat_debug;
+
+	float egg_y = 0.45;
 	float op = op_smin(
-		//vec2 (
-			sd_sphere (p + vec3 (0, 0, 0), 0.8),
-		//	cb_mat_blue),
-		//vec2 (
-			sd_sphere (p - vec3 (0, 0.7, 0), 0.6),
-		//	cb_mat_red)
+		sd_sphere(p - vec3(0, 1. - egg_y, 0), 0.5),
+		sd_sphere(p - vec3(0, 1.45 - egg_y, 0), 0.3),
 		.5
-	);
-	
-	vec2 egg = vec2 (op, cb_mat_red);
-	
-	vec2 left_leg = vec2 (
-	 sd_cylinder (
-	 
-	p - vec3 (0.6, -1, 0), vec2 (.1, 1)), cb_mat_blue);
+		);
+	vec2 egg = vec2(op, material);
 
-	vec2 right_leg = 
-	vec2 (
-	sd_cylinder (
-	p - vec3 (-0.6, -1, 0), vec2 (.1, 1)), cb_mat_blue);
-	
-	vec2 legs = op_add (left_leg, right_leg);
-	
-	return op_add (egg, legs);
+	vec3 wheel_pos = vec3(0, 0.8, 0);
+	float pedal_radius = 0.3;
+	float pedal_speed = 300.;
+	float pedal_off = 0.2;
+
+	mat3 rot_z = rotate_around_z(-iGlobalTime * pedal_speed);
+	vec3 left_foot_pos = wheel_pos + rot_z * vec3(0, pedal_radius, -pedal_off);
+	vec2 left_foot = vec2(
+		sd_sphere(p + left_foot_pos, 0.1),
+		material);
+
+	rot_z = rotate_around_z(-iGlobalTime * pedal_speed);
+	vec3 right_foot_pos = wheel_pos + rot_z * vec3(0, -pedal_radius, pedal_off);
+	vec2 right_foot = vec2(
+		sd_sphere(p + right_foot_pos, 0.1),
+		material);
+
+	vec2 feet = op_add(left_foot, right_foot);
+
+	vec3 pelvis = vec3(0, 0., 0);
+	float femur = 0.7;
+	float tibia = 0.6;
+
+	vec3 knee_l = solve(pelvis, left_foot_pos, femur, tibia, vec3(0, 0, 1));
+	vec2 left_leg_a = vec2(
+		sd_cylinder(p, pelvis, knee_l, .05),
+		material);
+	vec2 left_leg_b = vec2(
+		sd_cylinder(p + knee_l, vec3(0), left_foot_pos - knee_l, .05),
+		material);
+
+	vec3 knee_r = solve(pelvis, right_foot_pos, femur, tibia, vec3(0, 0, 1));
+	vec2 right_leg_a = vec2(
+		sd_cylinder(p, pelvis, knee_r, .05),
+		material);
+	vec2 right_leg_b = vec2(
+		sd_cylinder(p + knee_r, vec3(0), right_foot_pos - knee_r, .05),
+		material);
+
+	vec2 legs = op_add(
+		vec2(op_smin(left_leg_a.x, left_leg_b.x, .01), material),
+		op_add(right_leg_a, right_leg_b));
+
+	mat3 rot = rotate_around_x(90.);
+	vec2 bike = vec2(
+		sd_torus(rot * (p + wheel_pos + vec3(0, 0.25, 0)), vec2(1., .03)),
+		cb_mat_white);
+
+	vec2 ground = vec2(
+		sd_plane(p, vec3(0, 1, 0), 2.2),
+		cb_mat_green);
+
+	return op_add(
+		ground,
+		op_add(legs, op_add(egg, op_add(feet, bike))));
 }
 
-vec3 sdf_normal (_in(vec3) p)
+vec3 sdf_normal(_in(vec3) p)
 {
 	float dt = 0.05;
-	vec3 x = vec3 (dt, 0, 0);
-	vec3 y = vec3 (0, dt, 0);
-	vec3 z = vec3 (0, 0, dt);
-	return normalize (vec3 (
-		sdf (p+x).r - sdf (p-x).r,
-		sdf (p+y).r - sdf (p-y).r,
-		sdf (p+z).r - sdf (p-z).r
-	));
+	vec3 x = vec3(dt, 0, 0);
+	vec3 y = vec3(0, dt, 0);
+	vec3 z = vec3(0, 0, dt);
+	return normalize(vec3(
+		sdf(p + x).r - sdf(p - x).r,
+		sdf(p + y).r - sdf(p - y).r,
+		sdf(p + z).r - sdf(p - z).r
+		));
+}
+
+float shadowmarch(_in(ray_t) ray)
+{
+	float t = 0.;
+	float umbra = 1.;
+
+	for (int i = 0; i < 30; i++) {
+		vec3 p = ray.origin + ray.direction * t;
+
+		vec2 d = sdf(p);
+		if (t > 10.) break;
+
+		if (d.x < 0.001) {
+			return 0.1;
+		}
+
+		t += d.x;
+		umbra = min(umbra, 48. * d.x / t);
+	}
+
+	return umbra;
 }
 
 vec3 raymarch(_in(ray_t) ray)
@@ -529,18 +607,27 @@ vec3 raymarch(_in(ray_t) ray)
 	for (int i = 0; i < 50; i++) {
 		vec3 p = ray.origin + ray.direction * t;
 
-		vec2 d = sdf2(p);
+		vec2 d = sdf(p);
 		if (t > 10.) break;
 
-		if (d.x < 0.002) {
+		if (d.x < 0.001) {
 			vec3 n = sdf_normal(p);
 			hit_t h = hit_t _begin
 				t, int(d.y), 1., p, n
 				_end;
 
+			float s = 1.;
+			if (int(d.y) == cb_mat_green) {
+				vec3 sh_dir = normalize(lights[0].origin - p);
+				ray_t sh_ray = ray_t _begin
+					p + sh_dir * 0.1, sh_dir
+					_end;
+				s = shadowmarch(sh_ray);
+			}
+
 			return
-			//vec3 (float(i)/50.);
-			illuminate(h);
+				//vec3 (float(i)/50.);
+				illuminate(h) * s;
 		}
 
 		t += d.x;
@@ -549,29 +636,29 @@ vec3 raymarch(_in(ray_t) ray)
 	return background(ray);
 }
 
-void main ()
+void main()
 {
-// The pipeline transform
-//
-// 1. gl_FragCoord is in raster space [0..resolution]
-// 2. convert to NDC [0..1] by dividing to the resolution
-// 3. convert to camera space:
-//  a. xy gets [-1, +1] by 2 * NDC - 1; z fixed at -1
-//  c. apply aspect & fov
-//  d. apply the look-at algoritm which will
-//     produce the 3 camera axis:
-//
-//      R   ^ +Y                  ^ +Y             E eye/ray origin
-//       .  |\                    |     . R        R primary ray
-//         .| \                   |   .            @ fov angle
-//   -Z     | .\   +Z             | .
-//    ------0---E--->   +X -------0-------> -X
-//          | @/                  |
-//          | /                   |
-//          |/                    | -Y
-//           -Y
-//
-// NOTE: everything is expressed in this space, NOT world
+	// The pipeline transform
+	//
+	// 1. fragCoord is in raster space [0..resolution]
+	// 2. convert to NDC [0..1] by dividing to the resolution
+	// 3. convert to camera space:
+	//  a. xy gets [-1, +1] by 2 * NDC - 1; z fixed at -1
+	//  c. apply aspect & fov
+	//  d. apply the look-at algoritm which will
+	//     produce the 3 camera axis:
+	//
+	//      R   ^ +Y                  ^ +Y             E eye/ray origin
+	//       .  |\                    |     . R        R primary ray
+	//         .| \                   |   .            @ fov angle
+	//   -Z     | .\   +Z             | .
+	//    ------0---E--->   +X -------0-------> -X
+	//          | @/                  |
+	//          | /                   |
+	//          |/                    | -Y
+	//           -Y
+	//
+	// NOTE: everything is expressed in this space, NOT world
 
 	// assuming screen width is larger than height 
 	vec2 aspect_ratio = vec2(iResolution.x / iResolution.y, 1);
@@ -605,7 +692,7 @@ void main ()
 	float q = iGlobalTime * 24.;
 	mat3 rot_y = rotate_around_y(q);
 	mat3 rot_x = rotate_around_x(q);
-	vec3 eye =  rot_y * vec3(0, 0, 4);
+	vec3 eye = vec3(2, 4, 6);
 	vec3 look_at = vec3(0);
 #endif
 
@@ -628,14 +715,14 @@ void main ()
 			/ float(MSAA_PASSES);
 	}
 
-	gl_FragColor = vec4 (corect_gamma (color), 1);
+	gl_FragColor = vec4(corect_gamma(color), 1);
 }
 
 void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit)
 {
 #if 1
-// geometrical solution
-// info: http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-7-intersecting-simple-shapes/ray-sphere-intersection/
+	// geometrical solution
+	// info: http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-7-intersecting-simple-shapes/ray-sphere-intersection/
 	vec3 rc = sphere.origin - ray.origin;
 	float radius2 = sphere.radius * sphere.radius;
 	float tca = dot(rc, ray.direction);
@@ -649,15 +736,15 @@ void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit)
 	if (t0 < 0.) t0 = t1;
 	if (t0 < hit.t) {
 #else // TODO: wrong for some reason... t gets weird values at intersection
-// analytical solution
-// based on combining the
-// sphere eq: (P - C)^2 = R^2
-// ray eq: P = O + t*D
-// into a quadratic eq: ax^2 + bx + c = 0
-// which can be solved by "completing the square" http://www.mathsisfun.com/algebra/completing-square.html
-// NOTE: be careful about "catastrophic cancellation" http://en.wikipedia.org/wiki/Loss_of_significance
+	// analytical solution
+	// based on combining the
+	// sphere eq: (P - C)^2 = R^2
+	// ray eq: P = O + t*D
+	// into a quadratic eq: ax^2 + bx + c = 0
+	// which can be solved by "completing the square" http://www.mathsisfun.com/algebra/completing-square.html
+	// NOTE: be careful about "catastrophic cancellation" http://en.wikipedia.org/wiki/Loss_of_significance
 	vec3 rc = ray.origin - sphere.origin;
-//	float a = D dot D -- which is 1 because D is normalised
+	//	float a = D dot D -- which is 1 because D is normalised
 	float b = 2.0 * dot(rc, ray.direction); // 2 * (O - C) dot D
 	float c = dot(rc, rc) - sphere.radius * sphere.radius; // (O - C)^2 - R^2
 	float discr = b * b - 4.0 * c;
@@ -686,7 +773,7 @@ void intersect_plane(_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit)
 	float denom = dot(p.direction, ray.direction);
 	if (denom > 1e-6)
 	{
-		float t = dot(vec3 (p.distance) - ray.origin, p.direction) / denom;
+		float t = dot(vec3(p.distance) - ray.origin, p.direction) / denom;
 		if (t >= 0.0 && t < hit.t)
 		{
 			vec3 impact = ray.origin + ray.direction * t;
@@ -729,7 +816,7 @@ void intersect_plane(_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit)
 //
 float fresnel_factor(_in(float) n1, _in(float) n2, _in(float) VdotH)
 {
-// using Schlick’s approximation    
+	// using Schlick’s approximation    
 	float Rn = (n1 - n2) / (n1 + n2);
 	float R0 = Rn * Rn; // reflection coefficient for light incoming parallel to the normal
 	float F = 1. - VdotH;
@@ -747,16 +834,24 @@ vec3 reflect(_in(vec3) incident, _in(vec3) normal)
 	return incident - 2. * dot(normal, incident) * normal;
 }
 
-vec3 refract (_in(vec3) incident, _in(vec3) normal, _in(float) n)
+vec3 refract(_in(vec3) incident, _in(vec3) normal, _in(float) n)
 {
-	float cosi = -dot ( normal, incident);
+	float cosi = -dot(normal, incident);
 	float sint2 = n * n * (1. - cosi * cosi);
 	if (sint2 > 1.) {
-		return reflect (incident, normal); // Total Internal Reflection - TODO: is this ok?
+		return reflect(incident, normal); // Total Internal Reflection - TODO: is this ok?
 	}
-	return n * incident + (n * cosi - sqrt (1. - sint2)) * normal;
+	return n * incident + (n * cosi - sqrt(1. - sint2)) * normal;
 }
 #endif
+
+mat3 rotate_around_z(_in(float) angle_degrees)
+{
+	float angle = radians(angle_degrees);
+	float _sin = sin(angle);
+	float _cos = cos(angle);
+	return mat3(_cos, -_sin, 0, _sin, _cos, 0, 0, 0, 1);
+}
 
 mat3 rotate_around_y(_in(float) angle_degrees)
 {
@@ -771,13 +866,13 @@ mat3 rotate_around_x(_in(float) angle_degrees)
 	float angle = radians(angle_degrees);
 	float _sin = sin(angle);
 	float _cos = cos(angle);
-	return mat3 (1, 0, 0, 0, _cos, -_sin, 0, _sin, _cos);
+	return mat3(1, 0, 0, 0, _cos, -_sin, 0, _sin, _cos);
 }
 
 vec3 corect_gamma(_in(vec3) color)
 {
 	float gamma = 1.0 / 2.25;
-	return vec3 (pow(color.r, gamma), pow(color.g, gamma),pow(color.b, gamma));
+	return vec3(pow(color.r, gamma), pow(color.g, gamma), pow(color.b, gamma));
 }
 
 material_t get_material(_in(int) index)
