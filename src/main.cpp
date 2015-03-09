@@ -510,7 +510,7 @@ vec2 sdf(_in(vec3) p)
 
 	vec3 wheel_pos = vec3(0, 0.8, 0);
 	float pedal_radius = 0.3;
-	float pedal_speed = 300.;
+	float pedal_speed = 30.;
 	float pedal_off = 0.2;
 
 	mat3 rot_z = rotate_around_z(-iGlobalTime * pedal_speed);
@@ -562,7 +562,8 @@ vec2 sdf(_in(vec3) p)
 
 	return op_add(
 		ground,
-		op_add(legs, op_add(egg, op_add(feet, bike))));
+		op_add(legs, op_add(egg, op_add(feet, bike)))
+	);
 }
 
 vec3 sdf_normal(_in(vec3) p)
@@ -603,14 +604,18 @@ float shadowmarch(_in(ray_t) ray)
 vec3 raymarch(_in(ray_t) ray)
 {
 	float t = 0.;
+	int steps = 50;
 
-	for (int i = 0; i < 50; i++) {
+	for (int i = 0; i < steps; i++) {
 		vec3 p = ray.origin + ray.direction * t;
 
 		vec2 d = sdf(p);
 		if (t > 10.) break;
 
-		if (d.x < 0.001) {
+		if (d.x < 0.01) {
+#if 1
+			return vec3 (float(i) / float(steps));
+#else
 			vec3 n = sdf_normal(p);
 			hit_t h = hit_t _begin
 				t, int(d.y), 1., p, n
@@ -624,10 +629,9 @@ vec3 raymarch(_in(ray_t) ray)
 					_end;
 				s = shadowmarch(sh_ray);
 			}
-
-			return
-				//vec3 (float(i)/50.);
-				illuminate(h) * s;
+			
+			return illuminate(h) * s;
+#endif
 		}
 
 		t += d.x;
@@ -692,7 +696,7 @@ void main()
 	float q = iGlobalTime * 24.;
 	mat3 rot_y = rotate_around_y(q);
 	mat3 rot_x = rotate_around_x(q);
-	vec3 eye = vec3(2, 4, 6);
+	vec3 eye = vec3(0, 0, 4);
 	vec3 look_at = vec3(0);
 #endif
 
