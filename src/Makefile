@@ -6,8 +6,8 @@ all: raytracer
 
 # Compile the binary by calling the compiler with cflags, lflags, and any libs (if defined) and the list of objects.
 raytracer: $(OBJS)
-	$(CXX) $(CFLAGS) -o raytracer $(OBJS) $(LFLAGS) $(LIBS)
+	$(CXX) $(CXXFLAGS) -o raytracer $(OBJS) $(LFLAGS) $(LIBS)
 
 # Get a .o from a .cpp by calling compiler with cflags and includes (if defined)
 .cpp.o:
-	$(CXX) $(CFLAGS) $(INCLUDES) -c $<
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<
