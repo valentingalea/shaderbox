@@ -162,10 +162,10 @@ void setup_scene()
 		_end;
 
 #if 0
-	float _sin = sin (iGlobalTime);
-	float _cos = cos (iGlobalTime);
+	float _sin = sin(iGlobalTime);
+	float _cos = cos(iGlobalTime);
 	//	spheres[cb_sphere_left].origin += vec3 (_sin - 0.5, abs (_sin), _cos);
-	spheres[cb_sphere_right].origin += vec3 (_sin + 0.5, abs (_cos), _cos);
+	spheres[cb_sphere_right].origin += vec3(_sin + 0.5, abs(_cos), _cos);
 #endif
 }
 
@@ -411,24 +411,35 @@ vec3 ik_2_bone_centered_solver(vec3 goal, float L1, float L2)
 
 	return q;
 #else // naive version with law of cosines
-    float G = length(goal);
-    float cos_theta = (L1*L1 + G*G - L2*L2) / (2.*L1*G);
-    float sin_theta = sqrt(1. - cos_theta * cos_theta);
-    
-    mat3 rot = mat3(
-        cos_theta, -sin_theta, 0,
-        sin_theta, cos_theta, 0,
-        0, 0, 1.
-    );
-    
-	return rot * (normalize(goal) * L1);    
+	float G = length(goal);
+
+	// tetha is the angle between bone1 and goal direction
+	// get it from law of cosines applied to the
+	// triangle with sides: bone1, bone2, pivot_of_bone1<->goal
+	float cos_theta = (L1*L1 + G*G - L2*L2) / (2.*L1*G);
+
+	// sin^2 + cos^2 = 1 (Pythagoras in unit circle)
+	float sin_theta = sqrt(1. - cos_theta * cos_theta);
+
+	// rotation matrix by theta amount around the axis
+	// perpendicular to the plane created by bone1 and bone2
+	mat3 rot = mat3(
+		cos_theta, -sin_theta, 0,
+		sin_theta, cos_theta, 0,
+		0, 0, 1.
+		);
+
+	// get the end of bone1 aka the pivot of bone2
+	// by getting a vector from the goal direction
+	// and rotating along with the newly found theta angle
+	return rot * (normalize(goal) * L1);
 #endif
 }
 
 vec3 ik_solver(vec3 start, vec3 goal, float bone_length_1, float bone_length_2)
 {
 	return start + ik_2_bone_centered_solver(
-        goal - start, bone_length_1, bone_length_2);
+		goal - start, bone_length_1, bone_length_2);
 }
 
 float sd_sphere(vec3 p, float s)
@@ -507,16 +518,17 @@ float sd_cylinder(vec3 P, vec3 P0, vec3 P1, float R)
 
 vec2 sdf(_in(vec3) P)
 {
-    vec3 p = P - vec3(0, 0.5, 0);
+	vec3 p = rotate_around_y(iGlobalTime * -50.0) * P -
+		vec3(0, 0.5, 1.75);
 
 	int material = cb_mat_red;
 
 	float egg_y = 0.65;
 	float egg_m = sd_sphere(p - vec3(0, egg_y, 0), 0.475);
-    float egg_b = sd_sphere(p - vec3(0, egg_y - 0.45, 0), 0.25);
-    float egg_t = sd_sphere(p - vec3(0, egg_y + 0.45, 0), 0.25);
-    float egg_1 = op_smin(egg_m, egg_b, .5);
-    float egg_2 = op_smin(egg_1, egg_t, .5);
+	float egg_b = sd_sphere(p - vec3(0, egg_y - 0.45, 0), 0.25);
+	float egg_t = sd_sphere(p - vec3(0, egg_y + 0.45, 0), 0.25);
+	float egg_1 = op_smin(egg_m, egg_b, .5);
+	float egg_2 = op_smin(egg_1, egg_t, .5);
 	vec2 egg = vec2(egg_2, material);
 
 	vec3 wheel_pos = vec3(0, 1.2, 0);
@@ -530,10 +542,10 @@ vec2 sdf(_in(vec3) P)
 	rot_z = rotate_around_z(-iGlobalTime * pedal_speed);
 	vec3 right_foot_pos = wheel_pos + rot_z * vec3(0, -pedal_radius, -pedal_off);
 
-	vec3 side = vec3(0, 0, pedal_off);    
+	vec3 side = vec3(0, 0, pedal_off);
 	float femur = 0.8;
 	float tibia = 0.75;
-    float thick = .05;
+	float thick = .05;
 
 	vec3 pelvis = vec3(0, 0., 0) + side;
 	vec3 knee_l = ik_solver(pelvis, left_foot_pos, femur, tibia);
@@ -543,8 +555,8 @@ vec2 sdf(_in(vec3) P)
 	vec2 left_leg_b = vec2(
 		sd_cylinder(p + knee_l, vec3(0), left_foot_pos - knee_l, thick),
 		material);
-    
-    pelvis = vec3(0, 0., 0) - side;
+
+	pelvis = vec3(0, 0., 0) - side;
 	vec3 knee_r = ik_solver(pelvis, right_foot_pos, femur, tibia);
 	vec2 right_leg_a = vec2(
 		sd_cylinder(p + pelvis, vec3(0), knee_r + side, thick),
@@ -557,37 +569,37 @@ vec2 sdf(_in(vec3) P)
 		vec2(op_smin(left_leg_a.x, left_leg_b.x, .01), material),
 		op_add(right_leg_a, right_leg_b));
 
-    vec3 left_toe = normalize(vec3(left_foot_pos.y - knee_l.y, knee_l.x - left_foot_pos.x, 0));
+	vec3 left_toe = normalize(vec3(left_foot_pos.y - knee_l.y, knee_l.x - left_foot_pos.x, 0));
 	vec2 left_foot = vec2(
 		//sd_sphere(p + left_foot_pos, 0.1),
-        sd_cylinder(p + left_foot_pos, vec3(0), left_toe / 8., thick),
+		sd_cylinder(p + left_foot_pos, vec3(0), left_toe / 8., thick),
 		material);
-    
-    vec3 right_toe = normalize(vec3(right_foot_pos.y - knee_r.y, knee_r.x - right_foot_pos.x, 0));
+
+	vec3 right_toe = normalize(vec3(right_foot_pos.y - knee_r.y, knee_r.x - right_foot_pos.x, 0));
 	vec2 right_foot = vec2(
 		//sd_sphere(p + right_foot_pos, 0.1),
-        sd_cylinder(p + right_foot_pos, vec3(0), right_toe / 8., thick),
+		sd_cylinder(p + right_foot_pos, vec3(0), right_toe / 8., thick),
 		material);
 
 	vec2 feet = op_add(left_foot, right_foot);
-    
+
 	mat3 rot = rotate_around_x(90.);
 	vec2 bike = vec2(
 		sd_torus(rot * (p + wheel_pos), vec2(1., .025)),
 		cb_mat_white);
 
 	vec2 ground = vec2(
-		sd_plane(p, vec3(0, 1, 0), 2.2),
+		sd_plane(P, vec3(0, 1, 0), wheel_pos.y + 0.5),
 		cb_mat_green);
-    
-    // debug
-    vec2 origin = vec2(sd_sphere(p, .1), mat_debug);
-    //vec2 kr = vec2(sd_sphere(p + knee_r, .1), mat_debug);
-    vec2 debug = origin;//op_add(origin, debug_light);
 
-	return //op_add(
-		op_add(ground, debug),
-		op_add(legs, op_add(egg, op_add(feet, bike)));
+	// debug
+	//vec2 origin = vec2(sd_sphere(p, .1), mat_debug);
+	//vec2 kr = vec2(sd_sphere(p + knee_r, .1), mat_debug);
+	//vec2 debug = origin;//op_add(origin, debug_light);
+
+	return op_add(
+		ground,
+		op_add(legs, op_add(egg, op_add(feet, bike))));
 }
 
 vec3 sdf_normal(_in(vec3) p)
@@ -600,7 +612,7 @@ vec3 sdf_normal(_in(vec3) p)
 		sdf(p + x).r - sdf(p - x).r,
 		sdf(p + y).r - sdf(p - y).r,
 		sdf(p + z).r - sdf(p - z).r
-	));
+		));
 }
 
 float shadowmarch(_in(ray_t) ray)
@@ -637,8 +649,8 @@ vec3 raymarch(_in(ray_t) ray)
 		if (t > 10.) break;
 
 		if (d.x < 0.01) {
-#if 0
-			return vec3 (float(i) / float(steps));
+#if 1
+			return vec3(float(i) / float(steps));
 #else
 			vec3 n = sdf_normal(p);
 			hit_t h = hit_t _begin
@@ -653,7 +665,7 @@ vec3 raymarch(_in(ray_t) ray)
 					_end;
 				s = shadowmarch(sh_ray);
 			}
-			
+
 			return illuminate(h) * s;
 #endif
 		}
@@ -664,7 +676,7 @@ vec3 raymarch(_in(ray_t) ray)
 	return background(ray);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
+void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 {
 	// The pipeline transform
 	//
@@ -720,7 +732,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	float q = iGlobalTime * 50.;
 	mat3 rot_y = rotate_around_y(q);
 	mat3 rot_x = rotate_around_x(q);
-	vec3 eye = rot_y * vec3(1, 2, 5);
+	vec3 eye = vec3(1, 2, 5);
 	vec3 look_at = vec3(0);
 #endif
 
