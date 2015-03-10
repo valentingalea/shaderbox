@@ -94,7 +94,7 @@ static int renderThread(void*)
                     // vvvvvvvvvvvvvvvvvvvvvvvvvv
                     // THE SHADER IS INVOKED HERE
                     // ^^^^^^^^^^^^^^^^^^^^^^^^^^
-                    shader();
+					shader.mainImage(shader.gl_FragColor, shader.gl_FragCoord);
 
                     auto color = glsl_sandbox::clamp(shader.gl_FragColor, 0.0f, 1.0f);
 

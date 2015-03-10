@@ -668,7 +668,7 @@ vec3 raymarch(_in(ray_t) ray)
 	return background(ray);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
+void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 {
 	// The pipeline transform
 	//
@@ -926,9 +926,6 @@ material_t get_material(_in(int) index)
 	// be a dear a clean up
 #pragma warning(pop)
 #undef main
-#undef in
-#undef out
-#undef inout
 #undef uniform
 }
 

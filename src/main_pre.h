@@ -48,14 +48,6 @@ private:
 // this where the magic happens...
 namespace glsl_sandbox
 {
-    // a nested namespace used when redefining 'inout' and 'out' keywords
-    namespace ref
-    {
-        typedef ::vec2& vec2;
-        typedef ::vec3& vec3;
-        typedef ::vec4& vec4;
-    }
-
     #include <swizzle/glsl/vector_functions.h>
 
     // constants shaders are using
@@ -75,15 +67,12 @@ namespace glsl_sandbox
     {
         vec2 gl_FragCoord;
         vec4 gl_FragColor;
-        void operator()(void);
+		void mainImage(vec4 &fragColor, const vec2 &fragCoord);
     };
 
     // change meaning of glsl keywords to match sandbox
     #define uniform extern
-    #define in
-    #define out ref::
-    #define inout ref::
-    #define main fragment_shader::operator()
+    #define mainImage fragment_shader::mainImage
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
