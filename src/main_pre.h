@@ -18,6 +18,8 @@ typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 2, 2>
 typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 3, 3> mat3;
 typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 4, 4> mat4;
 
+#define OMP_ENABLED 1
+
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
 class sampler2D : public swizzle::glsl::texture_functions::tag

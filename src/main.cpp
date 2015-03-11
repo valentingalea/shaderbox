@@ -949,7 +949,7 @@ material_t get_material(_in(int) index)
 #include <time.h>
 #include <memory>
 #include <functional>
-#if OMP_ENABLED
+#ifdef OMP_ENABLED
 #include <omp.h>
 #endif
 
