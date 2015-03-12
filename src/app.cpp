@@ -84,7 +84,7 @@ namespace glsl_sandbox
 #undef uniform
 }
 
-#define OMP_ENABLED 1
+//#define OMP_ENABLED 1
 
 // these headers, especially SDL.h & time.h set up names that are in conflict
 // with sandbox'es;
