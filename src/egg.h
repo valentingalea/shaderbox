@@ -266,7 +266,7 @@ float shadowmarch(_in(ray_t) ray) // from http://iquilezles.org/www/articles/rms
 
 vec3 raymarch(_in(ray_t) ray)
 {
-	const int steps = 50;
+	const int steps = 75;
 	const float end = 15.;
 
 	float t = 0.;
