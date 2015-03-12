@@ -146,12 +146,27 @@ vec2 sdf(_in(vec3) P)
 	int material = mat_egg;
 
 	float egg_y = 0.65;
+#if 0
 	float egg_m = sd_sphere(p - vec3(0, egg_y, 0), 0.475);
 	float egg_b = sd_sphere(p - vec3(0, egg_y - 0.45, 0), 0.25);
 	float egg_t = sd_sphere(p - vec3(0, egg_y + 0.45, 0), 0.25);
 	float egg_1 = op_blend(egg_m, egg_b, .5);
 	float egg_2 = op_blend(egg_1, egg_t, .5);
 	vec2 egg = vec2(egg_2, material);
+#else
+    float s = 1.55;
+    mat3 scale = mat3(
+        s, 0, 0,
+        0, 1, 0,
+        0, 0, 1);
+    mat3 iscale = mat3(
+        1./s, 0, 0,
+        0, 1./s, 0,
+        0, 0, 1.);
+    vec2 egg = vec2(
+        sd_sphere(iscale * (scale * (p - vec3(0, egg_y, 0))), 0.475),
+        material);
+#endif
 
 	vec3 wheel_pos = vec3(0, 1.2, 0);
 	float pedal_radius = 0.3;
