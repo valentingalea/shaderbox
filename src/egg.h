@@ -52,6 +52,18 @@ void setup_scene()
 #define mat_ground 3
 }
 
+vec3 illuminate(_in(hit_t) hit)
+{
+#if 0 // debug: output the raymarching steps
+	return vec3(hit.material_param);
+#endif
+
+	if (hit.material_id == mat_ground) return vec3(13. / 255., 104. / 255., 0. / 255.);
+	if (hit.material_id == mat_egg) return vec3(0.95);
+	if (hit.material_id == mat_bike) return vec3(.2);
+	return vec3(1);
+}
+
 vec2 op_add(vec2 d1, vec2 d2) // union
 {
 	// minimum distance
@@ -222,24 +234,27 @@ vec3 sdf_normal(_in(vec3) p)
 		sdf(p + x).r - sdf(p - x).r,
 		sdf(p + y).r - sdf(p - y).r,
 		sdf(p + z).r - sdf(p - z).r
-		));
+	));
 }
+
+#define EPSILON 0.001
 
 float shadowmarch(_in(ray_t) ray) // from http://iquilezles.org/www/articles/rmshadows/rmshadows.htm
 {
-	const int steps = 30;
-	const float penumbra_factor = 48.;
+	const int steps = 20;
+	const float end = 10.;
+	const float penumbra_factor = 15.;
+	const float darkest = 0.1;
 
 	float t = 0.;
 	float umbra = 1.;
-
 	for (int i = 0; i < steps; i++) {
 		vec3 p = ray.origin + ray.direction * t;
 		vec2 d = sdf(p);
 
-		if (t > 10.) break;
-		if (d.x < 0.001) {
-			return 0.1;
+		if (t > end) break;
+		if (d.x < EPSILON) {
+			return darkest;
 		}
 
 		t += d.x;
@@ -251,16 +266,36 @@ float shadowmarch(_in(ray_t) ray) // from http://iquilezles.org/www/articles/rms
 
 vec3 raymarch(_in(ray_t) ray)
 {
-	float t = 0.;
 	const int steps = 50;
+	const float end = 15.;
 
+	float t = 0.;
 	for (int i = 0; i < steps; i++) {
 		vec3 p = ray.origin + ray.direction * t;
 		vec2 d = sdf(p);
 
-		if (t > 10.) break;
-		if (d.x < 0.01) {
-			return vec3(float(i) / float(steps));
+		if (t > end) break;
+		if (d.x < EPSILON) {
+			hit_t h = hit_t _begin
+				t, // ray length at impact
+				int(d.y), // material id
+				float(i) / float(steps), // material custom param
+				p, // point of impact
+				vec3(0) // sdf_normal(p);
+			_end;
+
+			float s = 1.;
+#if 1 // soft shadows
+			if (int(d.y) == mat_ground) {
+				vec3 sh_dir = vec3(0, 1, 1);
+				ray_t sh_ray = ray_t _begin
+					p + sh_dir * 0.05, sh_dir
+				_end;
+				s = shadowmarch(sh_ray);
+			}
+#endif
+
+			return illuminate(h) * s;
 		}
 
 		t += d.x;
@@ -350,7 +385,7 @@ ray_t get_primary_ray(_in(vec3) cam_local_point, _in(vec3) cam_origin, _in(vec3)
 	return ray_t _begin
 		cam_origin,
 		normalize(fwd + up * cam_local_point.y + right * cam_local_point.x)
-		_end;
+	_end;
 }
 
 vec3 ik_2_bone_centered_solver(vec3 goal, float L1, float L2)
