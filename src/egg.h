@@ -66,23 +66,31 @@ vec3 illuminate(_in(hit_t) hit)
 
 vec2 op_add(vec2 d1, vec2 d2) // union
 {
-	// minimum distance
+	// minimum distance (preserving material info)
 	return d1.x < d2.x ? d1 : d2;
 }
 
 float op_sub(float d1, float d2) // difference
 {
-	// TODO: see original paper
-	// diff between first and complement of the second fields
+	// intersection between first and
+	// complement of the second field
 	// aka the second 'carved out' from the first
 	return max(d1, -d2);
 }
 
 float op_intersect(float d1, float d2)
 {
-	// TODO: see original paper
 	// what's common for both fields
 	return max(d1, d2);
+}
+
+float op_blend(float a, float b, float k)
+{
+	// esentially liniar blend but more fancy
+	// from http://iquilezles.org/www/articles/smin/smin.htm
+	// NOTE: not true distance but estimate
+	float h = clamp(0.5 + 0.5*(b - a) / k, 0.0, 1.0);
+	return mix(b, a, h) - k*h*(1.0 - h);
 }
 
 float sd_plane(vec3 p, vec3 n, float d)
@@ -104,17 +112,18 @@ float sd_box(vec3 p, vec3 b)
 	return max(abs(p.x) - b.x, max(abs(p.y) - b.y, abs(p.z) - b.z));
 }
 
-float sd_torus(vec3 p, vec2 t) // around y axis
+float sd_torus(vec3 p, float R, float r) // around z axis
 {
-	// TODO: visualise this
-	return length(vec2(length(p.xz) - t.x, p.y)) - t.y;
+	// projected circle of radius R on xy plane
+	// combined with circle of radius r around z axis
+	return length(vec2(length(p.xy) - R, p.z)) - r;
 }
 
-float sd_y_cylinder(vec3 p, vec2 c)
+float sd_y_cylinder(vec3 p, float r, float h)
 {
 	// distance to the Y axis, offset (aka inflated) by the cylinder radius
 	// then intersected with 2 cutting planes
-	return max(length(p.xz) - c.r, abs(p.y) - c.g / 2.);
+	return max(length(p.xz) - r, abs(p.y) - h / 2.);
 }
 
 float sd_cylinder(vec3 P, vec3 P0, vec3 P1, float R)
@@ -127,15 +136,6 @@ float sd_cylinder(vec3 P, vec3 P0, vec3 P1, float R)
 	float plane_1 = sd_plane(P, dir, length(P1));
 	float plane_2 = sd_plane(P, -dir, -length(P0));
 	return op_sub(op_sub(dist, plane_1), plane_2) - R;
-}
-
-float op_blend(float a, float b, float k)
-{
-	// esentially liniar blend but more fancy
-	// from http://iquilezles.org/www/articles/smin/smin.htm
-	// NOTE: not true distance but estimate
-	float h = clamp(0.5 + 0.5*(b - a) / k, 0.0, 1.0);
-	return mix(b, a, h) - k*h*(1.0 - h);
 }
 
 vec2 sdf(_in(vec3) P)
@@ -193,31 +193,23 @@ vec2 sdf(_in(vec3) P)
 
 	vec3 left_toe = normalize(vec3(left_foot_pos.y - knee_l.y, knee_l.x - left_foot_pos.x, 0));
 	vec2 left_foot = vec2(
-		//sd_sphere(p + left_foot_pos, 0.1),
 		sd_cylinder(p + left_foot_pos, vec3(0), left_toe / 8., thick),
 		material);
 
 	vec3 right_toe = normalize(vec3(right_foot_pos.y - knee_r.y, knee_r.x - right_foot_pos.x, 0));
 	vec2 right_foot = vec2(
-		//sd_sphere(p + right_foot_pos, 0.1),
 		sd_cylinder(p + right_foot_pos, vec3(0), right_toe / 8., thick),
 		material);
 
 	vec2 feet = op_add(left_foot, right_foot);
 
-	mat3 rot = rotate_around_x(90.);
 	vec2 bike = vec2(
-		sd_torus(rot * (p + wheel_pos), vec2(1., .025)),
+		sd_torus(p + wheel_pos, 1., .025),
 		mat_bike);
 
 	vec2 ground = vec2(
 		sd_plane(P, vec3(0, 1, 0), wheel_pos.y + 0.5),
 		mat_ground);
-
-	// debug
-	//vec2 origin = vec2(sd_sphere(p, .1), mat_debug);
-	//vec2 kr = vec2(sd_sphere(p + knee_r, .1), mat_debug);
-	//vec2 debug = origin;//op_add(origin, debug_light);
 
 	return op_add(
 		ground,
