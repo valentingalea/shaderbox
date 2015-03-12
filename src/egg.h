@@ -86,7 +86,6 @@ float op_intersect(float d1, float d2)
 
 float op_blend(float a, float b, float k)
 {
-	// esentially liniar blend but more fancy
 	// from http://iquilezles.org/www/articles/smin/smin.htm
 	// NOTE: not true distance but estimate
 	float h = clamp(0.5 + 0.5*(b - a) / k, 0.0, 1.0);
@@ -219,7 +218,7 @@ vec2 sdf(_in(vec3) P)
 	vec2 feet = op_add(left_foot, right_foot);
 
 	vec2 bike = vec2(
-		sd_torus(p + wheel_pos, 1., .025),
+		sd_torus(p + wheel_pos, 1., .03),
 		mat_bike);
 
 	vec2 ground = vec2(
@@ -246,7 +245,7 @@ vec3 sdf_normal(_in(vec3) p)
 
 #define EPSILON 0.001
 
-float shadowmarch(_in(ray_t) ray) // from http://iquilezles.org/www/articles/rmshadows/rmshadows.htm
+float shadowmarch(_in(ray_t) ray)
 {
 	const int steps = 20;
 	const float end = 10.;
@@ -265,6 +264,8 @@ float shadowmarch(_in(ray_t) ray) // from http://iquilezles.org/www/articles/rms
 		}
 
 		t += d.x;
+		
+		// from http://iquilezles.org/www/articles/rmshadows/rmshadows.htm
 		umbra = min(umbra, penumbra_factor * d.x / t);
 	}
 
