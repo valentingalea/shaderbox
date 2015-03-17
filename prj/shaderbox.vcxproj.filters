@@ -38,4 +38,12 @@
       <Filter>Source Files</Filter>
     </Text>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\ref\ldS3DW.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\src\ref\XsXXDB.glsl">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

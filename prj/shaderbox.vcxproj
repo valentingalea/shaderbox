@@ -98,6 +98,10 @@
   <ItemGroup>
     <Text Include="..\src\Makefile" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\ref\ldS3DW.glsl" />
+    <None Include="..\src\ref\XsXXDB.glsl" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
