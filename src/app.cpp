@@ -47,6 +47,14 @@ private:
 // this where the magic happens...
 namespace glsl_sandbox
 {
+	// a nested namespace used when redefining 'inout' and 'out' keywords
+	namespace ref
+	{
+		typedef ::vec2& vec2;
+		typedef ::vec3& vec3;
+		typedef ::vec4& vec4;
+	}
+
 #include <swizzle/glsl/vector_functions.h>
 
 	// constants shaders are using
@@ -59,9 +67,6 @@ namespace glsl_sandbox
 	float& iGlobalTime = time;
 	vec2& iMouse = mouse;
 
-	sampler2D diffuse("diffuse.png", sampler2D::Repeat);
-	sampler2D specular("specular.png", sampler2D::Repeat);
-
 	struct fragment_shader
 	{
 		vec2 gl_FragCoord;
@@ -71,6 +76,9 @@ namespace glsl_sandbox
 
 	// change meaning of glsl keywords to match sandbox
 #define uniform extern
+#define in
+#define out ref::
+#define inout ref::
 #define mainImage fragment_shader::mainImage
 
 #pragma warning(push)
@@ -80,7 +88,10 @@ namespace glsl_sandbox
 #include "egg.h"
 	
 #pragma warning(pop)
-#undef main
+#undef mainImage
+#undef in
+#undef out
+#undef inout
 #undef uniform
 }
 
