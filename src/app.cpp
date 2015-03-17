@@ -85,7 +85,7 @@ namespace glsl_sandbox
 #pragma warning(disable: 4244) // disable return implicit conversion warning
 #pragma warning(disable: 4305) // disable truncation warning
 
-#include "egg.h"
+#include "app_egg.h"
 	
 #pragma warning(pop)
 #undef mainImage
