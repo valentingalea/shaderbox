@@ -91,7 +91,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\egg.h" />
+    <ClInclude Include="..\src\app_egg.h" />
     <ClInclude Include="..\src\main_post.h" />
     <ClInclude Include="..\src\main_pre.h" />
   </ItemGroup>

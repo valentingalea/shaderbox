@@ -29,7 +29,7 @@
     <ClInclude Include="..\src\main_pre.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\egg.h">
+    <ClInclude Include="..\src\app_egg.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
