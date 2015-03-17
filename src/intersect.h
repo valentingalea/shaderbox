@@ -1,3 +1,15 @@
+struct sphere_t {
+	vec3 origin;
+	float radius;
+	int material;
+};
+
+struct plane_t {
+	vec3 direction;
+	float distance;
+	int material;
+};
+
 void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit)
 {
 #if 1

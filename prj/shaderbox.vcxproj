@@ -92,12 +92,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\app_egg.h" />
+    <ClInclude Include="..\src\app_raytracer.h" />
+    <ClInclude Include="..\src\cornell_box.h" />
     <ClInclude Include="..\src\def.h" />
     <ClInclude Include="..\src\IK.h" />
     <ClInclude Include="..\src\intersect.h" />
+    <ClInclude Include="..\src\light.h" />
     <ClInclude Include="..\src\main.h" />
-    <ClInclude Include="..\src\main_post.h" />
-    <ClInclude Include="..\src\main_pre.h" />
+    <ClInclude Include="..\src\material.h" />
     <ClInclude Include="..\src\sdf.h" />
     <ClInclude Include="..\src\util.h" />
     <ClInclude Include="..\src\util_optics.h" />

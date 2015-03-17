@@ -34,3 +34,5 @@ _end;
 
 #define BIAS 1e-4 // small offset to add to ray when retracing to avoid self-intersection
 #define PI 3.14159265359
+
+vec3 eye, look_at;

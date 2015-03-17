@@ -59,7 +59,6 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 
 	vec3 color = vec3(0);
 
-	vec3 eye, look_at;
 	setup_camera(eye, look_at);
 
 	setup_scene();
