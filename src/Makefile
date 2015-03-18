@@ -1,9 +1,11 @@
-all: raytracer
+raytracer: raytracer.o
+	$(CXX) $(CXXFLAGS) -o raytracer raytracer.o $(LFLAGS) $(LIBS)
 
-# Compile the binary by calling the compiler with cflags, lflags, and any libs (if defined) and the list of objects.
-raytracer: app.o
-	$(CXX) $(CXXFLAGS) -o raytracer app.o $(LFLAGS) $(LIBS)
+raytracer.o : app.cpp app_raytracer.h main.h def.h util.h util_optics.h material.h light.h intersect.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_RAYTRACER -c $<
 
-# Get a .o from a .cpp by calling compiler with cflags and includes (if defined)
-app.o : app.cpp egg.h
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<
+egg: egg.o
+	$(CXX) $(CXXFLAGS) -o egg egg.o $(LFLAGS) $(LIBS)
+
+egg.o : app.cpp app_egg.h main.h def.h util.h IK.h sdf.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_EGG -c $<
