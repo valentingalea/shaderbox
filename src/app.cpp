@@ -1,3 +1,10 @@
+#define SCREEN_WIDTH 100
+#define SCREEN_HEIGHT 100
+//#define OMP_ENABLED
+//#define WRITE_GIF
+//#define APP_EGG
+#define APP_RAYTRACER
+
 // adapted from Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
 #include <swizzle/glsl/naive/vector.h>
@@ -85,7 +92,12 @@ namespace glsl_sandbox
 #pragma warning(disable: 4244) // disable return implicit conversion warning
 #pragma warning(disable: 4305) // disable truncation warning
 
+#ifdef APP_EGG
+#include "app_egg.h"
+#endif
+#ifdef APP_RAYTRACER
 #include "app_raytracer.h"
+#endif
 	
 #pragma warning(pop)
 #undef mainImage
@@ -94,8 +106,6 @@ namespace glsl_sandbox
 #undef inout
 #undef uniform
 }
-
-//#define OMP_ENABLED 1
 
 // these headers, especially SDL.h & time.h set up names that are in conflict
 // with sandbox'es;
@@ -170,7 +180,6 @@ bool g_cancelDraw = false;
 //! Quit!
 bool g_quit = false;
 
-//#define WRITE_GIF
 #ifdef WRITE_GIF
 #include "..\lib\gif-h\gif.h"
 #include <time.h>
@@ -183,7 +192,7 @@ static int renderThread(void*)
 	{
 		auto bmp = g_surface.get();
 
-#if !defined(_DEBUG) && OMP_ENABLED
+#if !defined(_DEBUG) && defined(OMP_ENABLED)
 #pragma omp parallel 
 		{
 			int thredsCount = omp_get_num_threads();

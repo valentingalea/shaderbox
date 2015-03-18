@@ -1,6 +1,4 @@
 #ifdef __cplusplus
-#define SCREEN_WIDTH 100
-#define SCREEN_HEIGHT 100
 #define _in(T) const T &
 #define _inout(T) T &
 #define _out(T) T &
