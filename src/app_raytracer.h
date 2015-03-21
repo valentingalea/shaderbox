@@ -22,6 +22,14 @@ void setup_scene()
 	materials[mat_debug] = material_t _begin vec3(1., 1., 1.), 0., 0., 1., 0., 0. _end;
 
 	setup_cornell_box();
+
+#if 1
+	float _sin = sin(iGlobalTime);
+	float _cos = cos(iGlobalTime);
+	spheres[cb_sphere_left].origin += vec3(0, abs(_sin), _cos + 1);
+	spheres[cb_sphere_right].origin.z = 0;// += vec3(0, abs(_cos), _cos);
+	lights[0].L.z = 1.5;
+#endif
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -47,7 +55,7 @@ vec3 illuminate(_in(hit_t) hit) // TODO: find a way to account for more light ty
 	vec3 L = get_light_direction(lights[0], hit);
 
 	// TODO: more lights
-#if 0
+#if 1
 		accum += illum_blinn_phong(V, L, hit, mat);
 #else
 		accum += illum_cook_torrance(V, L, hit, mat);
@@ -73,28 +81,52 @@ hit_t raytrace_iteration(_in(ray_t) ray, _in(int) mat_to_ignore)
 	return hit;
 }
 
-vec3 render(_in(ray_t) ray)
+vec3 render(_in(ray_t) primary_ray)
 {
-	hit_t hit = raytrace_iteration(ray, mat_invalid);
+	vec3 color = vec3(0);
+	vec3 accum = vec3(1);
+	ray_t ray = primary_ray;
 
-	if (hit.t >= max_dist) {
-		return background(ray);
-	}
+	for (int i = 0; i < 2; i++) {
+		hit_t hit = raytrace_iteration(ray, mat_invalid);
 
-	vec3 color = illuminate(hit);
+		if (hit.t >= max_dist) {
+			color += accum * background(ray);
+			break;
+		}
+
+		float f = fresnel_factor(1., 1, dot(hit.normal, -ray.direction));
+		color += (1. - f) * accum * illuminate(hit);
 
 #if 1 // shadow ray
-	vec3 sh_line = lights[0].L - hit.origin; // TODO: more light types
-	vec3 sh_dir = normalize(sh_line);
-	ray_t sh_trace = ray_t _begin
-		hit.origin + sh_dir * BIAS,
-		sh_dir
-	_end;
-	hit_t sh_hit = raytrace_iteration(sh_trace, mat_debug);
-	if (sh_hit.t < length(sh_line)) {
-		color *= 0.1;
-	}
+		if (i == 0) {
+			vec3 shadow_line = lights[0].L - hit.origin; // TODO: more light types
+			vec3 shadow_dir = normalize(shadow_line);
+
+			ray_t shadow_trace = ray_t _begin
+				hit.origin + shadow_dir * BIAS,
+				shadow_dir
+				_end;
+			hit_t shadow_hit = raytrace_iteration(shadow_trace, mat_debug);
+
+			if (shadow_hit.t < length(shadow_line)) {
+				color *= 0.1;
+			}
+		}
 #endif
+
+		material_t mat = get_material(hit.material_id);
+		if (mat.reflectivity > 0.) {
+			accum *= f;
+			vec3 reflect_dir = normalize(reflect(hit.normal, ray.direction));
+			ray = ray_t _begin
+				hit.origin + reflect_dir * BIAS,
+				reflect_dir
+			_end;
+		} else {
+			break;
+		}
+	}
 
 	return color;
 }

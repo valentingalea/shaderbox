@@ -19,11 +19,11 @@ void setup_cornell_box()
 	_end;
 	materials[cb_mat_reflect] = material_t _begin
 		vec3(0.95, 0.64, 0.54),
-		1., .1, 1.0, 0., 0.
+		1., .1, 1.0, 1., 0.
 	_end;
 	materials[cb_mat_refract] = material_t _begin
 		vec3(1., 0.77, 0.345),
-		1., .05, 1.333, 0., 1.
+		1., .05, 1.333, 1., 1.
 	_end;
 
 #define cb_plane_ground 0
@@ -44,7 +44,7 @@ void setup_cornell_box()
 #define cb_sphere_left 1
 #define cb_sphere_right 2
 	spheres[cb_sphere_light] = sphere_t _begin vec3(0, 2.5 * cb_plane_dist + 0.4, 0), 1.5, mat_debug _end;
-	spheres[cb_sphere_left] = sphere_t _begin vec3(0.75, 1, -0.75), 0.5, cb_mat_reflect _end;
+	spheres[cb_sphere_left] = sphere_t _begin vec3(0.75, 1, -0.75), 0.75, cb_mat_reflect _end;
 	spheres[cb_sphere_right] = sphere_t _begin vec3(-0.75, 0.75, 0.75), 0.75, cb_mat_refract _end;
 
 	lights[0] = light_t _begin
