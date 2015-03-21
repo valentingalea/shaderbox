@@ -185,8 +185,8 @@ vec3 render(_in(ray_t) ray)
 				t, // ray length at impact
 				int(d.y), // material id
 				float(i) / float(steps), // material custom param
-				p, // point of impact
-				vec3(0) // sdf_normal(p);
+				vec3(0), // sdf_normal(p),
+				p // point of impact				
 			_end;
 
 			float s = 1.;
