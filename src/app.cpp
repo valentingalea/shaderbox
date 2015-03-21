@@ -1,9 +1,13 @@
 #define SCREEN_WIDTH 100
 #define SCREEN_HEIGHT 100
+
 //#define OMP_ENABLED
 //#define WRITE_GIF
+
+// better to define these outside the src
 //#define APP_EGG
-#define APP_RAYTRACER
+//#define APP_RAYTRACER
+//#define APP_SDF_AO
 
 // adapted from Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
@@ -97,6 +101,9 @@ namespace glsl_sandbox
 #endif
 #ifdef APP_RAYTRACER
 #include "app_raytracer.h"
+#endif
+#ifdef APP_SDF_AO
+#include "app_sdf_ao.h"
 #endif
 	
 #pragma warning(pop)
