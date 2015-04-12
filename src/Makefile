@@ -1,4 +1,4 @@
-all: sdf_ao
+all: terrain
 	
 raytracer: raytracer.o
 	$(CXX) $(CXXFLAGS) -o shaderbox raytracer.o $(LFLAGS) $(LIBS)
@@ -14,6 +14,11 @@ sdf_ao: sdf_ao.o
 	$(CXX) $(CXXFLAGS) -o shaderbox sdf_ao.o $(LFLAGS) $(LIBS)
 sdf_ao.o : app.cpp app_sdf_ao.h main.h def.h util.h sdf.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_SDF_AO -c -o sdf_ao.o $<
+
+terrain: terrain.o
+	$(CXX) $(CXXFLAGS) -o shaderbox terrain.o $(LFLAGS) $(LIBS)
+terrain.o : app.cpp app_terrain.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_TERRAIN -c -o terrain.o $<
 
 clean:
 	rm *.o
