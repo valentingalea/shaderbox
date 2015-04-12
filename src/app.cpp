@@ -105,6 +105,9 @@ namespace glsl_sandbox
 #ifdef APP_SDF_AO
 #include "app_sdf_ao.h"
 #endif
+#ifdef APP_TERRAIN
+#include "app_terrain.h"
+#endif
 	
 #pragma warning(pop)
 #undef mainImage
