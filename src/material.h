@@ -1,3 +1,7 @@
+//
+// Materials system definitions
+//
+
 struct material_t {
 	vec3 base_color;
 	float metallic;

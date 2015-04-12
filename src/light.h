@@ -1,3 +1,7 @@
+//
+// Lighting models
+//
+
 #define LIGHT_POINT 1
 #define LIGHT_DIR 2
 

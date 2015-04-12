@@ -1,3 +1,8 @@
+//
+// Cornell Box definition
+// http://www.graphics.cornell.edu/online/box/
+//
+
 void setup_cornell_box()
 {
 #define cb_mat_white 1

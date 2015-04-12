@@ -1,3 +1,7 @@
+//
+// Various 3D utilities functions
+//
+
 mat3 rotate_around_z(_in(float) angle_degrees)
 {
 	float angle = radians(angle_degrees);

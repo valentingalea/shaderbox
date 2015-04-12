@@ -3,6 +3,10 @@
 #include "IK.h"
 #include "sdf.h"
 
+//
+// Vectorpark Egg
+//
+
 vec3 background(_in(ray_t) ray)
 {
 	return vec3(.1, .1, .7);

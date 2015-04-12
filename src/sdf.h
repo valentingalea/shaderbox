@@ -1,3 +1,7 @@
+//
+// Signed Distance Fields functions
+//
+
 vec2 op_add(vec2 d1, vec2 d2) // union
 {
 	// minimum distance (preserving material info)

@@ -1,7 +1,12 @@
 #include "def.h"
 
-// Created by Reinder Nijhoff 2015
-// @reindernijhoff
+//
+// Terrain tests
+//
+//
+// originally from:
+// Created by Reinder Nijhoff 2015 @reindernijhoff
+//
 
 void mainImage(_out(vec4) f, _in(vec2) w)
 {

@@ -1,3 +1,7 @@
+//
+// Optics related utility functions
+//
+
 // Surfaces are more reflective at glancing angles
 //
 // how much reflection and how much transmission

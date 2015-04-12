@@ -5,6 +5,10 @@
 #include "util_optics.h"
 #include "light.h"
 
+//
+// Distance Fields Ambient Occlusion
+//
+
 vec3 background(_in(ray_t) ray)
 {
 	return vec3(.1, .1, .7);
@@ -58,7 +62,7 @@ vec2 sdf(_in(vec3) p)
 		mat_phong);
 		
 	vec2 ground = vec2 (
-		sd_plane (p, vec3 (0, 1, 0), 1),
+		sd_plane (p, vec3 (0, 1, 0), 1.),
 		mat_ground);
 
 	return op_add (
@@ -86,7 +90,7 @@ vec3 sdf_ao(_in(hit_t) hit)
 	
 	float d = 0.;
 	float occlusion = 0.;
-	for (int i = 1; i <= steps; i++) {
+	for (float i = 1.; i <= float(steps); i += 1.) {
 		vec3 p = hit.origin + dt * i * hit.normal;
 		d = sdf (p).x;
 		

@@ -1,3 +1,7 @@
+//
+// Inverse Kinematics
+//
+
 vec3 ik_2_bone_centered_solver(vec3 goal, float L1, float L2)
 {
 #if 0 // from https://www.shadertoy.com/view/ldlGR7

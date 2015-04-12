@@ -5,6 +5,10 @@
 #include "light.h"
 #include "intersect.h"
 
+//
+// Raytracer
+//
+
 #define num_planes 6
 plane_t planes[num_planes];
 

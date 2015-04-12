@@ -89,6 +89,8 @@
   <ItemGroup>
     <ClInclude Include="..\src\app_egg.h" />
     <ClInclude Include="..\src\app_raytracer.h" />
+    <ClInclude Include="..\src\app_sdf_ao.h" />
+    <ClInclude Include="..\src\app_terrain.h" />
     <ClInclude Include="..\src\cornell_box.h" />
     <ClInclude Include="..\src\def.h" />
     <ClInclude Include="..\src\IK.h" />

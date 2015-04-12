@@ -1,3 +1,7 @@
+//
+// Analytical surface-ray intersection routines
+//
+
 struct sphere_t {
 	vec3 origin;
 	float radius;
