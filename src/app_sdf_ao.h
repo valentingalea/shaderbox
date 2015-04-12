@@ -15,7 +15,7 @@ void setup_scene()
 #define mat_debug 0
 #define mat_ground 0
 #define mat_phong 0
-	materials[mat_debug] = material_t _begin vec3(1., 1., 1.), 0., 0., 1., 0., 0. _end;
+	materials[mat_debug] = material_t _begin vec3(0., 1., 0.), 0., 0.9, 1., 0., 0. _end;
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -36,9 +36,9 @@ vec3 illuminate(_in(hit_t) hit)
 	vec3 accum = ambient_light; // really cheap equivalent for indirect light
 
 	vec3 V = normalize(eye - hit.origin); // view direction
-	vec3 L = vec3 (1, 1, 0); //get_light_direction(lights[0], hit);
+	vec3 L = normalize (vec3 (1, 1, 0)); //get_light_direction(lights[0], hit);
 
-#if 1
+#if 0
 		accum += illum_blinn_phong(V, L, hit, mat);
 #else
 		accum += illum_cook_torrance(V, L, hit, mat);
@@ -79,7 +79,24 @@ vec3 sdf_normal(_in(vec3) p)
 	));
 }
 
-#define EPSILON 0.001
+vec3 sdf_ao(_in(hit_t) hit)
+{
+	const float dt = .5;
+	const int steps = 5;
+	
+	float d = 0.;
+	float occlusion = 0.;
+	for (int i = 1; i <= steps; i++) {
+		vec3 p = hit.origin + dt * i * hit.normal;
+		d = sdf (p).x;
+		
+		occlusion += 1. / pow(2., i) * (dt * i - d);
+	}
+	
+	return vec3 (1. - clamp(occlusion, 0., 1.));
+}
+
+#define EPSILON 0.01
 
 vec3 render(_in(ray_t) ray)
 {
@@ -101,7 +118,8 @@ vec3 render(_in(ray_t) ray)
 				p // point of impact				
 			_end;
 
-			return illuminate(h);
+			float ambient = sdf_ao (h).x;
+			return illuminate(h) * ambient;
 		}
 
 		t += d.x;
