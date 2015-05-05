@@ -73,6 +73,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <OpenMPSupport>true</OpenMPSupport>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>APP_2D;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -87,6 +88,7 @@
     <ClCompile Include="..\src\app.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\app_2d.h" />
     <ClInclude Include="..\src\app_egg.h" />
     <ClInclude Include="..\src\app_raytracer.h" />
     <ClInclude Include="..\src\app_sdf_ao.h" />
