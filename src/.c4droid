@@ -1,6 +1,6 @@
-#Wed Mar 18 00:57:52 GMT+00:00 2015
+#Tue May 05 09:56:16 BST 2015
 comp_mode=1
-binary_fname=egg
+binary_fname=shaderbox
 conf_patch=true
 run_mode=1
 qmake_cmd=export PATH\=(c4droid\:GCCROOT)qt/bin/\:$PATH\nexport C4DROID_QTLIBPATH\=(c4droid\:QTLIBPATH)\nqmake -spec android-g++
