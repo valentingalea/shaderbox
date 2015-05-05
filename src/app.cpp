@@ -104,7 +104,7 @@ namespace glsl_sandbox
 #include "app_terrain.h"
 #endif
 #ifdef APP_2D
-#include "app_2d.h
+#include "app_2d.h"
 #endif
 	
 #pragma warning(pop)
