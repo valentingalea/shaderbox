@@ -4,11 +4,6 @@
 //#define OMP_ENABLED
 //#define WRITE_GIF
 
-// better to define these outside the src
-//#define APP_EGG
-//#define APP_RAYTRACER
-//#define APP_SDF_AO
-
 // adapted from Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
 #include <swizzle/glsl/naive/vector.h>
@@ -107,6 +102,9 @@ namespace glsl_sandbox
 #endif
 #ifdef APP_TERRAIN
 #include "app_terrain.h"
+#endif
+#ifdef APP_2D
+#include "app_2d.h
 #endif
 	
 #pragma warning(pop)
