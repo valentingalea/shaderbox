@@ -32,6 +32,11 @@ vec2 perturb (_in(vec2) uv)
 	return vec2 (mod (s, 1.), mod (t, 1.));
 }
 
+float tristep (float t) // -1 to 1, peak at 0
+{
+	return max (1. - abs (t) , 0);
+}
+
 void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 {
 	vec2 uv = fragCoord / u_res.xy;
@@ -40,6 +45,8 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 		perturb (uv)
 		+ vec2(0, u_time)
 	);
+	
+	color *= 1. - tristep (2.*uv.y - 1.);
 	
 	fragColor = color;
 }
