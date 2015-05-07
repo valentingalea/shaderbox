@@ -22,7 +22,7 @@ terrain.o : app.cpp app_terrain.h def.h
 
 2d: 2d.o
 	$(CXX) $(CXXFLAGS) -o shaderbox 2d.o $(LFLAGS) $(LIBS)
-2d.o : app.cpp app_2d.h def.h
+2d.o : app.cpp app_2d.h def.h noise.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_2D -c -o 2d.o $<
 
 clean:
