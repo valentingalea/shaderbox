@@ -1,4 +1,5 @@
 #include "def.h"
+#include "noise.h"
 
 sampler2D iChannel0 ("", sampler2D::Repeat);
 
@@ -8,10 +9,11 @@ sampler2D iChannel0 ("", sampler2D::Repeat);
 
 vec4 sample (_in(vec2) uv)
 {
-#if 1
+#if 0
 	return texture (u_tex, uv);
 #else
-// TODO: some procedural shit
+	float n = fbm (uv, 0.5, 0.5, 2., 2., 6);
+	return vec4 (n, n, n, 1.);
 #endif
 }
 
@@ -40,13 +42,16 @@ float tent_filter (float t) // -1 to 1, peak at 0
 void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 {
 	vec2 uv = fragCoord / u_res.xy;
-	
+/*	
 	vec4 color = sample (
 		perturb (uv)
 		+ vec2(0, u_time)
 	);
 	
 	color *= 1. - tent_filter (2.*uv.y - 1.);
-	
+*/
+
+	vec4 color = sample (uv / 4.);
+		
 	fragColor = color;
 }
