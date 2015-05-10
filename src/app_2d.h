@@ -58,11 +58,14 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	vec2 st = perturb_tunnel (uv, d);
 	vec4 color = sample (st) * d;
 #else
-	vec2 st = perturb_road (uv);
-	vec4 color = sample (st + vec2(0, u_time));
+	vec2 st = perturb_road (uv) + vec2(0, u_time);
+	vec4 color = sample (st);
 
 	color *= 1. - tent_filter (2.*uv.y - 1.);
 #endif
+
+	// debug
+	//color = vec4 (vec2 (fmod (st.x, 1.), fmod (st.y, 1.)),0, 1.);
 		
 	fragColor = color;
 }
