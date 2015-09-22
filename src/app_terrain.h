@@ -16,7 +16,7 @@ bool intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _i
 	vec3 rc = sphere.origin - ray.origin;
 	float radius2 = sphere.radius * sphere.radius;
 	float tca = dot(rc, ray.direction);
-	//	if (tca < 0.) return false;
+//	if (tca < 0.) return false;
 	float d2 = dot(rc, rc) - tca * tca;
 	if (d2 > radius2) return false;
 	float thc = sqrt(radius2 - d2);
@@ -26,17 +26,13 @@ bool intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _i
 	return true;
 }
 
-//
-// Main
-//
-
 const vec3 betaR = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh scattering coefficients at sea level (m)
 const vec3 betaM = vec3(21e-6); // Mie scattering coefficients at sea level (m)
 const float hR = 7994.0; // Rayleigh scale height (m)
 const float hM = 1200.0; // Mie scale height (m)
 const float earth_radius = 6360e3; // (m)
 const float atmosphere_radius = 6420e3; // (m)
-const vec3 sun_dir = vec3(0, 1, 0);
+vec3 sun_dir = vec3(0, 1, 0);
 const float sun_power = 20.0;
 const float g = 0.76; // defines if the light is mainly scattered along the forward or backwards direction
 
@@ -52,67 +48,66 @@ vec3 get_incident_light(_in(ray_t) ray)
 		ray, atmosphere, t0, t1)) {
 		return vec3(0);
 	}
-	
-	const float num_samples = 16.;
-	float march_step = t1 / num_samples;
-	
+
+	const int num_samples = 16;
+	float march_step = t1 / float(num_samples);
+
 	// cosine angle view and light direction
-	float mu = dot (ray.direction, sun_dir);
-	
+	float mu = dot(ray.direction, sun_dir);
+
 	// R phase function
 	float phaseR =
-	3. / (16. * PI) *
-	(1 - mu * mu);
-	
+		3. / (16. * PI) *
+		(1. + mu * mu);
+
 	// Mie phase function
 	// TODO: replace with Schlick’s 
 	float phaseM =
-	3 / (8 * PI) *
-	((1 - g * g) * (1 + mu * mu)) /
-	((2 + g * g)
-	* pow(1 + g * g - 2 * g * mu, 1.5));
-	
+		3. / (8. * PI) *
+		((1. - g * g) * (1. + mu * mu)) /
+		((2. + g * g)
+		* pow(1. + g * g - 2. * g * mu, 1.5));
+
 	// optical depth = average density
 	// TODO: wiki
 	float optical_depthR = 0.;
 	float optical_depthM = 0.;
-	
-	vec3 sumR = vec3 (0);
-	vec3 sumM = vec3 (0);
+
+	vec3 sumR = vec3(0);
+	vec3 sumM = vec3(0);
 	float march_pos = 0.;
-	
+
 	for (int i = 0; i < num_samples; i++) {
-		vec3 sample = ray.origin + 
-		ray.direction * march_pos;
-		float height = length (sample) - earth_radius;
-		
+		vec3 sample =
+			ray.origin +
+			ray.direction * (march_pos + 0.5 * march_step);
+		float height = length(sample) - earth_radius;
+
 		// height scale
 		// TODO: explain 
-		float hr = exp (-height / hR) * march_step;
-		float hm = exp (-height / hM) * march_step;
-		
+		float hr = exp(-height / hR) * march_step;
+		float hm = exp(-height / hM) * march_step;
+
 		optical_depthR += hr;
 		optical_depthM += hm;
-		
+
 		vec3 tau =
-		betaR *
-		(optical_depthR /*+ optical_depthLightR*/) +
-		betaM * 1.1 * (optical_depthM /*+ opticalDepthLightM*/);
-		
-		vec3 attenuation = exp (-tau);//vec3(
-		//exp(-tau.x), exp(-tau.y), exp(-tau.z));
-		
+			betaR *
+			(optical_depthR /*+ optical_depthLightR*/)+
+			betaM * 1.1 * (optical_depthM /*+ opticalDepthLightM*/);
+
+		vec3 attenuation = exp(-tau);
+
 		sumR += hr * attenuation;
-		sumM += hm * attenuation;		
-		
+		sumM += hm * attenuation;
+
 		march_pos += march_step;
 	}
-	
-	return //vec3(1, 0, 0);
-	sun_power *
-	(sumR * phaseR * betaR +
-	sumM * phaseM * betaR);
-	
+
+	return
+		sun_power *
+		(sumR * phaseR * betaR +
+		sumM * phaseM * betaR);
 }
 
 void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
@@ -124,26 +119,29 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 
 	vec3 col = vec3(0);
 
+	// sun
+	mat3 rot = rotate_around_z(-u_time * 5.);
+	sun_dir *= rot;
+
 	// sky dome angles
+	// TODO: understand better
 	vec3 p = point_cam;
-	float z2 = p.x * p.x + p.y * p.y;
-	if (z2 <= 1.0) {
-		float phi = atan(p.y, p.x); // this is actually atan2 from C
-		float theta = acos(1.0 - z2);
+	float z2 = p.x * p.x + p.y * p.y; // TODO: what about the check <= 1. ?
+	float phi = atan(p.y, p.x); // this is actually atan2 from C
+	float theta = acos(1.0 - z2);
+	vec3 dir = vec3(
+		sin(theta) * cos(phi),
+		cos(theta),
+		sin(theta) * sin(phi));
 
-		vec3 dir = vec3(
-			sin(theta) * cos(phi),
-			cos(theta),
-			sin(theta) * sin(phi));
-
-		ray_t ray = ray_t _begin
-			vec3(0, earth_radius + 1., 0),
-			dir
+	ray_t ray = ray_t _begin
+		vec3(0, earth_radius + 1., 0),
+		dir
 		_end;
-		col =
-			//abs(dir);
-			get_incident_light(ray);
-	}
+	col =
+		//abs(dir);
+		get_incident_light(ray);
 
+//    col = corect_gamma(col, 2.25);
 	fragColor = vec4(col, 1);
 }
