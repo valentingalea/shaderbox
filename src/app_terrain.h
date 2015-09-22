@@ -1,4 +1,9 @@
 #include "def.h"
+#include "util.h"
+
+#define u_tex0 iChannel0
+#define u_res iResolution
+#define u_time iGlobalTime
 
 struct sphere_t {
 	vec3 origin;
@@ -18,17 +23,6 @@ bool intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _i
 	t0 = tca - thc;
 	t1 = tca + thc;
 
-	if (t0 > t1) {
-		float temp = t0;
-		t0 = t1;
-		t1 = temp;
-	}
-
-	if (t0 < 0.) {
-		t0 = t1;
-		if (t0 < 0.) return false;
-	}
-
 	return true;
 }
 
@@ -38,13 +32,13 @@ bool intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _i
 
 const vec3 betaR = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh scattering coefficients at sea level (m)
 const vec3 betaM = vec3(21e-6); // Mie scattering coefficients at sea level (m)
-const float Rh = 7994.0; // Rayleigh scale height (m)
-const float Mh = 1200.0; // Mie scale height (m)
+const float hR = 7994.0; // Rayleigh scale height (m)
+const float hM = 1200.0; // Mie scale height (m)
 const float earth_radius = 6360e3; // (m)
 const float atmosphere_radius = 6420e3; // (m)
 const vec3 sun_dir = vec3(0, 1, 0);
 const float sun_power = 20.0;
-const float mean_cos = 0.76; // defines if the light is mainly scattered along the forward or backwards direction
+const float g = 0.76; // defines if the light is mainly scattered along the forward or backwards direction
 
 const int air = 1;
 const sphere_t atmosphere = sphere_t _begin
@@ -54,15 +48,78 @@ _end;
 vec3 get_incident_light(_in(ray_t) ray)
 {
 	float t0, t1;
-	if (!intersect_sphere(ray, atmosphere, t0, t1)) return vec3(0);
-	return vec3(1, 0, 0);
+	if (!intersect_sphere(
+		ray, atmosphere, t0, t1)) {
+		return vec3(0);
+	}
+	
+	const float num_samples = 16.;
+	float march_step = t1 / num_samples;
+	
+	// cosine angle view and light direction
+	float mu = dot (ray.direction, sun_dir);
+	
+	// R phase function
+	float phaseR =
+	3. / (16. * PI) *
+	(1 - mu * mu);
+	
+	// Mie phase function
+	// TODO: replace with Schlick’s 
+	float phaseM =
+	3 / (8 * PI) *
+	((1 - g * g) * (1 + mu * mu)) /
+	((2 + g * g)
+	* pow(1 + g * g - 2 * g * mu, 1.5));
+	
+	// optical depth = average density
+	// TODO: wiki
+	float optical_depthR = 0.;
+	float optical_depthM = 0.;
+	
+	vec3 sumR = vec3 (0);
+	vec3 sumM = vec3 (0);
+	float march_pos = 0.;
+	
+	for (int i = 0; i < num_samples; i++) {
+		vec3 sample = ray.origin + 
+		ray.direction * march_pos;
+		float height = length (sample) - earth_radius;
+		
+		// height scale
+		// TODO: explain 
+		float hr = exp (-height / hR) * march_step;
+		float hm = exp (-height / hM) * march_step;
+		
+		optical_depthR += hr;
+		optical_depthM += hm;
+		
+		vec3 tau =
+		betaR *
+		(optical_depthR /*+ optical_depthLightR*/) +
+		betaM * 1.1 * (optical_depthM /*+ opticalDepthLightM*/);
+		
+		vec3 attenuation = exp (-tau);//vec3(
+		//exp(-tau.x), exp(-tau.y), exp(-tau.z));
+		
+		sumR += hr * attenuation;
+		sumM += hm * attenuation;		
+		
+		march_pos += march_step;
+	}
+	
+	return //vec3(1, 0, 0);
+	sun_power *
+	(sumR * phaseR * betaR +
+	sumM * phaseM * betaR);
+	
 }
 
 void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 {
-	vec2 aspect_ratio = vec2(iResolution.x / iResolution.y, 1);
+	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
 	float fov = tan(radians(45.0));
-	vec2 point_ndc = fragCoord.xy / iResolution.xy;
+	vec2 point_ndc = fragCoord.xy / u_res.xy;
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
 	vec3 col = vec3(0);
@@ -82,7 +139,7 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 		ray_t ray = ray_t _begin
 			vec3(0, earth_radius + 1., 0),
 			dir
-			_end;
+		_end;
 		col =
 			//abs(dir);
 			get_incident_light(ray);
