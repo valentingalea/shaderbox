@@ -41,6 +41,37 @@ const sphere_t atmosphere = sphere_t _begin
 	vec3(0), atmosphere_radius, air
 _end;
 
+const int num_samples = 16;
+const int num_samples_light = 8;
+
+bool get_sun_light(
+	_in(ray_t) ray,
+	_inout(float) optical_depthR,
+	_inout(float) optical_depthM
+){
+	float t0, t1;
+	intersect_sphere(ray, atmosphere, t0, t1);
+
+	float march_pos = 0.;
+	float march_step = t1 / float(num_samples_light);
+
+	for (int i = 0; i < num_samples_light; i++) {
+		vec3 sample =
+			ray.origin +
+			ray.direction * (march_pos + 0.5 * march_step);
+		float height = length(sample) - earth_radius;
+		if (height < 0.)
+			return false;
+
+		optical_depthR += exp(-height / hR) * march_step;
+		optical_depthM += exp(-height / hM) * march_step;
+
+		march_pos += march_step;
+	}
+
+	return true;
+}
+
 vec3 get_incident_light(_in(ray_t) ray)
 {
 	float t0, t1;
@@ -49,7 +80,6 @@ vec3 get_incident_light(_in(ray_t) ray)
 		return vec3(0);
 	}
 
-	const int num_samples = 16;
 	float march_step = t1 / float(num_samples);
 
 	// cosine angle view and light direction
@@ -91,15 +121,28 @@ vec3 get_incident_light(_in(ray_t) ray)
 		optical_depthR += hr;
 		optical_depthM += hm;
 
-		vec3 tau =
-			betaR *
-			(optical_depthR /*+ optical_depthLightR*/)+
-			betaM * 1.1 * (optical_depthM /*+ opticalDepthLightM*/);
+		ray_t light_ray = ray_t _begin
+			sample,
+			sun_dir
+			_end;
+		float optical_depth_lightR = 0.;
+		float optical_depth_lightM = 0.;
+		bool overground = get_sun_light(
+			light_ray,
+			optical_depth_lightR,
+			optical_depth_lightM);
 
-		vec3 attenuation = exp(-tau);
+		if (overground) {
+			vec3 tau =
+				betaR *
+				(optical_depthR + optical_depth_lightR) +
+				betaM * 1.1 * (optical_depthM + optical_depth_lightM);
 
-		sumR += hr * attenuation;
-		sumM += hm * attenuation;
+			vec3 attenuation = exp(-tau);
+
+			sumR += hr * attenuation;
+			sumM += hm * attenuation;
+		}
 
 		march_pos += march_step;
 	}
@@ -120,7 +163,7 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	vec3 col = vec3(0);
 
 	// sun
-	mat3 rot = rotate_around_z(-u_time * 5.);
+	mat3 rot = rotate_around_z(-sin(u_time) * 90.);
 	sun_dir *= rot;
 
 	// sky dome angles
