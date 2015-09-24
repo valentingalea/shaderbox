@@ -1,17 +1,21 @@
 #include "def.h"
 #include "util.h"
+#include "intersect.h"
 
-#define u_tex0 iChannel0
-#define u_res iResolution
-#define u_time iGlobalTime
+ray_t get_primary_ray(_in(vec3) cam_local_point, _inout(vec3) cam_origin, _inout(vec3) cam_look_at)
+{
+	vec3 fwd = normalize(cam_look_at - cam_origin);
+	vec3 up = vec3(0, 1, 0);
+	vec3 right = cross(up, fwd);
+	up = cross(fwd, right);
 
-struct sphere_t {
-	vec3 origin;
-	float radius;
-	int material;
-};
+	return ray_t _begin
+		cam_origin,
+		normalize(fwd + up * cam_local_point.y + right * cam_local_point.x)
+	_end;
+}
 
-bool intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout(float) t1)
+bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout(float) t1)
 {
 	vec3 rc = sphere.origin - ray.origin;
 	float radius2 = sphere.radius * sphere.radius;
@@ -50,7 +54,7 @@ bool get_sun_light(
 	_inout(float) optical_depthM
 ){
 	float t0, t1;
-	intersect_sphere(ray, atmosphere, t0, t1);
+	isect_sphere(ray, atmosphere, t0, t1);
 
 	float march_pos = 0.;
 	float march_step = t1 / float(num_samples_light);
@@ -75,7 +79,7 @@ bool get_sun_light(
 vec3 get_incident_light(_in(ray_t) ray)
 {
 	float t0, t1;
-	if (!intersect_sphere(
+	if (!isect_sphere(
 		ray, atmosphere, t0, t1)) {
 		return vec3(0);
 	}
@@ -163,9 +167,10 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	vec3 col = vec3(0);
 
 	// sun
-	mat3 rot = rotate_around_z(-sin(u_time) * 90.);
-	sun_dir *= rot;
+	//mat3 rot = rotate_around_z(-sin(u_time) * 90.);
+	//sun_dir *= rot;
 
+#if 1
 	// sky dome angles
 	// TODO: understand better
 	vec3 p = point_cam;
@@ -180,10 +185,31 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	ray_t ray = ray_t _begin
 		vec3(0, earth_radius + 1., 0),
 		dir
-		_end;
-	col =
-		//abs(dir);
-		get_incident_light(ray);
+	_end;
+	
+	col = get_incident_light(ray);
+#else
+
+	vec3 eye = vec3 (0, earth_radius + 1., 0);
+	vec3 look_at = vec3 (0, earth_radius + 1.5, -1);
+	
+	ray_t ray = get_primary_ray(point_cam, eye, look_at);
+	
+	plane_t terrain = plane_t _begin
+		vec3 (0, -1, 0),
+		earth_radius,
+		0
+	_end;
+	
+	hit_t hit = no_hit;
+	intersect_plane (ray, terrain, hit);
+	
+	if (hit.t > max_dist) {
+		col = get_incident_light(ray);
+	} else {
+		col = hit.material_param * vec3 (0.333);
+	}
+#endif
 
 //    col = corect_gamma(col, 2.25);
 	fragColor = vec4(col, 1);
