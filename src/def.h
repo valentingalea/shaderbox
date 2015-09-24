@@ -33,7 +33,7 @@ struct hit_t {
 	vec3 normal;
 	vec3 origin;
 };
-#define max_dist 1e9 // TODO: precision issues
+#define max_dist 1e8 // TODO: precision issues
 hit_t no_hit = hit_t _begin
 	(max_dist + 1e1), -1, 1., vec3(0), vec3(0)
 _end;
