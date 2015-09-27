@@ -1,3 +1,10 @@
+// ----------------------------------------------------------------------------
+// Rayleigh and Mie scattering atmosphere system
+//
+// implementation of the techniques described here:
+// http://www.scratchapixel.com/old/lessons/3d-advanced-lessons/simulating-the-colors-of-the-sky/atmospheric-scattering/
+// ----------------------------------------------------------------------------
+
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
@@ -20,7 +27,6 @@ bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout
 	vec3 rc = sphere.origin - ray.origin;
 	float radius2 = sphere.radius * sphere.radius;
 	float tca = dot(rc, ray.direction);
-//	if (tca < 0.) return false;
 	float d2 = dot(rc, rc) - tca * tca;
 	if (d2 > radius2) return false;
 	float thc = sqrt(radius2 - d2);
@@ -30,15 +36,52 @@ bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout
 	return true;
 }
 
-const vec3 betaR = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh scattering coefficients at sea level (m)
-const vec3 betaM = vec3(21e-6); // Mie scattering coefficients at sea level (m)
-const float hR = 7994.0; // Rayleigh scale height (m)
-const float hM = 1200.0; // Mie scale height (m)
+// scattering coefficients at sea level (m)
+const vec3 betaR = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh 
+const vec3 betaM = vec3(21e-6); // Mie
+
+// scale height (m)
+// thickness of the atmosphere if its density were uniform
+const float hR = 7994.0; // Rayleigh
+const float hM = 1200.0; // Mie
+
+float rayleigh_phase_func(float mu)
+{
+	return
+			3. * (1. + mu*mu)
+	/ //------------------------
+				(16. * PI);
+}
+
+// Henyey-Greenstein phase function factor [-1, 1]
+// represents the average cosine of the scattered directions
+// 0 is isotropic scattering
+// > 1 is forward scattering, < 1 is backwards
+const float g = 0.76;
+float henyey_greenstein_phase_func(float mu)
+{
+	return
+						(1. - g*g)
+	/ //---------------------------------------------
+		((4. + PI) * pow(1. + g*g - 2.*g*mu, 1.5));
+}
+
+// Schlick Phase Function factor
+// Pharr and  Humphreys [2004] equivalence to g above
+const float k = 1.55*g - 0.55 * (g*g*g);
+float schlick_phase_func(float mu)
+{
+	return
+					(1. - k*k)
+	/ //-------------------------------------------
+		(4. * PI * (1. + k*mu) * (1. + k*mu));
+}
+
 const float earth_radius = 6360e3; // (m)
 const float atmosphere_radius = 6420e3; // (m)
+
 vec3 sun_dir = vec3(0, 1, 0);
 const float sun_power = 20.0;
-const float g = 0.76; // defines if the light is mainly scattered along the forward or backwards direction
 
 const int air = 1;
 const sphere_t atmosphere = sphere_t _begin
@@ -78,6 +121,7 @@ bool get_sun_light(
 
 vec3 get_incident_light(_in(ray_t) ray)
 {
+	// "pierce" the atmosphere with the viewing ray
 	float t0, t1;
 	if (!isect_sphere(
 		ray, atmosphere, t0, t1)) {
@@ -86,24 +130,26 @@ vec3 get_incident_light(_in(ray_t) ray)
 
 	float march_step = t1 / float(num_samples);
 
-	// cosine angle view and light direction
+	// cosine of angle between view and light directions
 	float mu = dot(ray.direction, sun_dir);
 
-	// R phase function
-	float phaseR =
-		3. / (16. * PI) *
-		(1. + mu * mu);
-
-	// Mie phase function
-	// TODO: replace with Schlick’s 
+	// Rayleigh and Mie phase functions
+	// A black box indicating how light is interacting with the material
+	// Similar to BRDF except
+	// * it usually considers a single angle
+	//   (the phase angle between 2 directions)
+	// * integrates to 1 over the entire sphere of directions
+	float phaseR = rayleigh_phase_func(mu);
 	float phaseM =
-		3. / (8. * PI) *
-		((1. - g * g) * (1. + mu * mu)) /
-		((2. + g * g)
-		* pow(1. + g * g - 2. * g * mu, 1.5));
+#if 1
+		henyey_greenstein_phase_func(mu);
+#else
+		schlick_phase_func(mu);
+#endif
 
-	// optical depth = average density
-	// TODO: wiki
+	// optical depth (or "average density")
+	// represents the accumulated extinction coefficients
+	// along the path, multiplied by the length of that path
 	float optical_depthR = 0.;
 	float optical_depthM = 0.;
 
@@ -117,18 +163,17 @@ vec3 get_incident_light(_in(ray_t) ray)
 			ray.direction * (march_pos + 0.5 * march_step);
 		float height = length(sample) - earth_radius;
 
-		// height scale
-		// TODO: explain 
+		// integrate the height scale
 		float hr = exp(-height / hR) * march_step;
 		float hm = exp(-height / hM) * march_step;
-
 		optical_depthR += hr;
 		optical_depthM += hm;
 
+		// gather the sunlight
 		ray_t light_ray = ray_t _begin
 			sample,
 			sun_dir
-			_end;
+		_end;
 		float optical_depth_lightR = 0.;
 		float optical_depth_lightM = 0.;
 		bool overground = get_sun_light(
@@ -138,10 +183,8 @@ vec3 get_incident_light(_in(ray_t) ray)
 
 		if (overground) {
 			vec3 tau =
-				betaR *
-				(optical_depthR + optical_depth_lightR) +
+				betaR * (optical_depthR + optical_depth_lightR) +
 				betaM * 1.1 * (optical_depthM + optical_depth_lightM);
-
 			vec3 attenuation = exp(-tau);
 
 			sumR += hr * attenuation;
@@ -167,15 +210,14 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	vec3 col = vec3(0);
 
 	// sun
-	//mat3 rot = rotate_around_z(-sin(u_time) * 90.);
-	//sun_dir *= rot;
+	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
+	sun_dir *= rot;
 
 #if 1
 	// sky dome angles
-	// TODO: understand better
 	vec3 p = point_cam;
-	float z2 = p.x * p.x + p.y * p.y; // TODO: what about the check <= 1. ?
-	float phi = atan(p.y, p.x); // this is actually atan2 from C
+	float z2 = p.x * p.x + p.y * p.y;
+	float phi = atan(p.y, p.x);
 	float theta = acos(1.0 - z2);
 	vec3 dir = vec3(
 		sin(theta) * cos(phi),
