@@ -5,7 +5,7 @@ Works both on C++ and GLSL using the wonderful CxxSwizzle library (https://githu
 
 The various subprojects are enabled via global defines:
 * APP_EGG is an distance field ray marcher animation. (Live: https://www.shadertoy.com/view/MlsGDf)
-* APP_RAYTRACER is a PBR raytracer with simple reflection and refraction.
+* APP_RAYTRACER is a PBR raytracer with simple reflection and refraction. (Live: https://www.shadertoy.com/view/Xl2XW1)
 * APP_SDF_AO is a test for ambient occlusion with signed distance fields. (Live: https://www.shadertoy.com/view/XtBGDW)
 * APP_2D is an old-skool demoscene tunnel effect.
 * APP_TERRAIN is an ongoing test for modeling terrain and atmosphere.
