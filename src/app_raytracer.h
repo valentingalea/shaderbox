@@ -30,8 +30,8 @@ void setup_scene()
 #if 1
 	float _sin = sin(u_time);
 	float _cos = cos(u_time);
-	spheres[cb_sphere_left].origin += vec3(0, abs(_sin), _cos + 1);
-	spheres[cb_sphere_right].origin.z = 0;// += vec3(0, abs(_cos), _cos);
+	spheres[cb_sphere_left].origin += vec3(0, abs(_sin), _cos + 1.);
+	spheres[cb_sphere_right].origin.z = 0.;// += vec3(0, abs(_cos), _cos);
 	lights[0].L.z = 1.5;
 #endif
 }
@@ -59,7 +59,7 @@ vec3 illuminate(_in(hit_t) hit) // TODO: find a way to account for more light ty
 	vec3 L = get_light_direction(lights[0], hit);
 
 	// TODO: more lights
-#if 1
+#if 0
 		accum += illum_blinn_phong(V, L, hit, mat);
 #else
 		accum += illum_cook_torrance(V, L, hit, mat);
@@ -99,7 +99,7 @@ vec3 render(_in(ray_t) primary_ray)
 			break;
 		}
 
-		float f = fresnel_factor(1., 1, dot(hit.normal, -ray.direction));
+		float f = fresnel_factor(1., 1., dot(hit.normal, -ray.direction));
 		color += (1. - f) * accum * illuminate(hit);
 
 #if 1 // shadow ray
