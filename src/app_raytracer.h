@@ -5,9 +5,9 @@
 #include "light.h"
 #include "intersect.h"
 
-//
+// ----------------------------------------------------------------------------
 // Raytracer
-//
+// ----------------------------------------------------------------------------
 
 #define num_planes 6
 plane_t planes[num_planes];
@@ -28,8 +28,8 @@ void setup_scene()
 	setup_cornell_box();
 
 #if 1
-	float _sin = sin(iGlobalTime);
-	float _cos = cos(iGlobalTime);
+	float _sin = sin(u_time);
+	float _cos = cos(u_time);
 	spheres[cb_sphere_left].origin += vec3(0, abs(_sin), _cos + 1);
 	spheres[cb_sphere_right].origin.z = 0;// += vec3(0, abs(_cos), _cos);
 	lights[0].L.z = 1.5;
@@ -38,7 +38,7 @@ void setup_scene()
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
-	vec2 mouse = iMouse.x < BIAS ? vec2(0) : 2. * (iResolution.xy / iMouse.xy) - 1.;
+	vec2 mouse = u_mouse.x < BIAS ? vec2(0) : 2. * (u_res.xy / u_mouse.xy) - 1.;
 	mat3 rot_y = rotate_around_y(mouse.x * 30.);
 	eye = rot_y * vec3(0, cb_plane_dist, 2.333 * cb_plane_dist);
 	look_at = vec3(0, cb_plane_dist, 0);

@@ -1,6 +1,6 @@
-//
+// ----------------------------------------------------------------------------
 // Analytical surface-ray intersection routines
-//
+// ----------------------------------------------------------------------------
 
 struct sphere_t {
 	vec3 origin;
@@ -14,8 +14,11 @@ struct plane_t {
 	int material;
 };
 
-void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit)
-{
+void intersect_sphere(
+	_in(ray_t) ray,
+	_in(sphere_t) sphere,
+	_inout(hit_t) hit
+){
 #if 1
 	// geometrical solution
 	// info: http://www.scratchapixel.com/old/lessons/3d-basic-lessons/lesson-7-intersecting-simple-shapes/ray-sphere-intersection/
@@ -64,8 +67,11 @@ void intersect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(hit_t) hit)
 // a ray eq: P = O + t*D
 // substitution and solving for t gives:
 // t = ((P0 - O) dot N) / (N dot D)
-void intersect_plane(_in(ray_t) ray, _in(plane_t) p, _inout(hit_t) hit)
-{
+void intersect_plane(
+	_in(ray_t) ray,
+	_in(plane_t) p,
+	_inout(hit_t) hit
+){
 	float denom = dot(p.direction, ray.direction);
 	if (denom > 1e-6)
 	{

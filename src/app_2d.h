@@ -1,16 +1,17 @@
 #include "def.h"
 #include "noise.h"
 
-sampler2D iChannel0 ("", sampler2D::Repeat);
+#ifdef __cplusplus
+sampler2D u_tex0 ("", sampler2D::Repeat);
+#else
+#define u_tex0 iChannel0
+#endif
 
-#define u_tex iChannel0
-#define u_res iResolution
-#define u_time iGlobalTime
-
-vec4 sample (_in(vec2) uv)
-{
+vec4 sample (
+	_in(vec2) uv
+){
 #if 1
-	return texture (u_tex, uv);
+	return texture (u_tex0, uv);
 #else
 	float n = fbm (uv, 0.5, 0.5, 2., 2., 6);
 	return vec4 (n, n, n, 1.);
@@ -18,9 +19,9 @@ vec4 sample (_in(vec2) uv)
 }
 
 vec2 perturb_road (
-_in(vec2) uv,
-_in(float) time)
-{
+	_in(vec2) uv,
+	_in(float) time
+){
 	vec2 p = 2.*uv - 1.;
 	
 	float s = p.x / abs(p.y);
@@ -30,10 +31,10 @@ _in(float) time)
 }
 
 vec2 perturb_tunnel (
-_in(vec2) uv,
-_in(float) time,
-_inout(float) r)
-{
+	_in(vec2) uv,
+	_in(float) time,
+	_inout(float) r
+){
 	vec2 p = 2.*uv - 1.;
 	
 	r = sqrt (dot (p, p));
@@ -45,13 +46,16 @@ _inout(float) r)
 	return  vec2 (s, t);
 }
 
-float tent_filter (float t) // -1 to 1, peak at 0
-{
+float tent_filter ( // -1 to 1, peak at 0
+	_in(float) t
+){
 	return max (1. - abs (t) , 0);
 }
 
-void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
-{
+void mainImage(
+	_out(vec4) fragColor,
+	_in(vec2) fragCoord
+){
 	vec2 uv = fragCoord / u_res.xy;
 	
 	vec2 st;

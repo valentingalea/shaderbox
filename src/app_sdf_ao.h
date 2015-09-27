@@ -5,9 +5,9 @@
 #include "util_optics.h"
 #include "light.h"
 
-//
+// ----------------------------------------------------------------------------
 // Distance Fields Ambient Occlusion
-//
+// ----------------------------------------------------------------------------
 
 vec3 background(_in(ray_t) ray)
 {
@@ -24,7 +24,7 @@ void setup_scene()
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
-	mat3 rot = rotate_around_y (iGlobalTime * 50.);
+	mat3 rot = rotate_around_y (u_time * 50.);
 	eye = rot * vec3(2, 2, 4);
 	look_at = vec3(0);
 }

@@ -3,9 +3,9 @@
 #include "IK.h"
 #include "sdf.h"
 
-//
+// ----------------------------------------------------------------------------
 // Vectorpark Egg
-//
+// ----------------------------------------------------------------------------
 
 vec3 background(_in(ray_t) ray)
 {
@@ -40,7 +40,7 @@ vec3 illuminate(_in(hit_t) hit)
 
 vec2 sdf(_in(vec3) P)
 {
-	vec3 p = rotate_around_y(iGlobalTime * -50.0) * P -
+	vec3 p = rotate_around_y(u_time * -50.0) * P -
 		vec3(0, 0.5, 1.75);
 
 	int material = mat_egg;
@@ -73,10 +73,10 @@ vec2 sdf(_in(vec3) P)
 	float pedal_speed = 300.;
 	float pedal_off = 0.2;
 
-	mat3 rot_z = rotate_around_z(-iGlobalTime * pedal_speed);
+	mat3 rot_z = rotate_around_z(-u_time * pedal_speed);
 	vec3 left_foot_pos = wheel_pos + rot_z * vec3(0, pedal_radius, pedal_off);
 
-	rot_z = rotate_around_z(-iGlobalTime * pedal_speed);
+	rot_z = rotate_around_z(-u_time * pedal_speed);
 	vec3 right_foot_pos = wheel_pos + rot_z * vec3(0, -pedal_radius, -pedal_off);
 
 	vec3 side = vec3(0, 0, pedal_off);

@@ -1,6 +1,6 @@
-//
+// ----------------------------------------------------------------------------
 // Lighting models
-//
+// ----------------------------------------------------------------------------
 
 #define LIGHT_POINT 1
 #define LIGHT_DIR 2
@@ -15,8 +15,10 @@ light_t lights[8];
 
 vec3 ambient_light = vec3(.01, .01, .01);
 
-vec3 get_light_direction(_in(light_t) light, _in(hit_t) point)
-{
+vec3 get_light_direction(
+	_in(light_t) light,
+	_in(hit_t) point
+){
 	if (light.type == LIGHT_DIR) {
 		return light.L;
 	} else {
@@ -40,8 +42,11 @@ vec3 get_light_direction(_in(light_t) light, _in(hit_t) point)
 //
 
 vec3 illum_blinn_phong(
-	_in(vec3) V, _in(vec3) L, _in(hit_t) hit, _in(material_t) mat)
-{
+	_in(vec3) V,
+	_in(vec3) L,
+	_in(hit_t) hit,
+	_in(material_t) mat
+){
 	vec3 diffuse = max(0., dot(L, hit.normal)) * (mat.base_color * hit.material_param);
 
 	float spec_factor = 50.;
@@ -57,8 +62,11 @@ vec3 illum_blinn_phong(
 }
 
 vec3 illum_cook_torrance(
-	_in(vec3) V, _in(vec3) L, _in(hit_t) hit, _in(material_t) mat)
-{
+	_in(vec3) V,
+	_in(vec3) L,
+	_in(hit_t) hit,
+	_in(material_t) mat
+){
 	vec3 H = normalize(L + V);
 	float NdotL = dot(hit.normal, L);
 	float NdotH = dot(hit.normal, H);

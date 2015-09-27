@@ -1,6 +1,6 @@
-//
+// ----------------------------------------------------------------------------
 // Materials system definitions
-//
+// ----------------------------------------------------------------------------
 
 struct material_t {
 	vec3 base_color;
@@ -16,8 +16,9 @@ struct material_t {
 #define mat_debug 0
 material_t materials[num_materials];
 
-material_t get_material(_in(int) index)
-{
+material_t get_material(
+	_in(int) index
+){
 	material_t mat;
 
 	for (int i = 0; i < num_materials; ++i) {

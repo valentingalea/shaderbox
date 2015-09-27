@@ -18,7 +18,7 @@
 // Shadertoy specific uniforms
 #define u_res iResolution
 #define u_time iGlobalTime
-#define u_tex0 iChannel0
+#define u_mouse iMouse
 
 struct ray_t {
 	vec3 origin;

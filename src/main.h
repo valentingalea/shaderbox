@@ -1,9 +1,12 @@
-//
+// ----------------------------------------------------------------------------
 // Main Rendering function
-//
+// ----------------------------------------------------------------------------
 
-ray_t get_primary_ray(_in(vec3) cam_local_point, _inout(vec3) cam_origin, _inout(vec3) cam_look_at)
-{
+ray_t get_primary_ray(
+	_in(vec3) cam_local_point,
+	_inout(vec3) cam_origin,
+	_inout(vec3) cam_look_at
+){
 	vec3 fwd = normalize(cam_look_at - cam_origin);
 	vec3 up = vec3(0, 1, 0);
 	vec3 right = cross(up, fwd);
@@ -15,7 +18,9 @@ ray_t get_primary_ray(_in(vec3) cam_local_point, _inout(vec3) cam_origin, _inout
 	_end;
 }
 
-void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
+void mainImage(
+	_out(vec4) fragColor,
+	_in(vec2) fragCoord)
 {
 	// The pipeline transform
 	//
@@ -40,7 +45,7 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	// NOTE: everything is expressed in this space, NOT world
 
 	// assuming screen width is larger than height 
-	vec2 aspect_ratio = vec2(iResolution.x / iResolution.y, 1);
+	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
 	// field of view
 	float fov = tan(radians(30.0));
 
@@ -68,8 +73,10 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	setup_scene();
 
 	for (int i = 0; i < MSAA_PASSES; i++) {
-		vec2 point_ndc = (fragCoord.xy + msaa[i]) / iResolution.xy;
-		vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
+		vec2 point_ndc = (fragCoord.xy + msaa[i]) / u_res.xy;
+		vec3 point_cam = vec3(
+			(2.0 * point_ndc - 1.0) * aspect_ratio * fov,
+			-1.0);
 
 		ray_t ray = get_primary_ray(point_cam, eye, look_at);
 

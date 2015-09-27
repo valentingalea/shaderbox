@@ -1,9 +1,12 @@
-//
-// Inverse Kinematics
-//
+// ----------------------------------------------------------------------------
+// Inverse Kinematics solvers
+// ----------------------------------------------------------------------------
 
-vec3 ik_2_bone_centered_solver(vec3 goal, float L1, float L2)
-{
+vec3 ik_2_bone_centered_solver(
+	_in(vec3) goal,
+	_in(float) L1,
+	_in(float) L2
+){
 #if 0 // from https://www.shadertoy.com/view/ldlGR7
 	vec3 q = goal*(0.5 + 0.5*(L1*L1 - L2*L2) / dot(goal, goal));
 
@@ -38,8 +41,12 @@ vec3 ik_2_bone_centered_solver(vec3 goal, float L1, float L2)
 #endif
 }
 
-vec3 ik_solver(vec3 start, vec3 goal, float bone_length_1, float bone_length_2)
-{
+vec3 ik_solver(
+	_in(vec3) start,
+	_in(vec3) goal,
+	_in(float) bone_length_1,
+	_in(float) bone_length_2
+){
 	return start + ik_2_bone_centered_solver(
 		goal - start, bone_length_1, bone_length_2);
 }
