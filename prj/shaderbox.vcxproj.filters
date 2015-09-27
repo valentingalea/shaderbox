@@ -65,6 +65,9 @@
     <ClInclude Include="..\src\app_2d.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\noise.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\src\Makefile">
