@@ -30,17 +30,16 @@ float fbm_4(
 	_in(vec3) pos	
 ){
 	float t = 0.;
-	float p = pos;
+	vec3 p = pos;
 	
-	t  = 0.5000 * NOISE_FUNC(p); p *= 2.001;
-	t += 0.2500 * NOISE_FUNC(p); p *= 2.002;
-	t += 0.1250 * NOISE_FUNC(p); p *= 2.003;
-	t += 0.0625 * NOISE_FUNC(p);
+	t  = 0.51749673 * NOISE_FUNC(p); p *= 2.001;
+	t += 0.25584929 * NOISE_FUNC(p); p *= 2.002;
+	t += 0.12527603 * NOISE_FUNC(p); p *= 2.003;
+	t += 0.06255931 * NOISE_FUNC(p);
 	
 	return t;
 }
 
 //TODO:
 // - add rotation matrix for extra variation
-// - for the unrolled on input more random amplitudes
 // - domain distortion?
