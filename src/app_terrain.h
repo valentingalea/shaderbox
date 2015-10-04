@@ -1,13 +1,60 @@
-// ----------------------------------------------------------------------------
-// Rayleigh and Mie scattering atmosphere system
-//
-// implementation of the techniques described here:
-// http://www.scratchapixel.com/old/lessons/3d-advanced-lessons/simulating-the-colors-of-the-sky/atmospheric-scattering/
-// ----------------------------------------------------------------------------
+// Cloulds
+// https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Cloud_types_en.svg/960px-Cloud_types_en.svg.png
+// http://oceanservice.noaa.gov/education/yos/resource/JetStream/synoptic/clouds_max.htm#max
+// http://www.metoffice.gov.uk/learning/clouds/cloud-spotting-guide
+// http://www.srh.noaa.gov/srh/jetstream/clouds/cloudwise/types.html
 
-#include "def.h"
-#include "util.h"
-#include "intersect.h"
+// TODO: replace
+float hash( float n ) { return fract(sin(n)*753.5453123); }
+float noise( in vec3 x )
+{
+    vec3 p = floor(x);
+    vec3 f = fract(x);
+    f = f*f*(3.0-2.0*f);
+	
+    float n = p.x + p.y*157.0 + 113.0*p.z;
+    return mix(mix(mix( hash(n+  0.0), hash(n+  1.0),f.x),
+                   mix( hash(n+157.0), hash(n+158.0),f.x),f.y),
+               mix(mix( hash(n+113.0), hash(n+114.0),f.x),
+                   mix( hash(n+270.0), hash(n+271.0),f.x),f.y),f.z);
+}
+float fbm(vec3 pos)
+{
+    float f = 0.;
+    vec3 q = pos;
+    f  = 0.5000*noise( q ); q = q*2.01;
+    f += 0.2500*noise( q ); q = q*2.02;
+    f += 0.1250*noise( q ); q = q*2.03;
+    f += 0.0625*noise( q ); q = q*2.01;    
+    return f;
+}
+
+// GLSL/C++ compatibility layer
+#ifdef __cplusplus
+#define _in(T) const T &
+#define _inout(T) T &
+#define _out(T) T &
+#define _begin {
+#define _end }
+#else
+#define _in(T) const in T
+#define _inout(T) inout T
+#define _out(T) out T
+#define _begin (
+#define _end )
+#endif
+
+#define PI 3.14159265359
+
+// Shadertoy specific uniforms
+#define u_res iResolution
+#define u_time iGlobalTime
+#define u_mouse iMouse
+
+struct ray_t {
+	vec3 origin;
+	vec3 direction;
+};
 
 ray_t get_primary_ray(_in(vec3) cam_local_point, _inout(vec3) cam_origin, _inout(vec3) cam_look_at)
 {
@@ -22,182 +69,53 @@ ray_t get_primary_ray(_in(vec3) cam_local_point, _inout(vec3) cam_origin, _inout
 	_end;
 }
 
-bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout(float) t1)
+mat3 rotate_around_x(_in(float) angle_degrees)
 {
-	vec3 rc = sphere.origin - ray.origin;
-	float radius2 = sphere.radius * sphere.radius;
-	float tca = dot(rc, ray.direction);
-	float d2 = dot(rc, rc) - tca * tca;
-	if (d2 > radius2) return false;
-	float thc = sqrt(radius2 - d2);
-	t0 = tca - thc;
-	t1 = tca + thc;
-
-	return true;
+	float angle = radians(angle_degrees);
+	float _sin = sin(angle);
+	float _cos = cos(angle);
+	return mat3(1, 0, 0, 0, _cos, -_sin, 0, _sin, _cos);
 }
-
-// scattering coefficients at sea level (m)
-const vec3 betaR = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh 
-const vec3 betaM = vec3(21e-6); // Mie
-
-// scale height (m)
-// thickness of the atmosphere if its density were uniform
-const float hR = 7994.0; // Rayleigh
-const float hM = 1200.0; // Mie
-
-float rayleigh_phase_func(float mu)
-{
-	return
-			3. * (1. + mu*mu)
-	/ //------------------------
-				(16. * PI);
-}
-
-// Henyey-Greenstein phase function factor [-1, 1]
-// represents the average cosine of the scattered directions
-// 0 is isotropic scattering
-// > 1 is forward scattering, < 1 is backwards
-const float g = 0.76;
-float henyey_greenstein_phase_func(float mu)
-{
-	return
-						(1. - g*g)
-	/ //---------------------------------------------
-		((4. + PI) * pow(1. + g*g - 2.*g*mu, 1.5));
-}
-
-// Schlick Phase Function factor
-// Pharr and  Humphreys [2004] equivalence to g above
-const float k = 1.55*g - 0.55 * (g*g*g);
-float schlick_phase_func(float mu)
-{
-	return
-					(1. - k*k)
-	/ //-------------------------------------------
-		(4. * PI * (1. + k*mu) * (1. + k*mu));
-}
-
-const float earth_radius = 6360e3; // (m)
-const float atmosphere_radius = 6420e3; // (m)
 
 vec3 sun_dir = vec3(0, 1, 0);
-const float sun_power = 20.0;
 
-const int air = 1;
-const sphere_t atmosphere = sphere_t _begin
-	vec3(0), atmosphere_radius, air
-_end;
-
-const int num_samples = 16;
-const int num_samples_light = 8;
-
-bool get_sun_light(
-	_in(ray_t) ray,
-	_inout(float) optical_depthR,
-	_inout(float) optical_depthM
-){
-	float t0, t1;
-	isect_sphere(ray, atmosphere, t0, t1);
-
-	float march_pos = 0.;
-	float march_step = t1 / float(num_samples_light);
-
-	for (int i = 0; i < num_samples_light; i++) {
-		vec3 sample =
-			ray.origin +
-			ray.direction * (march_pos + 0.5 * march_step);
-		float height = length(sample) - earth_radius;
-		if (height < 0.)
-			return false;
-
-		optical_depthR += exp(-height / hR) * march_step;
-		optical_depthM += exp(-height / hM) * march_step;
-
-		march_pos += march_step;
-	}
-
-	return true;
+vec3 render_sky_color(_in(ray_t) eye)
+{
+    float sun_dot = clamp(dot(eye.direction, sun_dir), 0., 1.);
+    
+    // colour scheme taken from https://www.shadertoy.com/view/MlSSR1
+	vec3 blue = vec3(0.3,.55,0.8);
+    vec3 red = vec3(0.8,0.8,0.6);        
+    vec3 sky = mix(blue, red, 2.45*pow(sun_dot, 228.));
+    
+    return sky * (1. - 0.18*eye.direction);
 }
 
-vec3 get_incident_light(_in(ray_t) ray)
+vec3 render_clouds(_in(ray_t) eye)
 {
-	// "pierce" the atmosphere with the viewing ray
-	float t0, t1;
-	if (!isect_sphere(
-		ray, atmosphere, t0, t1)) {
-		return vec3(0);
-	}
-
-	float march_step = t1 / float(num_samples);
-
-	// cosine of angle between view and light directions
-	float mu = dot(ray.direction, sun_dir);
-
-	// Rayleigh and Mie phase functions
-	// A black box indicating how light is interacting with the material
-	// Similar to BRDF except
-	// * it usually considers a single angle
-	//   (the phase angle between 2 directions)
-	// * integrates to 1 over the entire sphere of directions
-	float phaseR = rayleigh_phase_func(mu);
-	float phaseM =
+    // create vanishing point by projection with Y
+    vec3 proj = eye.direction / (eye.direction.y + .125);
+    
+  	// layers of cloulds
+    float n = 0.;
+    for (int i = 0; i < 1; i++) {
+    	n += fbm((proj + vec3(0, float(i) * 1.232, 0)) * 1.42131);
+    }
+    
+	// coverage
 #if 1
-		henyey_greenstein_phase_func(mu);
+    n = smoothstep(.333, 1., n);
 #else
-		schlick_phase_func(mu);
+    float c = fbm(proj * 2.16 - u_time * .5);
+    n = smoothstep(.0, n, c); // += adds a cool static upper layer
 #endif
-
-	// optical depth (or "average density")
-	// represents the accumulated extinction coefficients
-	// along the path, multiplied by the length of that path
-	float optical_depthR = 0.;
-	float optical_depthM = 0.;
-
-	vec3 sumR = vec3(0);
-	vec3 sumM = vec3(0);
-	float march_pos = 0.;
-
-	for (int i = 0; i < num_samples; i++) {
-		vec3 sample =
-			ray.origin +
-			ray.direction * (march_pos + 0.5 * march_step);
-		float height = length(sample) - earth_radius;
-
-		// integrate the height scale
-		float hr = exp(-height / hR) * march_step;
-		float hm = exp(-height / hM) * march_step;
-		optical_depthR += hr;
-		optical_depthM += hm;
-
-		// gather the sunlight
-		ray_t light_ray = ray_t _begin
-			sample,
-			sun_dir
-		_end;
-		float optical_depth_lightR = 0.;
-		float optical_depth_lightM = 0.;
-		bool overground = get_sun_light(
-			light_ray,
-			optical_depth_lightR,
-			optical_depth_lightM);
-
-		if (overground) {
-			vec3 tau =
-				betaR * (optical_depthR + optical_depth_lightR) +
-				betaM * 1.1 * (optical_depthM + optical_depth_lightM);
-			vec3 attenuation = exp(-tau);
-
-			sumR += hr * attenuation;
-			sumM += hm * attenuation;
-		}
-
-		march_pos += march_step;
-	}
-
-	return
-		sun_power *
-		(sumR * phaseR * betaR +
-		sumM * phaseM * betaR);
+    
+    // add horizon (hide lower artifact/reflection)
+    // linear interp the Y with pow func that 
+    // ramps up fast at the end, 0 otherwise
+    n = mix(n, 0., pow(1. - max(eye.direction.y, 0.), 8.));
+    
+    return vec3(n);
 }
 
 void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
@@ -209,50 +127,15 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 
 	vec3 col = vec3(0);
 
-	// sun
 	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
 	sun_dir *= rot;
-
-#if 1
-	// sky dome angles
-	vec3 p = point_cam;
-	float z2 = p.x * p.x + p.y * p.y;
-	float phi = atan(p.y, p.x);
-	float theta = acos(1.0 - z2);
-	vec3 dir = vec3(
-		sin(theta) * cos(phi),
-		cos(theta),
-		sin(theta) * sin(phi));
-
-	ray_t ray = ray_t _begin
-		vec3(0, earth_radius + 1., 0),
-		dir
-	_end;
-	
-	col = get_incident_light(ray);
-#else
-
-	vec3 eye = vec3 (0, earth_radius + 1., 0);
-	vec3 look_at = vec3 (0, earth_radius + 1.5, -1);
-	
-	ray_t ray = get_primary_ray(point_cam, eye, look_at);
-	
-	plane_t terrain = plane_t _begin
-		vec3 (0, -1, 0),
-		earth_radius,
-		0
-	_end;
-	
-	hit_t hit = no_hit;
-	intersect_plane (ray, terrain, hit);
-	
-	if (hit.t > max_dist) {
-		col = get_incident_light(ray);
-	} else {
-		col = hit.material_param * vec3 (0.333);
-	}
-#endif
-
-//    col = corect_gamma(col, 2.25);
-	fragColor = vec4(col, 1);
+    
+    vec3 eye = vec3 (0, 1., 0);
+    vec3 look_at = vec3 (0, 1.5, -1);
+	ray_t eye_ray = get_primary_ray(point_cam, eye, look_at);
+    
+    //col += render_sky_color(eye_ray);
+    col += render_clouds(eye_ray) * 0.73343242;
+      
+    fragColor = vec4(col, 1);
 }
