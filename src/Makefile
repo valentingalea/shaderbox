@@ -1,4 +1,4 @@
-all: 2d
+all: terrain
 	
 raytracer: raytracer.o
 	$(CXX) $(CXXFLAGS) -o shaderbox raytracer.o $(LFLAGS) $(LIBS)
