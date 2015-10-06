@@ -94,7 +94,7 @@ vec3 render_sky_color(_in(ray_t) eye)
 vec3 render_clouds(_in(ray_t) eye)
 {
 	const int steps = 5;
-	const float thickness = 20;
+	const float thickness = 20.;
 	
 	float march_dist = 0.;
 	float march_step = thickness / float (steps);
@@ -121,7 +121,7 @@ vec3 render_clouds(_in(ray_t) eye)
 
 		// composition - front to back
 		src.rgb *= src.a;
-		dst = (1.0f - dst.a)*src + dst;
+		dst = (1. - dst.a)*src + dst;
 		
 		// early out of opaque
 		if (dst.a > .995) break;
@@ -146,8 +146,8 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 
 	vec3 col = vec3(0);
 
-	//mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
-	//sun_dir *= rot;
+	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
+	sun_dir *= rot;
     
     vec3 eye = vec3 (0, 1., 0);
     vec3 look_at = vec3 (0, 1.5, -1);
