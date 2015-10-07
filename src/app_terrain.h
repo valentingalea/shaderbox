@@ -88,34 +88,53 @@ vec3 render_sky_color(_in(ray_t) eye)
     vec3 red = vec3(0.8,0.8,0.6);        
     vec3 sky = mix(blue, red, 2.45*pow(sun_dot, 228.));
     
-    return sky * (1. - 0.18*eye.direction);
+    return sky;// * (1. - 0.18*eye.direction);
 }
 
 vec3 render_clouds(_in(ray_t) eye)
 {
+	const int steps = 5;
+	const float thickness = 20.;
+	
+	float march_dist = 0.;
+	float march_step = thickness / float (steps);
+	
     // create vanishing point by projection with Y
-    vec3 proj = eye.direction / (eye.direction.y + .125);
+    vec3 proj = eye.direction / (eye.direction.y + .225);
     
-  	// layers of cloulds
-    float n = 0.;
-    for (int i = 0; i < 1; i++) {
-    	n += fbm((proj + vec3(0, float(i) * 1.232, 0)) * 1.42131);
+    // colors
+    vec4 src = vec4 (0);
+    vec4 dst = vec4 (0);
+    
+    for (int i = 0; i < steps; i++) {
+    	vec3 sample = eye.origin + 
+    	proj *
+    	(march_dist + march_step * .5);
+    	
+    	// density func
+    	// layer of cloulds + coverage
+    	float n = fbm(sample * .242131 + u_time);
+		src = vec4 (smoothstep(.33, 1., n));
+		
+		// decay func (could be beer law)
+		src.a *= 0.5;
+
+		// composition - front to back
+		src.rgb *= src.a;
+		dst = (1. - dst.a)*src + dst;
+		
+		// early out of opaque
+		if (dst.a > .995) break;
+
+    	march_dist += march_step;
     }
-    
-	// coverage
-#if 1
-    n = smoothstep(.333, 1., n);
-#else
-    float c = fbm(proj * 2.16 - u_time * .5);
-    n = smoothstep(.0, n, c); // += adds a cool static upper layer
-#endif
     
     // add horizon (hide lower artifact/reflection)
     // linear interp the Y with pow func that 
     // ramps up fast at the end, 0 otherwise
-    n = mix(n, 0., pow(1. - max(eye.direction.y, 0.), 8.));
+    dst = mix(dst, vec4 (0.), pow(1. - max(eye.direction.y, 0.), 8.));
     
-    return vec3(n);
+    return dst.rgb;
 }
 
 void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
@@ -134,8 +153,8 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
     vec3 look_at = vec3 (0, 1.5, -1);
 	ray_t eye_ray = get_primary_ray(point_cam, eye, look_at);
     
-    //col += render_sky_color(eye_ray);
-    col += render_clouds(eye_ray) * 0.73343242;
+    col += render_sky_color(eye_ray);
+    col += render_clouds(eye_ray);
       
     fragColor = vec4(col, 1);
 }
