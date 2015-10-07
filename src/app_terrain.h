@@ -97,33 +97,40 @@ vec3 render_clouds(_in(ray_t) eye)
 	const float thickness = 20.;
 	
 	float march_dist = 0.;
-	float march_step = thickness / float (steps);
+	float march_step = 0.25; //thickness / float (steps);
 	
     // create vanishing point by projection with Y
-    vec3 proj = eye.direction / (eye.direction.y + .225);
+    vec3 proj = eye.direction /
+    	(eye.direction.y + .225);
     
     // colors
     vec4 src = vec4 (0);
     vec4 dst = vec4 (0);
-    
+    	   
     for (int i = 0; i < steps; i++) {
-    	vec3 sample = eye.origin + 
-    	proj *
-    	(march_dist + march_step * .5);
+    	vec3 sample = eye.origin +
+    		proj * (march_dist + march_step*.5);
     	
     	// density func
     	// layer of cloulds + coverage
-    	float n = fbm(sample * .242131 + u_time);
-		src = vec4 (smoothstep(.33, 1., n));
+    	float dens = fbm(sample * .9242 + u_time);
+		dens = smoothstep(.33, 1., dens);
 		
-		// decay func (could be beer law)
+		// coloring
+		src = vec4 (vec3 (1), dens);
+		src.rgb *= mix (
+			3.1*vec3(1.0,0.5,0.05),
+			vec3(0.48,0.53,0.5),
+			clamp (sample.y, 0., 1.));
+		
+		// decay func
 		src.a *= 0.5;
 
 		// composition - front to back
 		src.rgb *= src.a;
 		dst = (1. - dst.a)*src + dst;
 		
-		// early out of opaque
+		// early out if opaque
 		if (dst.a > .995) break;
 
     	march_dist += march_step;
