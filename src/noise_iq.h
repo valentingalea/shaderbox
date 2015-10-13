@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// Noise function from IQ (procedural)
+// Noise function by iq (from https://www.shadertoy.com/view/4sfGzS)
 // ----------------------------------------------------------------------------
 
 float hash(
