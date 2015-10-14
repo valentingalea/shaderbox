@@ -7,13 +7,14 @@
 #define mul(a, b) (a) * (b)
 #endif
 
-#ifdef __GLSL
+#ifdef GL_ES
 #define _in(T) const in T
 #define _inout(T) inout T
 #define _out(T) out T
 #define _begin(type) type (
 #define _end )
 #define mul(a, b) (a) * (b)
+precision mediump float;
 #endif
 
 #ifdef __HLSL
@@ -75,3 +76,4 @@ hit_t no_hit = _begin(hit_t)
 	vec3(0, 0, 0), // normal
 	vec3(0, 0, 0) // origin
 _end;
+
