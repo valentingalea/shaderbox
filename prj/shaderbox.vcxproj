@@ -74,7 +74,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <OpenMPSupport>true</OpenMPSupport>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>APP_CLOUDS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>APP_ATMOSPHERE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -90,6 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\app_2d.h" />
+    <ClInclude Include="..\src\app_atmosphere.h" />
     <ClInclude Include="..\src\app_clouds.h" />
     <ClInclude Include="..\src\app_egg.h" />
     <ClInclude Include="..\src\app_raytracer.h" />

@@ -103,6 +103,9 @@ namespace glsl_sandbox
 #ifdef APP_CLOUDS
 #include "app_clouds.h"
 #endif
+#ifdef APP_ATMOSPHERE
+#include "app_atmosphere.h"
+#endif
 #ifdef APP_2D
 #include "app_2d.h"
 #endif
