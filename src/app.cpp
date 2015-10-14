@@ -100,8 +100,8 @@ namespace glsl_sandbox
 #ifdef APP_SDF_AO
 #include "app_sdf_ao.h"
 #endif
-#ifdef APP_TERRAIN
-#include "app_terrain.h"
+#ifdef APP_CLOUDS
+#include "app_clouds.h"
 #endif
 #ifdef APP_2D
 #include "app_2d.h"

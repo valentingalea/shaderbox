@@ -55,9 +55,6 @@
     <ClInclude Include="..\src\app_sdf_ao.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\app_terrain.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\app_2d.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -68,6 +65,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\noise_worley.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app_clouds.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

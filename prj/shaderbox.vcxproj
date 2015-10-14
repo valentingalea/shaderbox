@@ -50,7 +50,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>..\lib\SDL-1.2.15\include;..\lib\SDL_image-1.2.12\include;..\lib\CxxSwizzle\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>APP_TERRAIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -74,7 +74,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <OpenMPSupport>true</OpenMPSupport>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>APP_RAYTRACER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>APP_CLOUDS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -90,10 +90,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\app_2d.h" />
+    <ClInclude Include="..\src\app_clouds.h" />
     <ClInclude Include="..\src\app_egg.h" />
     <ClInclude Include="..\src\app_raytracer.h" />
     <ClInclude Include="..\src\app_sdf_ao.h" />
-    <ClInclude Include="..\src\app_terrain.h" />
     <ClInclude Include="..\src\cornell_box.h" />
     <ClInclude Include="..\src\def.h" />
     <ClInclude Include="..\src\fbm.h" />

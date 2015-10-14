@@ -1,4 +1,4 @@
-all: terrain
+all: clouds
 	
 raytracer: raytracer.o
 	$(CXX) $(CXXFLAGS) -o shaderbox raytracer.o $(LFLAGS) $(LIBS)
@@ -15,10 +15,10 @@ sdf_ao: sdf_ao.o
 sdf_ao.o : app.cpp app_sdf_ao.h main.h def.h util.h sdf.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_SDF_AO -c -o sdf_ao.o $<
 
-terrain: terrain.o
-	$(CXX) $(CXXFLAGS) -o shaderbox terrain.o $(LFLAGS) $(LIBS)
-terrain.o : app.cpp app_terrain.h def.h
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_TERRAIN -c -o terrain.o $<
+clouds: clouds.o
+	$(CXX) $(CXXFLAGS) -o shaderbox clouds.o $(LFLAGS) $(LIBS)
+clouds.o : app.cpp app_clouds.h def.h noise_iq.h fbm.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_clouds -c -o clouds.o $<
 
 2d: 2d.o
 	$(CXX) $(CXXFLAGS) -o shaderbox 2d.o $(LFLAGS) $(LIBS)
