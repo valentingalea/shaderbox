@@ -18,7 +18,12 @@ sdf_ao.o : app.cpp app_sdf_ao.h main.h def.h util.h sdf.h
 clouds: clouds.o
 	$(CXX) $(CXXFLAGS) -o shaderbox clouds.o $(LFLAGS) $(LIBS)
 clouds.o : app.cpp app_clouds.h def.h noise_iq.h fbm.h
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_clouds -c -o clouds.o $<
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_CLOUDS -c -o clouds.o $<
+
+atmosphere: atmosphere.o
+	$(CXX) $(CXXFLAGS) -o shaderbox atmosphere.o $(LFLAGS) $(LIBS)
+atmosphere.o : app.cpp app_atmosphere.h def.h util.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_ATMOSPHERE -c -o atmosphere.o $<
 
 2d: 2d.o
 	$(CXX) $(CXXFLAGS) -o shaderbox 2d.o $(LFLAGS) $(LIBS)

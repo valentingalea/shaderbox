@@ -7,7 +7,6 @@
 
 #include "def.h"
 #include "util.h"
-#include "intersect.h"
 
 ray_t get_primary_ray(
 	_in(vec3) cam_local_point,
