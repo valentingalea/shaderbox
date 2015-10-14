@@ -12,10 +12,11 @@ ray_t get_primary_ray(
 	vec3 right = cross(up, fwd);
 	up = cross(fwd, right);
 
-	return ray_t _begin
+	ray_t r = _begin(ray_t)
 		cam_origin,
 		normalize(fwd + up * cam_local_point.y + right * cam_local_point.x)
 	_end;
+	return r;
 }
 
 void mainImage(
@@ -63,11 +64,12 @@ void mainImage(
 #else
 #define MSAA_PASSES 1
 	vec2 msaa[MSAA_PASSES];
-	msaa[0] = vec2(0.5);
+	msaa[0] = vec2(.5, .5);
 #endif
 
-	vec3 color = vec3(0);
+	vec3 color = vec3(0, 0, 0);
 
+	vec3 eye, look_at;
 	setup_camera(eye, look_at);
 
 	setup_scene();

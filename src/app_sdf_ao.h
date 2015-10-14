@@ -19,7 +19,7 @@ void setup_scene()
 #define mat_debug 0
 #define mat_ground 0
 #define mat_phong 0
-	materials[mat_debug] = material_t _begin vec3(0., 1., 0.), 0., 0.9, 1., 0., 0. _end;
+	materials[mat_debug] = _begin(material_t) vec3(0., 1., 0.), 0., 0.9, 1., 0., 0. _end;
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -29,7 +29,7 @@ void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 	look_at = vec3(0);
 }
 
-vec3 illuminate(_in(hit_t) hit)
+vec3 illuminate(_in(vec3) eye, _in(hit_t) hit)
 {
 #if 0 // debug: output the raymarching steps
 	return vec3(hit.normal);//.material_param);
@@ -114,7 +114,7 @@ vec3 render(_in(ray_t) ray)
 
 		if (t > end) break;
 		if (d.x < EPSILON) {
-			hit_t h = hit_t _begin
+			hit_t h = _begin(hit_t)
 				t, // ray length at impact
 				int(d.y), // material id
 				float(i) / float(steps), // material custom param
@@ -123,7 +123,7 @@ vec3 render(_in(ray_t) ray)
 			_end;
 
 			float ambient = sdf_ao (h).x;
-			return illuminate(h) * ambient;
+			return illuminate(ray.origin, h) * ambient;
 		}
 
 		t += d.x;

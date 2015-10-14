@@ -17,13 +17,13 @@ sphere_t spheres[num_spheres];
 
 vec3 background(_in(ray_t) ray)
 {
-	return vec3(0);
+	return vec3(0, 0, 0);
 }
 
 #include "cornell_box.h"
 void setup_scene()
 {
-	materials[mat_debug] = material_t _begin vec3(1., 1., 1.), 0., 0., 1., 0., 0. _end;
+	materials[mat_debug] = _begin(material_t) vec3(1., 1., 1.), 0., 0., 1., 0., 0. _end;
 
 	setup_cornell_box();
 
@@ -44,7 +44,7 @@ void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 	look_at = vec3(0, cb_plane_dist, 0);
 }
 
-vec3 illuminate(_in(hit_t) hit) // TODO: find a way to account for more light types
+vec3 illuminate(_in(vec3) eye, _in(hit_t) hit) // TODO: find a way to account for more light types
 {
 	material_t mat = get_material(hit.material_id);
 
@@ -100,14 +100,14 @@ vec3 render(_in(ray_t) primary_ray)
 		}
 
 		float f = fresnel_factor(1., 1., dot(hit.normal, -ray.direction));
-		color += (1. - f) * accum * illuminate(hit);
+		color += (1. - f) * accum * illuminate(primary_ray.origin, hit);
 
 #if 1 // shadow ray
 		if (i == 0) {
 			vec3 shadow_line = lights[0].L - hit.origin; // TODO: more light types
 			vec3 shadow_dir = normalize(shadow_line);
 
-			ray_t shadow_trace = ray_t _begin
+			ray_t shadow_trace = _begin(ray_t)
 				hit.origin + shadow_dir * BIAS,
 				shadow_dir
 				_end;
@@ -123,7 +123,7 @@ vec3 render(_in(ray_t) primary_ray)
 		if (mat.reflectivity > 0.) {
 			accum *= f;
 			vec3 reflect_dir = normalize(reflect(hit.normal, ray.direction));
-			ray = ray_t _begin
+			ray = _begin(ray_t)
 				hit.origin + reflect_dir * BIAS,
 				reflect_dir
 			_end;

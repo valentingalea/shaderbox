@@ -37,7 +37,7 @@ vec3 ik_2_bone_centered_solver(
 	// get the end of bone1 aka the pivot of bone2
 	// by getting a vector from the goal direction
 	// and rotating along with the newly found theta angle
-	return rot * (normalize(goal) * L1);
+	return mul(rot, (normalize(goal) * L1));
 #endif
 }
 

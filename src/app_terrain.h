@@ -15,7 +15,7 @@ ray_t get_primary_ray(_in(vec3) cam_local_point, _inout(vec3) cam_origin, _inout
 	vec3 right = cross(up, fwd);
 	up = cross(fwd, right);
 
-	return ray_t _begin
+	return _begin(ray_t)
 		cam_origin,
 		normalize(fwd + up * cam_local_point.y + right * cam_local_point.x)
 	_end;
@@ -46,8 +46,8 @@ vec3 render_clouds(_in(ray_t) eye)
     	(eye.direction.y + .225);
     
     // colors
-    vec4 src = vec4 (0);
-    vec4 dst = vec4 (0);
+    vec4 src = vec4 (0, 0, 0, 0);
+    vec4 dst = vec4 (0, 0, 0, 0);
     	   
     for (int i = 0; i < steps; i++) {
     	vec3 sample = eye.origin +
@@ -59,7 +59,7 @@ vec3 render_clouds(_in(ray_t) eye)
 		dens = smoothstep(.533, 1., dens);
 		
 		// coloring
-		src = vec4 (vec3 (1), dens);
+		src = vec4 (1, 1, 1, dens);
 		src.rgb *= mix (
 			3.1*vec3(1.0,0.5,0.05),
 			vec3(0.48,0.53,0.5),
@@ -81,7 +81,7 @@ vec3 render_clouds(_in(ray_t) eye)
     // add horizon (hide lower artifact/reflection)
     // linear interp the Y with pow func that 
     // ramps up fast at the end, 0 otherwise
-    dst = mix(dst, vec4 (0.), pow(1. - max(eye.direction.y, 0.), 8.));
+    dst = mix(dst, vec4 (0, 0, 0, 0), pow(1. - max(eye.direction.y, 0.), 8.));
     
     return dst.rgb;
 }
@@ -93,7 +93,7 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	vec2 point_ndc = fragCoord.xy / u_res.xy;
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
-	vec3 col = vec3(0);
+	vec3 col = vec3(0, 0, 0);
 	
 	vec3 sun_dir = vec3(0, 0, -1);
 //	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);

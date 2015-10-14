@@ -17,12 +17,12 @@ vec3 ambient_light = vec3(.01, .01, .01);
 
 vec3 get_light_direction(
 	_in(light_t) light,
-	_in(hit_t) point
+	_in(hit_t) P
 ){
 	if (light.type == LIGHT_DIR) {
 		return light.L;
 	} else {
-		return normalize(light.L - point.origin);
+		return normalize(light.L - P.origin);
 	}
 }
 
@@ -55,7 +55,7 @@ vec3 illum_blinn_phong(
 	vec3 specular = pow(max(0., dot(H, hit.normal)), spec_factor); // * light.color * specular color
 #else // Phong specular
 	vec3 R = reflect(-L, hit.normal);
-	vec3 specular = pow(max(0., dot(R, V)), spec_factor) * vec3(1); // * light.color * specular color
+	vec3 specular = pow(max(0., dot(R, V)), spec_factor) * vec3(1, 1, 1); // * light.color * specular color
 #endif
 
 	return diffuse + specular;

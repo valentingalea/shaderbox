@@ -23,7 +23,7 @@ void setup_scene()
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
 	eye = vec3(1, 2, 5);
-	look_at = vec3(0);
+	look_at = vec3(0, 0, 0);
 }
 
 vec3 illuminate(_in(hit_t) hit)
@@ -33,20 +33,19 @@ vec3 illuminate(_in(hit_t) hit)
 #endif
 
 	if (hit.material_id == mat_ground) return vec3(13. / 255., 104. / 255., 0. / 255.);
-	if (hit.material_id == mat_egg) return vec3(0.95);
-	if (hit.material_id == mat_bike) return vec3(.2);
-	return vec3(1);
+	if (hit.material_id == mat_egg) return vec3(0.9, 0.95, 0.95);
+	if (hit.material_id == mat_bike) return vec3(.2, .2, .2);
+	return vec3(1, 1, 1);
 }
 
 vec2 sdf(_in(vec3) P)
 {
-	vec3 p = rotate_around_y(u_time * -50.0) * P -
-		vec3(0, 0.5, 1.75);
+	vec3 p = mul(rotate_around_y(u_time * -50.0), P) - vec3(0, 0.5, 1.75);
 
 	int material = mat_egg;
 
 	float egg_y = 0.65;
-#if 0
+#if 1
 	float egg_m = sd_sphere(p - vec3(0, egg_y, 0), 0.475);
 	float egg_b = sd_sphere(p - vec3(0, egg_y - 0.45, 0), 0.25);
 	float egg_t = sd_sphere(p - vec3(0, egg_y + 0.45, 0), 0.25);
@@ -74,10 +73,10 @@ vec2 sdf(_in(vec3) P)
 	float pedal_off = 0.2;
 
 	mat3 rot_z = rotate_around_z(-u_time * pedal_speed);
-	vec3 left_foot_pos = wheel_pos + rot_z * vec3(0, pedal_radius, pedal_off);
+	vec3 left_foot_pos = wheel_pos + mul(rot_z, vec3(0., pedal_radius, pedal_off));
 
 	rot_z = rotate_around_z(-u_time * pedal_speed);
-	vec3 right_foot_pos = wheel_pos + rot_z * vec3(0, -pedal_radius, -pedal_off);
+	vec3 right_foot_pos = wheel_pos + mul(rot_z, vec3(0., -pedal_radius, -pedal_off));
 
 	vec3 side = vec3(0, 0, pedal_off);
 	float femur = 0.8;
@@ -87,19 +86,19 @@ vec2 sdf(_in(vec3) P)
 	vec3 pelvis = vec3(0, 0., 0) + side;
 	vec3 knee_l = ik_solver(pelvis, left_foot_pos, femur, tibia);
 	vec2 left_leg_a = vec2(
-		sd_cylinder(p + pelvis, vec3(0), knee_l - side, thick),
+		sd_cylinder(p + pelvis, vec3(0, 0, 0), knee_l - side, thick),
 		material);
 	vec2 left_leg_b = vec2(
-		sd_cylinder(p + knee_l, vec3(0), left_foot_pos - knee_l, thick),
+		sd_cylinder(p + knee_l, vec3(0, 0, 0), left_foot_pos - knee_l, thick),
 		material);
 
 	pelvis = vec3(0, 0., 0) - side;
 	vec3 knee_r = ik_solver(pelvis, right_foot_pos, femur, tibia);
 	vec2 right_leg_a = vec2(
-		sd_cylinder(p + pelvis, vec3(0), knee_r + side, thick),
+		sd_cylinder(p + pelvis, vec3(0, 0, 0), knee_r + side, thick),
 		material);
 	vec2 right_leg_b = vec2(
-		sd_cylinder(p + knee_r, vec3(0), right_foot_pos - knee_r, thick),
+		sd_cylinder(p + knee_r, vec3(0, 0, 0), right_foot_pos - knee_r, thick),
 		material);
 
 	vec2 legs = op_add(
@@ -108,12 +107,12 @@ vec2 sdf(_in(vec3) P)
 
 	vec3 left_toe = normalize(vec3(left_foot_pos.y - knee_l.y, knee_l.x - left_foot_pos.x, 0));
 	vec2 left_foot = vec2(
-		sd_cylinder(p + left_foot_pos, vec3(0), left_toe / 8., thick),
+		sd_cylinder(p + left_foot_pos, vec3(0, 0, 0), left_toe / 8., thick),
 		material);
 
 	vec3 right_toe = normalize(vec3(right_foot_pos.y - knee_r.y, knee_r.x - right_foot_pos.x, 0));
 	vec2 right_foot = vec2(
-		sd_cylinder(p + right_foot_pos, vec3(0), right_toe / 8., thick),
+		sd_cylinder(p + right_foot_pos, vec3(0, 0, 0), right_toe / 8., thick),
 		material);
 
 	vec2 feet = op_add(left_foot, right_foot);
@@ -185,11 +184,11 @@ vec3 render(_in(ray_t) ray)
 
 		if (t > end) break;
 		if (d.x < EPSILON) {
-			hit_t h = hit_t _begin
+			hit_t h = _begin(hit_t)
 				t, // ray length at impact
 				int(d.y), // material id
 				float(i) / float(steps), // material custom param
-				vec3(0), // sdf_normal(p),
+				vec3(0, 0, 0), // sdf_normal(p),
 				p // point of impact				
 			_end;
 
@@ -197,7 +196,7 @@ vec3 render(_in(ray_t) ray)
 #if 1 // soft shadows
 			if (int(d.y) == mat_ground) {
 				vec3 sh_dir = vec3(0, 1, 1);
-				ray_t sh_ray = ray_t _begin
+				ray_t sh_ray = _begin(ray_t)
 					p + sh_dir * 0.05, sh_dir
 				_end;
 				s = shadowmarch(sh_ray);

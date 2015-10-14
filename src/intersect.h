@@ -47,7 +47,8 @@ void intersect_plane(
 	float denom = dot(p.direction, ray.direction);
 	if (denom < 1e-6) return;
 
-	float t = dot(vec3(p.distance) - ray.origin, p.direction) / denom;
+	vec3 P0 = vec3(p.distance, p.distance, p.distance);
+	float t = dot(P0 - ray.origin, p.direction) / denom;
 	if (t < 0. || t > hit.t) return;
 	
 	vec3 impact = ray.origin + ray.direction * t;

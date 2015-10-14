@@ -1,5 +1,9 @@
 #include "def.h"
-#include "noise.h"
+
+#if 0
+#include "noise_iq.h"
+#include "fbm.h"
+#endif
 
 #ifdef __cplusplus
 sampler2D u_tex0 ("", sampler2D::Repeat);
@@ -13,7 +17,7 @@ vec4 sample (
 #if 1
 	return texture (u_tex0, uv);
 #else
-	float n = fbm (uv, 0.5, 0.5, 2., 2., 6);
+	float n = fbm (vec3(uv, 1.));
 	return vec4 (n, n, n, 1.);
 #endif
 }
