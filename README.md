@@ -5,7 +5,7 @@ Works both on C++ and GLSL using the wonderful CxxSwizzle library (https://githu
 
 The various subprojects are enabled via global defines:
 
-Project define | Description | Live on shadertoy.com
+Project define | Description                                            | Live on shadertoy.com
 ---------------|--------------------------------------------------------|-------------------
 APP_EGG        | an distance field ray marcher animation                | https://www.shadertoy.com/view/MlsGDf
 APP_RAYTRACER  | PBR raytracer with simple reflection and refraction    | https://www.shadertoy.com/view/Xl2XW1
