@@ -33,15 +33,31 @@ precision mediump float;
 #define fract frac
 #define atan(y, x) atan2(x, y)
 #define mod fmod
-#pragma pack_matrix(row_major) 
+#pragma pack_matrix(row_major)
+uniform float u_time;
+uniform float2 u_res;
+void mainImage(_out(float4) fragColor, _in(float2) fragCoord);
+float4 main(float2 uv : POSITION0) : SV_TARGET0 { float4 col; mainImage(col, uv); return col; }
 #endif
 
-#define PI 3.14159265359
-
-// Shadertoy specific uniforms
+#if defined(__cplusplus) || defined(SHADERTOY)
 #define u_res iResolution
 #define u_time iGlobalTime
 #define u_mouse iMouse
+#endif
+
+#ifdef GLSLSANDBOX
+uniform float time;
+uniform vec2 mouse;
+uniform vec2 resolution;
+#define u_res resolution
+#define u_time time
+#define u_mouse mouse
+void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord);
+void main() { mainImage(gl_FragColor, gl_FragCoord.xy); }
+#endif
+
+#define PI 3.14159265359
 
 struct ray_t {
 	vec3 origin;
