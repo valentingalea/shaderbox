@@ -1,9 +1,3 @@
-#define SCREEN_WIDTH 100
-#define SCREEN_HEIGHT 100
-
-//#define OMP_ENABLED
-//#define WRITE_GIF
-
 // adapted from Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
 #include <swizzle/glsl/naive/vector.h>
@@ -91,22 +85,17 @@ namespace glsl_sandbox
 #pragma warning(disable: 4244) // disable return implicit conversion warning
 #pragma warning(disable: 4305) // disable truncation warning
 
-#ifdef APP_EGG
+#if defined(APP_EGG)
 #include "app_egg.h"
-#endif
-#ifdef APP_RAYTRACER
+#elif defined(APP_RAYTRACER)
 #include "app_raytracer.h"
-#endif
-#ifdef APP_SDF_AO
+#elif defined(APP_SDF_AO)
 #include "app_sdf_ao.h"
-#endif
-#ifdef APP_CLOUDS
+#elif defined(APP_CLOUDS)
 #include "app_clouds.h"
-#endif
-#ifdef APP_ATMOSPHERE
+#elif defined(APP_ATMOSPHERE)
 #include "app_atmosphere.h"
-#endif
-#ifdef APP_2D
+#elif defined(APP_2D)
 #include "app_2d.h"
 #endif
 	
