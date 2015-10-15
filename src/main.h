@@ -2,23 +2,6 @@
 // Main Rendering function
 // ----------------------------------------------------------------------------
 
-ray_t get_primary_ray(
-	_in(vec3) cam_local_point,
-	_inout(vec3) cam_origin,
-	_inout(vec3) cam_look_at
-){
-	vec3 fwd = normalize(cam_look_at - cam_origin);
-	vec3 up = vec3(0, 1, 0);
-	vec3 right = cross(up, fwd);
-	up = cross(fwd, right);
-
-	ray_t r = _begin(ray_t)
-		cam_origin,
-		normalize(fwd + up * cam_local_point.y + right * cam_local_point.x)
-	_end;
-	return r;
-}
-
 void mainImage(
 	_out(vec4) fragColor,
 	_in(vec2) fragCoord)

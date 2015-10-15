@@ -1,4 +1,3 @@
-// Cloulds
 // https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Cloud_types_en.svg/960px-Cloud_types_en.svg.png
 // http://oceanservice.noaa.gov/education/yos/resource/JetStream/synoptic/clouds_max.htm#max
 // http://www.metoffice.gov.uk/learning/clouds/cloud-spotting-guide
@@ -7,19 +6,7 @@
 #include "def.h"
 #include "noise_iq.h"
 #include "fbm.h"
-
-ray_t get_primary_ray(_in(vec3) cam_local_point, _inout(vec3) cam_origin, _inout(vec3) cam_look_at)
-{
-	vec3 fwd = normalize(cam_look_at - cam_origin);
-	vec3 up = vec3(0, 1, 0);
-	vec3 right = cross(up, fwd);
-	up = cross(fwd, right);
-
-	return _begin(ray_t)
-		cam_origin,
-		normalize(fwd + up * cam_local_point.y + right * cam_local_point.x)
-	_end;
-}
+#include "util.h"
 
 vec3 render_sky_color(_in(ray_t) eye, _in(vec3) sun_dir)
 {
