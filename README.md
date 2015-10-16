@@ -1,16 +1,40 @@
 # shader box
-Various experiments with raytracing and raymarching.
+Various experiments with raytracing and
+raymarching done only in pixel (fragment) shaders.
 
-Works both on C++ and GLSL using the wonderful CxxSwizzle library (https://github.com/gwiazdorrr/CxxSwizzle). Needs a C++11 compiler like Visual Studio 2013 or GCC 4.8.
+Written in GLSL but supports C++ and HLSL
+using preprocessor macro tricks.
+The C++11 work is made possible by the
+wonderful CxxSwizzle library.
+(https://github.com/gwiazdorrr/CxxSwizzle)
 
-The various subprojects are enabled via global defines:
+## Projects
+The various submodules are enabled via global defines:
 
-Project define | Description                                            | Live on shadertoy.com
----------------|--------------------------------------------------------|-------------------
-APP_EGG        | an distance field ray marcher animation                | https://www.shadertoy.com/view/MlsGDf
-APP_RAYTRACER  | PBR raytracer with simple reflection and refraction    | https://www.shadertoy.com/view/Xl2XW1
-APP_SDF_AO     | test for ambient occlusion with signed distance fields | https://www.shadertoy.com/view/XtBGDW
-APP_2D         | old-skool demoscene tunnel effect                      |
-APP_ATMOSPHERE | study of Rayleigh/Mie air scattering                   | https://www.shadertoy.com/view/XtBXDz
-APP_CLOUDS     | study of volumetric clouds                             | https://www.shadertoy.com/view/XtBXDw
+Project define | Description                                        | Live on shadertoy.com
+---------------|----------------------------------------------------|-------------------------
+APP_EGG        | signed distance field raymarcher animation         | https://www.shadertoy.com/view/MlsGDf
+APP_RAYTRACER  | simple PBR raytracer with reflection               | https://www.shadertoy.com/view/Xl2XW1
+APP_SDF_AO     | test for ambient occlusion with distance fields    | https://www.shadertoy.com/view/XtBGDW
+APP_2D         | old-skool demoscene tunnel effect                  |
+APP_ATMOSPHERE | study of Rayleigh/Mie air scattering               | https://www.shadertoy.com/view/XtBXDz
+APP_CLOUDS     | study of volumetric clouds                         | https://www.shadertoy.com/view/XtBXDw
 
+## Requirements
+* a C++11 capable compiler. Tested on
+Visual Studio 2013, GCC 4.8
+* any GLSL/WebGL environment. Tested on
+shadertoy.com and glslsandbox.com
+* any HLSL environment. Curently untested
+and experimental
+
+## Features
+Over time various things were added and some
+can be extracted and used separately.
+
+* minimal raytracer framework
+* minimal Cook-Torrence lighting and material setup
+* signed distance field functions and operators
+* 2D two bone IK solver
+* a library of different noise functions
+* Rayleigh/Mie atmospheric scattering solver
