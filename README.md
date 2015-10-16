@@ -25,8 +25,8 @@ APP_CLOUDS     | study of volumetric clouds                         | https://ww
 Visual Studio 2013, GCC 4.8
 * any GLSL/WebGL environment. Tested on
 shadertoy.com and glslsandbox.com
-* any HLSL environment. Curently untested
-and experimental
+* any HLSL environment. Curently experimental and
+only tested with fxc.exe
 
 ## Features
 Over time various things were added and some
@@ -38,3 +38,4 @@ can be extracted and used separately.
 * 2D two bone IK solver
 * a library of different noise functions
 * Rayleigh/Mie atmospheric scattering solver
+* a bare-bones #include expander utility to compose files
