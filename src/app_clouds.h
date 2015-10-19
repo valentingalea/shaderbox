@@ -22,55 +22,52 @@ vec3 render_sky_color(_in(ray_t) eye, _in(vec3) sun_dir)
 
 vec3 render_clouds(_in(ray_t) eye)
 {
-	const int steps = 5;
-	const float thickness = 20.;
+	if (eye.direction.y < .1) return vec3(0);
 
-	float march_dist = 0.;
-	float march_step = 0.25; //thickness / float (steps);
+	const int steps = 64;
+	const float thickness = 100.;
+	float march_step = thickness / float(steps);
 
 	// create vanishing point by projection with Y
-	vec3 proj = eye.direction /
-		(eye.direction.y + .225);
+	const float sky_height = 200.0;
+	float dist = sky_height / eye.direction.y;
+	vec3 dir = eye.direction * dist;
 
-	// colors
-	vec4 src = vec4(0, 0, 0, 0);
-	vec4 dst = vec4(0, 0, 0, 0);
+	vec3 dir_step = dir * march_step;
+	vec3 pos = eye.origin;
+
+	float T = 1.; // transmitance
+	vec3 C = vec3(0); // color
+	const float absorption = 1.25;
+	float alpha = 0.;
 
 	for (int i = 0; i < steps; i++) {
-		vec3 sample = eye.origin +
-			proj * (march_dist + march_step*.5);
+		// sample point
+		vec3 p = pos * .0002242 + vec3(0, 0, u_time * .5);
 
-		// density func
-		// layer of cloulds + coverage
-		float dens = fbm(sample * .9242 + u_time / 4);
-		dens = smoothstep(.533, 1., dens);
+		// density function
+		float dens = fbm(p);
+		dens = smoothstep(.526, 1., dens);
 
-		// coloring
-		src = vec4(1, 1, 1, dens);
-		src.rgb *= mix(
-			3.1 * vec3(1.0, 0.5, 0.05),
-			1.3 * vec3(0.48, 0.53, 0.5),
-			clamp(sample.y, 0., 1.));
+		// Beer's law
+		float T_i = exp(-absorption * dens * march_step);
 
-		// decay func
-		src.a *= 0.5;
+		T *= T_i;
+		if (T < .01)
+			break; //return vec3((float(i) * 4.) / 255., 0, 0);
 
-		// composition - front to back
-		src.rgb *= src.a;
-		dst = (1. - dst.a)*src + dst;
+		C += T * /*light(p) */ /*color*/ dens * march_step;
+		alpha += (1. - T_i) * (1. - alpha);
 
-		// early out if opaque
-		if (dst.a > .995) break;
-
-		march_dist += march_step;
+		pos += dir_step;
 	}
+
+	C *= alpha;
 
 	// add horizon (hide lower artifact/reflection)
 	// linear interp the Y with pow func that 
 	// ramps up fast at the end, 0 otherwise
-	dst = mix(dst, vec4(0, 0, 0, 0), pow(1. - max(eye.direction.y, 0.), 8.));
-
-	return dst.rgb;
+	return C;//mix(C, vec3(0), pow(1. - max(eye.direction.y, 0.), 8.));
 }
 
 void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
@@ -90,7 +87,7 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	vec3 look_at = vec3(0, 1.5, -1);
 	ray_t eye_ray = get_primary_ray(point_cam, eye, look_at);
 
-	col += render_sky_color(eye_ray, sun_dir);
+//	col += render_sky_color(eye_ray, sun_dir);
 	col += render_clouds(eye_ray);
 
 	fragColor = vec4(col, 1);
