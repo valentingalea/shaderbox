@@ -1,4 +1,6 @@
 # shader box
+![snapshot of apps](http://valentingalea.github.io/shaderbox/apps.png)
+
 Various experiments with raytracing and
 raymarching done only in pixel (fragment) shaders.
 
