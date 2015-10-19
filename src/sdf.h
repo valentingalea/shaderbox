@@ -100,3 +100,53 @@ float sd_cylinder(
 	float plane_2 = sd_plane(P, -dir, -length(P0));
 	return op_sub(op_sub(dist, plane_1), plane_2) - R;
 }
+
+// 3D Bezier curved cylinder
+// original by http://research.microsoft.com/en-us/um/people/hoppe/ravg.pdf
+// adapted by iq https://www.shadertoy.com/view/ldj3Wh
+float det(
+	_in(vec2) a,
+	_in(vec2) b
+){
+	return a.x*b.y - b.x*a.y;
+}
+vec3 sd_bezier_get_closest(
+	_in(vec2) b0,
+	_in(vec2) b1,
+	_in(vec2) b2
+){
+	float a = det(b0, b2);
+	float b = 2.0*det(b1, b0);
+	float d = 2.0*det(b2, b1);
+	float f = b*d - a*a;
+	vec2  d21 = b2 - b1;
+	vec2  d10 = b1 - b0;
+	vec2  d20 = b2 - b0;
+	vec2  gf = 2.0*(b*d21 + d*d10 + a*d20); gf = vec2(gf.y, -gf.x);
+	vec2  pp = -f*gf / dot(gf, gf);
+	vec2  d0p = b0 - pp;
+	float ap = det(d0p, d20);
+	float bp = 2.0*det(d10, d0p);
+	float t = clamp((ap + bp) / (2.0*a + b + d), 0.0, 1.0);
+	return vec3(mix(mix(b0, b1, t), mix(b1, b2, t), t), t);
+}
+vec2 sd_bezier(
+	_in(vec3) a, // start
+	_in(vec3) b, // knot (control point)
+	_in(vec3) c, // end
+	_in(vec3) p, 
+	_in(float) thickness
+){
+	vec3 w = normalize(cross(c - b, a - b));
+	vec3 u = normalize(c - b);
+	vec3 v = normalize(cross(w, u));
+
+	vec2 a2 = vec2(dot(a - b, u), dot(a - b, v));
+	vec2 b2 = vec2(0.0);
+	vec2 c2 = vec2(dot(c - b, u), dot(c - b, v));
+	vec3 p3 = vec3(dot(p - b, u), dot(p - b, v), dot(p - b, w));
+
+	vec3 cp = sd_bezier_get_closest(a2 - p3.xy, b2 - p3.xy, c2 - p3.xy);
+
+	return vec2(0.85*(sqrt(dot(cp.xy, cp.xy) + p3.z*p3.z) - thickness), cp.z);
+}
