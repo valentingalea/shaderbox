@@ -41,3 +41,4 @@ can be extracted and used separately.
 * a library of different noise functions
 * Rayleigh/Mie atmospheric scattering solver
 * a bare-bones #include expander utility to compose files
+* primitive animated GIF output
