@@ -20,10 +20,8 @@ vec3 render_sky_color(_in(ray_t) eye, _in(vec3) sun_dir)
 	return sky;// * (1. - 0.18*eye.direction);
 }
 
-vec3 render_clouds(_in(ray_t) eye)
+vec4 render_clouds(_in(ray_t) eye)
 {
-	if (eye.direction.y < .1) return vec3(0);
-
 	const int steps = 64;
 	const float thickness = 100.;
 	float march_step = thickness / float(steps);
@@ -60,14 +58,14 @@ vec3 render_clouds(_in(ray_t) eye)
 		alpha += (1. - T_i) * (1. - alpha);
 
 		pos += dir_step;
+		if (length(pos) > 1e5)
+			break;
 	}
-
-	C *= alpha;
 
 	// add horizon (hide lower artifact/reflection)
 	// linear interp the Y with pow func that 
 	// ramps up fast at the end, 0 otherwise
-	return C;//mix(C, vec3(0), pow(1. - max(eye.direction.y, 0.), 8.));
+	return mix(vec4(C, alpha), vec4(0), pow(1. - max(eye.direction.y, 0.), 128.));
 }
 
 void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
@@ -87,8 +85,12 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	vec3 look_at = vec3(0, 1.5, -1);
 	ray_t eye_ray = get_primary_ray(point_cam, eye, look_at);
 
-//	col += render_sky_color(eye_ray, sun_dir);
-	col += render_clouds(eye_ray);
+	eye_ray.direction.yz *= rotate_2d(+u_mouse.y * .13);
+	eye_ray.direction.xz *= rotate_2d(-u_mouse.x * .33);
+
+	vec3 sky = render_sky_color(eye_ray, sun_dir);
+	vec4 cld = render_clouds(eye_ray);
+	col = mix(sky, cld.rgb, cld.a);
 
 	fragColor = vec4(col, 1);
 }
