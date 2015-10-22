@@ -7,6 +7,7 @@
 #include "noise_iq.h"
 #include "fbm.h"
 #include "util.h"
+#include "intersect.h"
 
 vec3 render_sky_color(_in(ray_t) eye, _in(vec3) sun_dir)
 {
@@ -88,9 +89,20 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	eye_ray.direction.yz *= rotate_2d(+u_mouse.y * .13);
 	eye_ray.direction.xz *= rotate_2d(-u_mouse.x * .33);
 
-	vec3 sky = render_sky_color(eye_ray, sun_dir);
-	vec4 cld = render_clouds(eye_ray);
-	col = mix(sky, cld.rgb, cld.a);
+	plane_t ground = _begin(plane_t)
+		vec3(0., -1., 0.), 0., 0
+		_end;
+	hit_t hit = no_hit;
+	intersect_plane(eye_ray, ground, hit);
+
+	if (hit.t < max_dist) {
+		float cb = checkboard_pattern(hit.origin.xz, .5);
+		col = mix(vec3(.6), vec3(.75), cb);
+	} else {
+		vec3 sky = render_sky_color(eye_ray, sun_dir);
+		vec4 cld = render_clouds(eye_ray);
+		col = mix(sky, cld.rgb, cld.a);
+	}
 
 	fragColor = vec4(col, 1);
 }
