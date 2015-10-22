@@ -28,10 +28,6 @@ void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 
 vec3 illuminate(_in(hit_t) hit)
 {
-#if 0 // debug: output the raymarching steps
-	return vec3(hit.material_param);
-#endif
-
 	if (hit.material_id == mat_ground) return vec3(13. / 255., 104. / 255., 0. / 255.);
 	if (hit.material_id == mat_egg) return vec3(0.9, 0.95, 0.95);
 	if (hit.material_id == mat_bike) return vec3(.2, .2, .2);
@@ -203,7 +199,6 @@ vec3 render(_in(ray_t) ray)
 			hit_t h = _begin(hit_t)
 				t, // ray length at impact
 				int(d.y), // material id
-				float(i) / float(steps), // material custom param
 				vec3(0, 0, 0), // sdf_normal(p),
 				p // point of impact				
 			_end;

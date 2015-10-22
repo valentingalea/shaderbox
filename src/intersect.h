@@ -28,7 +28,6 @@ void intersect_sphere(
 
 	hit.t = t0;
 	hit.material_id = sphere.material;
-	hit.material_param = 1.;
 	hit.origin = impact;
 	hit.normal = (impact - sphere.origin) / sphere.radius;
 }
@@ -51,18 +50,8 @@ void intersect_plane(
 	float t = dot(P0 - ray.origin, p.direction) / denom;
 	if (t < 0. || t > hit.t) return;
 	
-	vec3 impact = ray.origin + ray.direction * t;
-
-#if 0 // checkboard pattern			
-	vec2 pattern = floor (impact.xz * 0.5);
-	float cb = mod (pattern.x + pattern.y, 2.0);
-#else
-	float cb = 0.;
-#endif
-
 	hit.t = t;
 	hit.material_id = p.material;
-	hit.material_param = 1.; // cb; // Disabled for now
-	hit.origin = impact;
+	hit.origin = ray.origin + ray.direction * t;
 	hit.normal = faceforward(p.direction, ray.direction, p.direction);
 }

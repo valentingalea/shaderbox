@@ -72,3 +72,12 @@ vec3 faceforward(
 	return dot(Nref, I) < 0 ? N : -N;
 }
 #endif
+
+float checkboard_pattern(
+	_in(vec2) pos,
+	_in(float) scale
+){
+	vec2 pattern = floor(pos * scale);
+	return mod(pattern.x + pattern.y, 2.0);
+}
+

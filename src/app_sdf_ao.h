@@ -32,7 +32,7 @@ void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 vec3 illuminate(_in(vec3) eye, _in(hit_t) hit)
 {
 #if 0 // debug: output the raymarching steps
-	return vec3(hit.normal);//.material_param);
+	return vec3(hit.normal);
 #endif
 
 	material_t mat = get_material(hit.material_id);
@@ -117,7 +117,6 @@ vec3 render(_in(ray_t) ray)
 			hit_t h = _begin(hit_t)
 				t, // ray length at impact
 				int(d.y), // material id
-				float(i) / float(steps), // material custom param
 				sdf_normal(p),
 				p // point of impact				
 			_end;

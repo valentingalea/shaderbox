@@ -47,7 +47,7 @@ vec3 illum_blinn_phong(
 	_in(hit_t) hit,
 	_in(material_t) mat
 ){
-	vec3 diffuse = max(0., dot(L, hit.normal)) * (mat.base_color * hit.material_param);
+	vec3 diffuse = max(0., dot(L, hit.normal)) * mat.base_color;
 
 	float spec_factor = 50.;
 #if 0 // Blinn specular
@@ -88,5 +88,5 @@ vec3 illum_cook_torrance(
 	float fresnel_term = fresnel_factor(1., mat.ior, VdotH);
 
 	float specular = (geo_term * rough_term * fresnel_term) / (PI * NdotV * NdotL);
-	return max(0., NdotL) * (specular + (mat.base_color * hit.material_param));
+	return max(0., NdotL) * (specular + mat.base_color);
 }

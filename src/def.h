@@ -80,7 +80,6 @@ struct plane_t {
 struct hit_t {
 	float t;
 	int material_id;
-	float material_param;
 	vec3 normal;
 	vec3 origin;
 };
@@ -88,7 +87,6 @@ struct hit_t {
 hit_t no_hit = _begin(hit_t)
 	(max_dist + 1e1), // 'infinite' distance
 	-1, // material id
-	0., // material param
 	vec3(0, 0, 0), // normal
 	vec3(0, 0, 0) // origin
 _end;

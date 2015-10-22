@@ -234,7 +234,7 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	if (hit.t > max_dist) {
 		col = get_incident_light(ray);
 	} else {
-		col = hit.material_param * vec3 (0.333);
+		col = vec3 (0.333);
 	}
 #endif
 
