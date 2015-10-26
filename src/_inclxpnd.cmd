@@ -1,0 +1,1 @@
+..\util\inclxpnd\bin\inclxpnd.exe %1 > %~n1.glsl
