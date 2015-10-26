@@ -9,8 +9,10 @@
 #include "util.h"
 #include "intersect.h"
 
-vec3 render_sky_color(_in(ray_t) eye, _in(vec3) sun_dir)
-{
+vec3 render_sky_color(
+	_in(ray_t) eye,
+	_in(vec3) sun_dir
+){
 	float sun_dot = clamp(dot(eye.direction, sun_dir), 0., 1.);
 
 	// colour scheme taken from https://www.shadertoy.com/view/MlSSR1
@@ -21,9 +23,48 @@ vec3 render_sky_color(_in(ray_t) eye, _in(vec3) sun_dir)
 	return sky;// * (1. - 0.18*eye.direction);
 }
 
-vec4 render_clouds(_in(ray_t) eye)
-{
-	const int steps = 64;
+vec3 sun_dir = vec3(0, 0, -1);
+const float absorption = 1.25;
+
+float density(
+	_in(vec3) pos,
+	_in(vec3) offset
+){
+	vec3 p = pos * .0002242 + offset;
+	float dens = fbm(p);
+	return smoothstep(.526, 1., dens);	
+}
+
+float light(
+	_in (vec3) origin
+){
+	const int steps = 2;
+	float march_step = .025;
+	
+	vec3 pos = origin;
+	vec3 dir_step = sun_dir * march_step;
+	
+	float T = 1.; // transmitance
+	
+	for (int i = 0; i < steps; i++) {
+		float dens = density (pos, vec3 (0.));
+
+		float T_i = exp(-absorption * dens * march_step);
+
+		T *= T_i;
+		if (T < .01)
+			break;
+			
+		pos += dir_step;
+	}
+	
+	return T;
+}
+
+vec4 render_clouds(
+	_in(ray_t) eye
+){
+	const int steps = 4;
 	const float thickness = 100.;
 	float march_step = thickness / float(steps);
 
@@ -37,25 +78,18 @@ vec4 render_clouds(_in(ray_t) eye)
 
 	float T = 1.; // transmitance
 	vec3 C = vec3(0); // color
-	const float absorption = 1.25;
 	float alpha = 0.;
 
 	for (int i = 0; i < steps; i++) {
-		// sample point
-		vec3 p = pos * .0002242 + vec3(0, 0, u_time * .5);
+		float dens = density (pos, vec3(0, 0, u_time * .5));
 
-		// density function
-		float dens = fbm(p);
-		dens = smoothstep(.526, 1., dens);
-
-		// Beer's law
 		float T_i = exp(-absorption * dens * march_step);
 
 		T *= T_i;
 		if (T < .01)
 			break; //return vec3((float(i) * 4.) / 255., 0, 0);
 
-		C += T * /*light(p) */ /*color*/ dens * march_step;
+		C += T * light(pos) * /*color*/ dens * march_step;
 		alpha += (1. - T_i) * (1. - alpha);
 
 		pos += dir_step;
@@ -63,14 +97,13 @@ vec4 render_clouds(_in(ray_t) eye)
 			break;
 	}
 
-	// add horizon (hide lower artifact/reflection)
-	// linear interp the Y with pow func that 
-	// ramps up fast at the end, 0 otherwise
-	return mix(vec4(C, alpha), vec4(0), pow(1. - max(eye.direction.y, 0.), 128.));
+	return vec4(C, alpha);
 }
 
-void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
-{
+void mainImage(
+	_out(vec4) fragColor,
+	_in(vec2) fragCoord
+){
 	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
 	float fov = tan(radians(45.0));
 	vec2 point_ndc = fragCoord.xy / u_res.xy;
@@ -78,7 +111,6 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 
 	vec3 col = vec3(0, 0, 0);
 
-	vec3 sun_dir = vec3(0, 0, -1);
 //	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
 //	sun_dir *= rot;
 
