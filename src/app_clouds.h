@@ -9,21 +9,20 @@
 #include "util.h"
 #include "intersect.h"
 
+const vec3 sun_dir = vec3(0, 0, -1);
+
 vec3 render_sky_color(
-	_in(ray_t) eye,
-	_in(vec3) sun_dir
+	_in(ray_t) eye
 ){
 	float sun_dot = clamp(dot(eye.direction, sun_dir), 0., 1.);
 
-	// colour scheme taken from https://www.shadertoy.com/view/MlSSR1
-	vec3 blue = vec3(0.3, .55, 0.8);
-	vec3 red = vec3(0.8, 0.8, 0.6);
-	vec3 sky = mix(blue, red, 2.45*pow(sun_dot, 228.));
+	vec3 blue = vec3(0.25, .55, 0.85);
+	vec3 red = vec3(0.9, 0.9, 0.75);
+	vec3 sky = mix(blue, red, 2.5 * pow(sun_dot, 228.));
 
-	return sky;// * (1. - 0.18*eye.direction);
+	return sky;
 }
 
-vec3 sun_dir = vec3(0, 0, -1);
 const float absorption = 1.25;
 
 float density(
@@ -35,6 +34,7 @@ float density(
 	return smoothstep(.526, 1., dens);	
 }
 
+// TODO: not working correctly
 float light(
 	_in (vec3) origin
 ){
@@ -47,7 +47,7 @@ float light(
 	float T = 1.; // transmitance
 	
 	for (int i = 0; i < steps; i++) {
-		float dens = density (pos, vec3 (0.));
+		float dens = density (pos, vec3(0.));
 
 		float T_i = exp(-absorption * dens * march_step);
 
@@ -64,7 +64,7 @@ float light(
 vec4 render_clouds(
 	_in(ray_t) eye
 ){
-	const int steps = 4;
+	const int steps = 64;
 	const float thickness = 100.;
 	float march_step = thickness / float(steps);
 
@@ -77,7 +77,7 @@ vec4 render_clouds(
 	vec3 pos = eye.origin;
 
 	float T = 1.; // transmitance
-	vec3 C = vec3(0); // color
+	vec3 C = vec3(0.); // color
 	float alpha = 0.;
 
 	for (int i = 0; i < steps; i++) {
@@ -89,7 +89,7 @@ vec4 render_clouds(
 		if (T < .01)
 			break; //return vec3((float(i) * 4.) / 255., 0, 0);
 
-		C += T * light(pos) * /*color*/ dens * march_step;
+		C += T * /*light(pos)*/ /*color*/ dens * march_step;
 		alpha += (1. - T_i) * (1. - alpha);
 
 		pos += dir_step;
@@ -109,7 +109,7 @@ void mainImage(
 	vec2 point_ndc = fragCoord.xy / u_res.xy;
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
-	vec3 col = vec3(0, 0, 0);
+	vec3 col = vec3(0.);
 
 //	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
 //	sun_dir *= rot;
@@ -131,7 +131,7 @@ void mainImage(
 		float cb = checkboard_pattern(hit.origin.xz, .5);
 		col = mix(vec3(.6), vec3(.75), cb);
 	} else {
-		vec3 sky = render_sky_color(eye_ray, sun_dir);
+		vec3 sky = render_sky_color(eye_ray);
 		vec4 cld = render_clouds(eye_ray);
 		col = mix(sky, cld.rgb, cld.a);
 	}
