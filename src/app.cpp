@@ -1,21 +1,21 @@
 // adapted from Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
+#pragma warning(disable: 4244) // disable return implicit conversion warning
+#pragma warning(disable: 4305) // disable truncation warning
+typedef float real_t;
+
 #include <swizzle/glsl/naive/vector.h>
 #include <swizzle/glsl/naive/matrix.h>
 #include <swizzle/glsl/texture_functions.h>
 
 typedef swizzle::glsl::naive::vector< int, 2 > ivec2;
-typedef swizzle::glsl::naive::vector< float, 2 > vec2;
-typedef swizzle::glsl::naive::vector< float, 3 > vec3;
-typedef swizzle::glsl::naive::vector< float, 4 > vec4;
+typedef swizzle::glsl::naive::vector< real_t, 2 > vec2;
+typedef swizzle::glsl::naive::vector< real_t, 3 > vec3;
+typedef swizzle::glsl::naive::vector< real_t, 4 > vec4;
 
-static_assert(sizeof(vec2) == sizeof(float[2]), "Too big");
-static_assert(sizeof(vec3) == sizeof(float[3]), "Too big");
-static_assert(sizeof(vec4) == sizeof(float[4]), "Too big");
-
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 2, 2> mat2;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 3, 3> mat3;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 4, 4> mat4;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 2, 2> mat2;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 3, 3> mat3;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4> mat4;
 
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
@@ -58,13 +58,13 @@ namespace glsl_sandbox
 #include <swizzle/glsl/vector_functions.h>
 
 	// constants shaders are using
-	float time;
+	real_t time;
 	vec2 mouse;
 	vec2 resolution;
 
 	// constants some shaders from shader toy are using
 	vec2& iResolution = resolution;
-	float& iGlobalTime = time;
+	real_t& iGlobalTime = time;
 	vec2& iMouse = mouse;
 
 	struct fragment_shader
@@ -81,10 +81,6 @@ namespace glsl_sandbox
 #define inout ref::
 #define mainImage fragment_shader::mainImage
 
-#pragma warning(push)
-#pragma warning(disable: 4244) // disable return implicit conversion warning
-#pragma warning(disable: 4305) // disable truncation warning
-
 #if defined(APP_EGG)
 #include "app_egg.h"
 #elif defined(APP_RAYTRACER)
@@ -98,8 +94,7 @@ namespace glsl_sandbox
 #elif defined(APP_2D)
 #include "app_2d.h"
 #endif
-	
-#pragma warning(pop)
+
 #undef mainImage
 #undef in
 #undef out
@@ -213,7 +208,7 @@ static int renderThread(void*)
 					uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
 					for (int x = 0; x < bmp->w; ++x)
 					{
-						shader.gl_FragCoord = vec2(static_cast<float>(x), bmp->h - 1.0f - y);
+						shader.gl_FragCoord = vec2(static_cast<real_t>(x), bmp->h - 1.0f - y);
 
 						// vvvvvvvvvvvvvvvvvvvvvvvvvv
 						// THE SHADER IS INVOKED HERE
@@ -343,8 +338,8 @@ int main(int argc, char* argv[])
 				throw std::runtime_error("Unable to create surface");
 			}
 			// update shader value
-			glsl_sandbox::resolution.x = static_cast<float>(w);
-			glsl_sandbox::resolution.y = static_cast<float>(h);
+			glsl_sandbox::resolution.x = static_cast<real_t>(w);
+			glsl_sandbox::resolution.y = static_cast<real_t>(h);
 		};
 
 		// initial setup
@@ -358,9 +353,9 @@ int main(int argc, char* argv[])
 		resizeOrCreateScreen(initialResolution.x, initialResolution.y);
 		resizeOrCreateSurface(initialResolution.x, initialResolution.y);
 
-		float timeScale = 1;
+		real_t timeScale = 1;
 		int frame = 0;
-		float time = 0;
+		real_t time = 0;
 		vec2 mousePosition;
 		bool pendingResize = false;
 		bool mousePressed = false;
@@ -420,14 +415,14 @@ int main(int argc, char* argv[])
 				case SDL_MOUSEMOTION:
 					if (mousePressed)
 					{
-						mousePosition.x = static_cast<float>(event.button.x);
-						mousePosition.y = static_cast<float>(g_surface->h - 1 - event.button.y);
+						mousePosition.x = static_cast<real_t>(event.button.x);
+						mousePosition.y = static_cast<real_t>(g_surface->h - 1 - event.button.y);
 					}
 					break;
 				case SDL_MOUSEBUTTONDOWN:
 					mousePressed = true;
-					mousePosition.x = static_cast<float>(event.button.x);
-					mousePosition.y = static_cast<float>(g_surface->h - 1 - event.button.y);
+					mousePosition.x = static_cast<real_t>(event.button.x);
+					mousePosition.y = static_cast<real_t>(g_surface->h - 1 - event.button.y);
 					break;
 				case SDL_MOUSEBUTTONUP:
 					mousePressed = false;
@@ -484,7 +479,7 @@ int main(int argc, char* argv[])
 			cout.flush();
 
 			clock_t delta = clock() - begin;
-			time += static_cast<float>(delta / double(CLOCKS_PER_SEC) * timeScale);
+			time += static_cast<real_t>(delta / double(CLOCKS_PER_SEC) * timeScale);
 			begin = clock();
 		}
 
