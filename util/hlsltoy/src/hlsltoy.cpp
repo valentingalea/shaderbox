@@ -1,6 +1,3 @@
-#define WIDTH 1280
-#define HEIGHT 720         
-
 // from http://the-witness.net/news/2012/11/scopeexit-in-c11/
 template <typename F>
 struct ScopeExit {
@@ -38,6 +35,8 @@ void ShowError(LPCSTR szErrMsg, ID3D10Blob* pExtraErrorMsg = NULL)
 
 LPCTSTR lpszClassName = "tinyDX11";
 LPCTSTR lpszAppName = "hlsltoy";
+constexpr int WIDTH = 800;
+constexpr int HEIGHT = 600;
 
 DXGI_SWAP_CHAIN_DESC SwapChainDesc =
 {
@@ -50,7 +49,7 @@ DXGI_SWAP_CHAIN_DESC SwapChainDesc =
 
 // from http://altdevblog.com/2011/08/08/an-interesting-vertex-shader-trick/
 CHAR szVertexShader[] =
-"float4 VS_main(uint id : SV_VertexID) : SV_Position {"
+"float4 main(uint id : SV_VertexID) : SV_Position {"
 	"float2 tex = float2((id << 1) & 2, id & 2);"
 	"return float4(tex * float2(2, -2) + float2(-1, 1), 0, 1);"
 "}";
@@ -129,7 +128,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	// vertex shader
 	ID3D11VertexShader* pVS = NULL;
 	SCOPE_EXIT(SafeRelease(pVS));
-	hr = D3DCompile(szVertexShader, sizeof(szVertexShader), 0, 0, 0, "VS_main", "vs_5_0", flags, 0, &pBlob, &pErrorBlob);
+	hr = D3DCompile(szVertexShader, sizeof(szVertexShader), 0, 0, 0, "main", "vs_5_0", flags, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
 		ShowError("vertex compilation error", pErrorBlob);
@@ -143,7 +142,8 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	// pixel shader
 	ID3D11PixelShader* pPS = NULL;
 	SCOPE_EXIT(SafeRelease(pPS));
-	hr = D3DCompileFromFile(szArglist[1], NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS_main", "ps_5_0", 0, 0, &pBlob, &pErrorBlob);
+	//D3D_SHADER_MACRO PSShaderMacros[1] = { "__HLSL", "1" };
+	hr = D3DCompileFromFile(szArglist[1], NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
 		ShowError("pixel compilation error", pErrorBlob);
@@ -160,7 +160,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		float time;
 		DirectX::XMFLOAT2 mouse;
 	};
-	PS_CONSTANT_BUFFER PSConstBuff = { {WIDTH, HEIGHT}, 0, {0, 0} };
+	PS_CONSTANT_BUFFER PSConstBuff = { {float(WIDTH), float(HEIGHT)}, 0, {0, 0} };
 	D3D11_BUFFER_DESC uniformBuffDesc = { sizeof(PS_CONSTANT_BUFFER), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
 	ID3D11Buffer* pUniformBuff = NULL;
 	SCOPE_EXIT(SafeRelease(pUniformBuff));
@@ -187,6 +187,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		auto timerNow = std::chrono::high_resolution_clock::now();
 		auto timeElapsted = std::chrono::duration_cast<std::chrono::milliseconds>(timerNow - timerStart).count();
 
+#if 0 // TODO: doesn't seem to work - CPU/GPU trample over each other
 		// update the uniforms - potential bottleneck here as CPU/GPU fight for the resource
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
 		pImmediateContext->Map(pUniformBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
@@ -194,6 +195,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		volatile PS_CONSTANT_BUFFER *pBuff = (PS_CONSTANT_BUFFER *)mappedResource.pData;
 		pBuff->time = (float)(timeElapsted / 1000.f);
 		pImmediateContext->Unmap(pUniformBuff, 0);
+#endif
 
 		pImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		pImmediateContext->Draw(3, 0);

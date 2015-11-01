@@ -34,10 +34,12 @@ precision mediump float;
 #define atan(y, x) atan2(x, y)
 #define mod fmod
 #pragma pack_matrix(row_major)
-uniform float u_time;
-uniform float2 u_res;
+cbuffer uniforms : register(b0) {
+	float2 u_res;
+	float u_time;
+};
 void mainImage(_out(float4) fragColor, _in(float2) fragCoord);
-float4 main(float2 uv : POSITION0) : SV_TARGET0 { float4 col; mainImage(col, uv); return col; }
+float4 main(float4 uv : SV_Position) : SV_Target{ float4 col; mainImage(col, uv.xy); return col; }
 #endif
 
 #if defined(__cplusplus) || defined(SHADERTOY)
@@ -87,7 +89,7 @@ struct hit_t {
 hit_t no_hit = _begin(hit_t)
 	float(max_dist + 1e1), // 'infinite' distance
 	-1, // material id
-	vec3(0.), // normal
-	vec3(0.) // origin
+	vec3(0., 0., 0.), // normal
+	vec3(0., 0., 0.) // origin
 _end;
 

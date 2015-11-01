@@ -1,0 +1,1 @@
+..\bin\hlsltoy.exe %1
