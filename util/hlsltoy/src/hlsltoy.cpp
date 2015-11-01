@@ -54,6 +54,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
 {
 	LPWSTR *szArglist = NULL;
+	SCOPE_EXIT(if (szArglist) LocalFree(szArglist));
 	int nArgs = 0;
 	szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
 	if (!szArglist || nArgs < 2)
@@ -61,7 +62,6 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		ShowError("Minimal DX11 Framework.\n\Usage:\nhlsltoy <shader file>");
 		return ERROR_INVALID_COMMAND_LINE;
 	}
-	SCOPE_EXIT(LocalFree(szArglist));
 
 	HRESULT hr = NULL;
 	HINSTANCE hinst = GetModuleHandle(NULL);
@@ -78,15 +78,15 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	ID3D11Device*               pd3dDevice = NULL;
 	ID3D11DeviceContext*        pImmediateContext = NULL;
 	IDXGISwapChain*             pSwapChain = NULL;
+	SCOPE_EXIT(SafeRelease(pSwapChain));
+	SCOPE_EXIT(SafeRelease(pImmediateContext));
+	SCOPE_EXIT(SafeRelease(pd3dDevice));
 #ifdef _DEBUG	
 	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_DEBUG, 0, 0, D3D11_SDK_VERSION, (DXGI_SWAP_CHAIN_DESC*)&SwapChainDesc[0], &pSwapChain, &pd3dDevice, NULL, &pImmediateContext);
 	if (FAILED(hr)) return hr;
 #else
 	D3D11CreateDeviceAndSwapChain( NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, 0,0,D3D11_SDK_VERSION, (DXGI_SWAP_CHAIN_DESC*)&SwapChainDesc[0], &pSwapChain, &pd3dDevice, NULL, &pImmediateContext );
 #endif
-	SCOPE_EXIT(SafeRelease(pSwapChain));
-	SCOPE_EXIT(SafeRelease(pImmediateContext));
-	SCOPE_EXIT(SafeRelease(pd3dDevice));
 
 	// unordered access view on back buffer
 	pSwapChain->GetBuffer(0, __uuidof( ID3D11Texture2D ), (LPVOID*)&SwapChainDesc[0]);	// reuse swapchain struct for temp storage of texture pointer
@@ -95,9 +95,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 
 	// constant buffer
 	ID3D11Buffer *pConstants = NULL;
+	SCOPE_EXIT(SafeRelease(pConstants));
 	pd3dDevice->CreateBuffer(&ConstBufferDesc, NULL, &pConstants);
 	pImmediateContext->CSSetConstantBuffers(0, 1, &pConstants);
-	SCOPE_EXIT(SafeRelease(pConstants));
 
 	// compute shader
 	ID3D11ComputeShader *pCS = NULL;
@@ -135,6 +135,5 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		pSwapChain->Present(0, 0);
 	} while (true);
 	
-	ExitProcess(0);
 	return ERROR_SUCCESS;
 }
