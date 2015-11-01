@@ -17,12 +17,13 @@ ScopeExit<F> MakeScopeExit(F f) {
 #define SCOPE_EXIT(code) \
     auto STRING_JOIN2(scope_exit_, __LINE__) = MakeScopeExit([&](){code;})
 
-#define SafeRelease(T) if (T) T->Release()
+#define SafeRelease(T) if (T) { T->Release(); }
 
 #include <d3d11.h>
 #include <D3Dcompiler.h>
 #include <Shellapi.h>
 #include <stdio.h>
+#include <CRTDBG.H>
 
 void ShowError(LPCSTR szErrMsg, ID3D10Blob* pExtraErrorMsg = NULL)
 {
@@ -30,19 +31,33 @@ void ShowError(LPCSTR szErrMsg, ID3D10Blob* pExtraErrorMsg = NULL)
 	char message[MAX];
 	sprintf_s(message, MAX, szErrMsg);
 	if (pExtraErrorMsg != NULL)
-		sprintf_s(message, MAX, "%s", (LPCTSTR)pExtraErrorMsg->GetBufferPointer());
+		sprintf_s(message, MAX, "%s\n%s", szErrMsg, (LPCTSTR)pExtraErrorMsg->GetBufferPointer());
 	MessageBox(0, message, "Error", MB_ICONERROR);
 }
 
-static int SwapChainDesc[] = {
-	WIDTH, HEIGHT, 0, 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 0,  // w,h,refreshrate,format, scanline, scaling
-	1, 0, // sampledesc (count, quality)
-	DXGI_USAGE_UNORDERED_ACCESS, // usage
-	1, // buffercount
-	0, // hwnd
-	0, 0, 0 }; // fullscreen, swap_discard, flags
+LPCTSTR lpszClassName = "tinyDX11";
+LPCTSTR lpszAppName = "hlsltoy";
 
-static D3D11_BUFFER_DESC ConstBufferDesc = { 16, D3D11_USAGE_DEFAULT, D3D11_BIND_CONSTANT_BUFFER, 0, 0, 0 }; // 16,0,4,0,0,0
+DXGI_SWAP_CHAIN_DESC SwapChainDesc =
+{
+	{ WIDTH, HEIGHT, { 0, 0 }, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED, DXGI_MODE_SCALING_UNSPECIFIED, },  // w, h, refreshrate, format, scanline ordering, scaling
+	{ 1, 0 }, // number of multisamples per pixel, quality level
+	DXGI_USAGE_RENDER_TARGET_OUTPUT, 1, // buffer usage, buffer count
+	0, // output window (must be supplied later)
+	1, DXGI_SWAP_EFFECT_DISCARD, 0 // windowed, swap effect, flags
+};
+
+// from http://altdevblog.com/2011/08/08/an-interesting-vertex-shader-trick/
+CHAR szVertexShader[] =
+"float4 VS_main(uint id : SV_VertexID) : SV_Position {"
+	"switch (id) {"
+		"case 0: return float4(-1, 1, 0, 1);"
+		"case 1: return float4(-1, -1, 0, 1);"
+		"case 2: return float4(1, 1, 0, 1);"
+		"case 3: return float4(1, -1, 0, 1);"
+		"default: return float4(0, 0, 0, 0);"
+	"}"
+"}";
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -65,58 +80,87 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 
 	HRESULT hr = NULL;
 	HINSTANCE hinst = GetModuleHandle(NULL);
-	LPCTSTR lpszClassName = "tinyDX11";
 	WNDCLASS wc = { CS_HREDRAW | CS_VREDRAW | CS_OWNDC, (WNDPROC)WndProc, 0, 0, hinst, LoadIcon(NULL, IDI_WINLOGO), LoadCursor(NULL, IDC_ARROW), 0, 0, lpszClassName };
 	RegisterClass(&wc);
 	SCOPE_EXIT(UnregisterClass(lpszClassName, hinst));
 
-	HWND hWnd = CreateWindowExA(0, lpszClassName, "hlsltoy", WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_VISIBLE, 0, 0, WIDTH, HEIGHT, 0, 0, hinst, 0);
-	SwapChainDesc[12] = 1; // windowed
-	SwapChainDesc[11] = (int)hWnd;
+	HWND hWnd = CreateWindowExA(0, lpszClassName, lpszAppName, WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, WIDTH, HEIGHT, 0, 0, hinst, 0);
+	SwapChainDesc.OutputWindow = hWnd;
 
 	// setting up device
-	ID3D11Device*               pd3dDevice = NULL;
-	ID3D11DeviceContext*        pImmediateContext = NULL;
-	IDXGISwapChain*             pSwapChain = NULL;
+	ID3D11Device* pd3dDevice = NULL;
+	ID3D11DeviceContext* pImmediateContext = NULL;
+	IDXGISwapChain* pSwapChain = NULL;
 	SCOPE_EXIT(SafeRelease(pSwapChain));
 	SCOPE_EXIT(SafeRelease(pImmediateContext));
 	SCOPE_EXIT(SafeRelease(pd3dDevice));
-#ifdef _DEBUG	
-	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_DEBUG, 0, 0, D3D11_SDK_VERSION, (DXGI_SWAP_CHAIN_DESC*)&SwapChainDesc[0], &pSwapChain, &pd3dDevice, NULL, &pImmediateContext);
-	if (FAILED(hr)) return hr;
+	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 
+#ifdef _DEBUG
+		D3D11_CREATE_DEVICE_DEBUG,
 #else
-	D3D11CreateDeviceAndSwapChain( NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, 0,0,D3D11_SDK_VERSION, (DXGI_SWAP_CHAIN_DESC*)&SwapChainDesc[0], &pSwapChain, &pd3dDevice, NULL, &pImmediateContext );
+		D3D11_CREATE_DEVICE_SINGLETHREADED,
 #endif
+		0, 0, D3D11_SDK_VERSION, &SwapChainDesc, &pSwapChain, &pd3dDevice, NULL, &pImmediateContext);	
+	if (FAILED(hr)) return hr;
 
-	// unordered access view on back buffer
-	pSwapChain->GetBuffer(0, __uuidof( ID3D11Texture2D ), (LPVOID*)&SwapChainDesc[0]);	// reuse swapchain struct for temp storage of texture pointer
-	pd3dDevice->CreateUnorderedAccessView((ID3D11Texture2D*)SwapChainDesc[0], NULL, (ID3D11UnorderedAccessView**)&SwapChainDesc[0]);
-	pImmediateContext->CSSetUnorderedAccessViews(0, 1, (ID3D11UnorderedAccessView**)&SwapChainDesc[0], 0);
+	ID3D11Texture2D* pBackBuffer = NULL;
+	SCOPE_EXIT(SafeRelease(pBackBuffer));
+	hr = pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
+	_ASSERT(SUCCEEDED(hr));
 
-	// constant buffer
-	ID3D11Buffer *pConstants = NULL;
-	SCOPE_EXIT(SafeRelease(pConstants));
-	pd3dDevice->CreateBuffer(&ConstBufferDesc, NULL, &pConstants);
-	pImmediateContext->CSSetConstantBuffers(0, 1, &pConstants);
+	ID3D11RenderTargetView* pRenderTargetView = NULL;
+	SCOPE_EXIT(SafeRelease(pRenderTargetView));
+	hr = pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &pRenderTargetView);
+	_ASSERT(SUCCEEDED(hr));
 
-	// compute shader
-	ID3D11ComputeShader *pCS = NULL;
+	pImmediateContext->OMSetRenderTargets(1, &pRenderTargetView, NULL);
+
+	D3D11_VIEWPORT vp = { 0, 0, WIDTH, HEIGHT, 0., 1. };
+	pImmediateContext->RSSetViewports(1, &vp);
+
+	D3D11_RASTERIZER_DESC rasterizerDesc = { D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE, 0, 0., 0., FALSE, FALSE, FALSE, FALSE };
+	ID3D11RasterizerState* pd3dRasterizerState = NULL;
+	SCOPE_EXIT(SafeRelease(pd3dRasterizerState));
+	hr = pd3dDevice->CreateRasterizerState(&rasterizerDesc, &pd3dRasterizerState);
+	_ASSERT(SUCCEEDED(hr));
+
 	ID3D10Blob* pErrorBlob = NULL;
 	ID3D10Blob* pBlob = NULL;
-	SCOPE_EXIT(SafeRelease(pCS));
 	SCOPE_EXIT(SafeRelease(pErrorBlob));
 	SCOPE_EXIT(SafeRelease(pBlob));
-	hr = D3DCompileFromFile(szArglist[1], NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "cs_5_0", "cs_5_0", 0, 0, &pBlob, &pErrorBlob);
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_IEEE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS;
+
+	// vertex shader
+	ID3D11VertexShader* pVS = NULL;
+	SCOPE_EXIT(SafeRelease(pVS));
+	hr = D3DCompile(szVertexShader, sizeof(szVertexShader), 0, 0, 0, "VS_main", "vs_5_0", flags, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
-		ShowError("compilation error", pErrorBlob);
+		ShowError("vertex compilation error", pErrorBlob);
 		return ERROR_BAD_COMMAND;
 	}
-	else
+	hr = pd3dDevice->CreateVertexShader((DWORD*)pBlob->GetBufferPointer(), pBlob->GetBufferSize(), NULL, &pVS);
+	_ASSERT(SUCCEEDED(hr));
+	SafeRelease(pBlob);
+	SafeRelease(pErrorBlob);
+
+	// pixel shader
+	ID3D11PixelShader* pPS = NULL;
+	SCOPE_EXIT(SafeRelease(pPS));
+	CHAR szPixelShader[] = "float4 PS_main(float4 uv : SV_Position) : SV_Target { return float4(1, 0, 0, 1); }";
+	hr = D3DCompile(szPixelShader, sizeof(szPixelShader), 0, 0, 0, "PS_main", "ps_5_0", flags, 0, &pBlob, &pErrorBlob);
+	if (FAILED(hr))
 	{
-		hr = pd3dDevice->CreateComputeShader((DWORD*)pBlob->GetBufferPointer(), pBlob->GetBufferSize(), NULL, &pCS);
+		ShowError("pixel compilation error", pErrorBlob);
+		return ERROR_BAD_COMMAND;
 	}
-	pImmediateContext->CSSetShader(pCS, NULL, 0);
+	hr = pd3dDevice->CreatePixelShader((DWORD*)pBlob->GetBufferPointer(), pBlob->GetBufferSize(), NULL, &pPS);
+	_ASSERT(SUCCEEDED(hr));
+	SafeRelease(pBlob);
+	SafeRelease(pErrorBlob);
+
+	pImmediateContext->VSSetShader(pVS, NULL, 0);
+	pImmediateContext->PSSetShader(pPS, NULL, 0);
 
 	MSG msg = {};
 	do
@@ -129,9 +173,8 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 			DispatchMessage(&msg);
 		}
 
-		SwapChainDesc[0] = GetTickCount();
-		pImmediateContext->UpdateSubresource(pConstants, 0, 0, &SwapChainDesc[0], 4, 4);
-		pImmediateContext->Dispatch(WIDTH / 16, HEIGHT / 16, 1);
+		pImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		pImmediateContext->Draw(3, 0);
 		pSwapChain->Present(0, 0);
 	} while (true);
 	
