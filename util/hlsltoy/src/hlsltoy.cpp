@@ -21,9 +21,10 @@ ScopeExit<F> MakeScopeExit(F f) {
 
 #include <d3d11.h>
 #include <D3Dcompiler.h>
-#include <Shellapi.h>
-#include <stdio.h>
+#include <DirectXMath.h>
 #include <CRTDBG.H>
+#include <cstdio>
+#include <chrono>
 
 void ShowError(LPCSTR szErrMsg, ID3D10Blob* pExtraErrorMsg = NULL)
 {
@@ -50,13 +51,8 @@ DXGI_SWAP_CHAIN_DESC SwapChainDesc =
 // from http://altdevblog.com/2011/08/08/an-interesting-vertex-shader-trick/
 CHAR szVertexShader[] =
 "float4 VS_main(uint id : SV_VertexID) : SV_Position {"
-	"switch (id) {"
-		"case 0: return float4(-1, 1, 0, 1);"
-		"case 1: return float4(-1, -1, 0, 1);"
-		"case 2: return float4(1, 1, 0, 1);"
-		"case 3: return float4(1, -1, 0, 1);"
-		"default: return float4(0, 0, 0, 0);"
-	"}"
+	"float2 tex = float2((id << 1) & 2, id & 2);"
+	"return float4(tex * float2(2, -2) + float2(-1, 1), 0, 1);"
 "}";
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -147,8 +143,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	// pixel shader
 	ID3D11PixelShader* pPS = NULL;
 	SCOPE_EXIT(SafeRelease(pPS));
-	CHAR szPixelShader[] = "float4 PS_main(float4 uv : SV_Position) : SV_Target { return float4(1, 0, 0, 1); }";
-	hr = D3DCompile(szPixelShader, sizeof(szPixelShader), 0, 0, 0, "PS_main", "ps_5_0", flags, 0, &pBlob, &pErrorBlob);
+	hr = D3DCompileFromFile(szArglist[1], NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "PS_main", "ps_5_0", 0, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
 		ShowError("pixel compilation error", pErrorBlob);
@@ -159,9 +154,25 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SafeRelease(pBlob);
 	SafeRelease(pErrorBlob);
 
+	__declspec(align(16)) struct PS_CONSTANT_BUFFER
+	{
+		DirectX::XMFLOAT2 resolution;
+		float time;
+		DirectX::XMFLOAT2 mouse;
+	};
+	PS_CONSTANT_BUFFER PSConstBuff = { {WIDTH, HEIGHT}, 0, {0, 0} };
+	D3D11_BUFFER_DESC uniformBuffDesc = { sizeof(PS_CONSTANT_BUFFER), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
+	ID3D11Buffer* pUniformBuff = NULL;
+	SCOPE_EXIT(SafeRelease(pUniformBuff));
+	D3D11_SUBRESOURCE_DATA pData = { &PSConstBuff, 0, 0 };
+	hr = pd3dDevice->CreateBuffer(&uniformBuffDesc, &pData, &pUniformBuff);
+	_ASSERT(SUCCEEDED(hr));
+
 	pImmediateContext->VSSetShader(pVS, NULL, 0);
 	pImmediateContext->PSSetShader(pPS, NULL, 0);
+	pImmediateContext->PSSetConstantBuffers(0, 1, &pUniformBuff);
 
+	auto timerStart = std::chrono::high_resolution_clock::now();
 	MSG msg = {};
 	do
 	{		
@@ -173,8 +184,20 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 			DispatchMessage(&msg);
 		}
 
+		auto timerNow = std::chrono::high_resolution_clock::now();
+		auto timeElapsted = std::chrono::duration_cast<std::chrono::milliseconds>(timerNow - timerStart).count();
+
+		// update the uniforms - potential bottleneck here as CPU/GPU fight for the resource
+		D3D11_MAPPED_SUBRESOURCE mappedResource;
+		pImmediateContext->Map(pUniformBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		// must be careful not to read from data, only write
+		volatile PS_CONSTANT_BUFFER *pBuff = (PS_CONSTANT_BUFFER *)mappedResource.pData;
+		pBuff->time = (float)(timeElapsted / 1000.f);
+		pImmediateContext->Unmap(pUniformBuff, 0);
+
 		pImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		pImmediateContext->Draw(3, 0);
+
 		pSwapChain->Present(0, 0);
 	} while (true);
 	
