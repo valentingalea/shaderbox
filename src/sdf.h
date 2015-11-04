@@ -142,7 +142,7 @@ vec2 sd_bezier(
 	vec3 v = normalize(cross(w, u));
 
 	vec2 a2 = vec2(dot(a - b, u), dot(a - b, v));
-	vec2 b2 = vec2(0.0);
+	vec2 b2 = vec2(0., 0.);
 	vec2 c2 = vec2(dot(c - b, u), dot(c - b, v));
 	vec3 p3 = vec3(dot(p - b, u), dot(p - b, v), dot(p - b, w));
 

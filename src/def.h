@@ -4,6 +4,8 @@
 #define _out(T) T &
 #define _begin(type) type {
 #define _end }
+#define _mutable(T) T
+#define _constant(T) const T
 #define mul(a, b) (a) * (b)
 #endif
 
@@ -13,6 +15,8 @@
 #define _out(T) out T
 #define _begin(type) type (
 #define _end )
+#define _mutable(T) T
+#define _constant(T) const T
 #define mul(a, b) (a) * (b)
 precision mediump float;
 #endif
@@ -23,6 +27,8 @@ precision mediump float;
 #define _out(T) out T
 #define _begin(type) {
 #define _end }
+#define _mutable(T) static T
+#define _constant(T) static const T
 #define vec2 float2
 #define vec3 float3
 #define vec4 float4
@@ -37,6 +43,7 @@ precision mediump float;
 cbuffer uniforms : register(b0) {
 	float2 u_res;
 	float u_time;
+	float2 u_mouse;
 };
 void mainImage(_out(float4) fragColor, _in(float2) fragCoord);
 float4 main(float4 uv : SV_Position) : SV_Target{ float4 col; mainImage(col, uv.xy); return col; }

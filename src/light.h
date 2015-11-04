@@ -11,9 +11,9 @@ struct light_t {
 	vec3 color;
 };
 
-light_t lights[8];
+_mutable(light_t) lights[8];
 
-vec3 ambient_light = vec3(.01, .01, .01);
+_constant(vec3) ambient_light = vec3(.01, .01, .01);
 
 vec3 get_light_direction(
 	_in(light_t) light,

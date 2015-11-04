@@ -9,7 +9,7 @@
 #include "util.h"
 #include "intersect.h"
 
-const vec3 sun_dir = vec3(0, 0, -1);
+_mutable(vec3) sun_dir = vec3(0, 0, -1);
 
 vec3 render_sky_color(
 	_in(ray_t) eye
@@ -23,7 +23,7 @@ vec3 render_sky_color(
 	return sky;
 }
 
-const float absorption = 1.25;
+_constant(float) absorption = 1.25;
 
 float density(
 	_in(vec3) pos,
@@ -47,7 +47,7 @@ float light(
 	float T = 1.; // transmitance
 	
 	for (int i = 0; i < steps; i++) {
-		float dens = density (pos, vec3(0.));
+		float dens = density (pos, vec3(0, 0, 0));
 
 		float T_i = exp(-absorption * dens * march_step);
 
@@ -77,7 +77,7 @@ vec4 render_clouds(
 	vec3 pos = eye.origin;
 
 	float T = 1.; // transmitance
-	vec3 C = vec3(0.); // color
+	vec3 C = vec3(0, 0, 0); // color
 	float alpha = 0.;
 
 	for (int i = 0; i < steps; i++) {
@@ -109,7 +109,7 @@ void mainImage(
 	vec2 point_ndc = fragCoord.xy / u_res.xy;
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
-	vec3 col = vec3(0.);
+	vec3 col = vec3(0, 0, 0);
 
 //	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
 //	sun_dir *= rot;
@@ -118,8 +118,8 @@ void mainImage(
 	vec3 look_at = vec3(0, 1.5, -1);
 	ray_t eye_ray = get_primary_ray(point_cam, eye, look_at);
 
-	eye_ray.direction.yz *= rotate_2d(+u_mouse.y * .13);
-	eye_ray.direction.xz *= rotate_2d(-u_mouse.x * .33);
+//	eye_ray.direction.yz *= rotate_2d(+u_mouse.y * .13);
+//	eye_ray.direction.xz *= rotate_2d(-u_mouse.x * .33);
 
 	plane_t ground = _begin(plane_t)
 		vec3(0., -1., 0.), 0., 0
@@ -129,7 +129,7 @@ void mainImage(
 
 	if (hit.t < max_dist) {
 		float cb = checkboard_pattern(hit.origin.xz, .5);
-		col = mix(vec3(.6), vec3(.75), cb);
+		col = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), cb);
 	} else {
 		vec3 sky = render_sky_color(eye_ray);
 		vec4 cld = render_clouds(eye_ray);

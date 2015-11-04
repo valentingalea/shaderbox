@@ -1,20 +1,24 @@
 #include "def.h"
 
-#if 0
+//#define USE_TEXTURE
+
+#ifdef USE_TEXTURE
+#ifdef __cplusplus
+	sampler2D u_tex0("", sampler2D::Repeat);
+#endif
+#ifdef SHADERTOY
+	#define u_tex0 iChannel0
+#endif
+#else
 #include "noise_iq.h"
 #include "fbm.h"
 #endif
 
-#ifdef __cplusplus
-sampler2D u_tex0 ("", sampler2D::Repeat);
-#else
-#define u_tex0 iChannel0
-#endif
 
 vec4 sample (
 	_in(vec2) uv
 ){
-#if 1
+#ifdef USE_TEXTURE
 	return texture (u_tex0, uv);
 #else
 	float n = fbm (vec3(uv, 1.));

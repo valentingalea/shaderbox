@@ -37,13 +37,13 @@ vec3 illuminate(_in(hit_t) hit)
 #define BEZIER
 vec2 sdf(_in(vec3) P)
 {
-	vec3 p = rotate_around_y(u_time * -50.0) * P -
+	vec3 p = mul(rotate_around_y(u_time * -50.0), P) -
 		vec3(0, 0.5, 1.75);
 
 	int material = mat_egg;
 
 	float egg_y = 0.65;
-#if 0
+#if 1
 	float egg_m = sd_sphere(p - vec3(0, egg_y, 0), 0.475);
 	float egg_b = sd_sphere(p - vec3(0, egg_y - 0.45, 0), 0.25);
 	float egg_t = sd_sphere(p - vec3(0, egg_y + 0.45, 0), 0.25);
@@ -85,10 +85,10 @@ vec2 sdf(_in(vec3) P)
 	vec3 knee_l = ik_solver(pelvis, left_foot_pos, femur, tibia);
 #ifndef BEZIER
 	vec2 left_leg_a = vec2(
-		sd_cylinder(p + pelvis, vec3(0), knee_l - side, thick),
+		sd_cylinder(p + pelvis, vec3(0., 0., 0.), knee_l - side, thick),
 		material);
 	vec2 left_leg_b = vec2(
-		sd_cylinder(p + knee_l, vec3(0), left_foot_pos - knee_l, thick),
+		sd_cylinder(p + knee_l, vec3(0., 0., 0.), left_foot_pos - knee_l, thick),
 		material);
 #endif
 
@@ -96,10 +96,10 @@ vec2 sdf(_in(vec3) P)
 	vec3 knee_r = ik_solver(pelvis, right_foot_pos, femur, tibia);
 #ifndef BEZIER
 	vec2 right_leg_a = vec2(
-		sd_cylinder(p + pelvis, vec3(0), knee_r + side, thick),
+		sd_cylinder(p + pelvis, vec3(0., 0., 0.), knee_r + side, thick),
 		material);
 	vec2 right_leg_b = vec2(
-		sd_cylinder(p + knee_r, vec3(0), right_foot_pos - knee_r, thick),
+		sd_cylinder(p + knee_r, vec3(0., 0., 0.), right_foot_pos - knee_r, thick),
 		material);
 #endif
 
@@ -109,22 +109,22 @@ vec2 sdf(_in(vec3) P)
 		op_add(right_leg_a, right_leg_b)
 #else
 		vec2(
-		sd_bezier(-(vec3(0) + side), -knee_l, -left_foot_pos, p, thick).x,
+		sd_bezier(-(vec3(0., 0., 0.) + side), -knee_l, -left_foot_pos, p, thick).x,
 		material),
 		vec2(
-		sd_bezier(-(vec3(0) - side), -knee_r, -right_foot_pos, p, thick).x,
+		sd_bezier(-(vec3(0., 0., 0.) - side), -knee_r, -right_foot_pos, p, thick).x,
 		material)
 #endif
 	);
 
 	vec3 left_toe = normalize(vec3(left_foot_pos.y - knee_l.y, knee_l.x - left_foot_pos.x, 0));
 	vec2 left_foot = vec2(
-		sd_cylinder(p + left_foot_pos, vec3(0), left_toe / 8., thick),
+		sd_cylinder(p + left_foot_pos, vec3(0., 0., 0.), left_toe / 8., thick),
 		material);
 
 	vec3 right_toe = normalize(vec3(right_foot_pos.y - knee_r.y, knee_r.x - right_foot_pos.x, 0));
 	vec2 right_foot = vec2(
-		sd_cylinder(p + right_foot_pos, vec3(0), right_toe / 8., thick),
+		sd_cylinder(p + right_foot_pos, vec3(0., 0., 0.), right_toe / 8., thick),
 		material);
 
 	vec2 feet = op_add(left_foot, right_foot);
@@ -134,7 +134,7 @@ vec2 sdf(_in(vec3) P)
 		mat_bike);
 
 	vec2 ground = vec2(
-		sd_plane(P, vec3(0, 1, 0), wheel_pos.y + 0.5),
+		sd_plane(P, vec3(0., 1., 0.), wheel_pos.y + 0.5),
 		mat_ground);
 
 	return op_add(

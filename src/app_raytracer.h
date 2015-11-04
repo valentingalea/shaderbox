@@ -4,43 +4,42 @@
 #include "material.h"
 #include "light.h"
 #include "intersect.h"
+#include "cornell_box.h"
 
 // ----------------------------------------------------------------------------
 // Raytracer
 // ----------------------------------------------------------------------------
-
-#define num_planes 6
-plane_t planes[num_planes];
-
-#define num_spheres 3
-sphere_t spheres[num_spheres];
 
 vec3 background(_in(ray_t) ray)
 {
 	return vec3(0, 0, 0);
 }
 
-#include "cornell_box.h"
 void setup_scene()
 {
-	materials[mat_debug] = _begin(material_t) vec3(1., 1., 1.), 0., 0., 1., 0., 0. _end;
+	materials[mat_debug].base_color = vec3(1., 1., 1.);
+	materials[mat_debug].metallic = 0.;
+	materials[mat_debug].roughness = 0.;
+	materials[mat_debug].ior = 1.;
+	materials[mat_debug].reflectivity = 0.;
+	materials[mat_debug].translucency = 0.;
 
 	setup_cornell_box();
 
 #if 1
 	float _sin = sin(u_time);
 	float _cos = cos(u_time);
-	spheres[cb_sphere_left].origin += vec3(0, abs(_sin), _cos + 1.);
-	spheres[cb_sphere_right].origin.z = 0.;// += vec3(0, abs(_cos), _cos);
+	cb_spheres[cb_sphere_left].origin += vec3(0, abs(_sin), _cos + 1.);
+	cb_spheres[cb_sphere_right].origin.z = 0.;// += vec3(0, abs(_cos), _cos);
 	lights[0].L.z = 1.5;
 #endif
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
-	vec2 mouse = u_mouse.x < BIAS ? vec2(0) : 2. * (u_res.xy / u_mouse.xy) - 1.;
+	vec2 mouse = u_mouse.x < BIAS ? vec2(0, 0) : 2. * (u_res.xy / u_mouse.xy) - 1.;
 	mat3 rot_y = rotate_around_y(mouse.x * 30.);
-	eye = rot_y * vec3(0, cb_plane_dist, 2.333 * cb_plane_dist);
+	eye = mul(rot_y, vec3(0, cb_plane_dist, 2.333 * cb_plane_dist));
 	look_at = vec3(0, cb_plane_dist, 0);
 }
 
@@ -71,14 +70,15 @@ vec3 illuminate(_in(vec3) eye, _in(hit_t) hit) // TODO: find a way to account fo
 hit_t raytrace_iteration(_in(ray_t) ray, _in(int) mat_to_ignore)
 {
 	hit_t hit = no_hit;
+	int i;
 
-	for (int i = 0; i < num_planes; ++i) {
-		intersect_plane(ray, planes[i], hit);
+	for (i = 0; i < num_cb_planes; ++i) {
+		intersect_plane(ray, cb_planes[i], hit);
 	}
 
-	for (int i = 0; i < num_spheres; ++i) {
-		if (spheres[i].material != mat_to_ignore) {
-			intersect_sphere(ray, spheres[i], hit);
+	for (i = 0; i < num_cb_spheres; ++i) {
+		if (cb_spheres[i].material != mat_to_ignore) {
+			intersect_sphere(ray, cb_spheres[i], hit);
 		}
 	}
 
@@ -87,8 +87,8 @@ hit_t raytrace_iteration(_in(ray_t) ray, _in(int) mat_to_ignore)
 
 vec3 render(_in(ray_t) primary_ray)
 {
-	vec3 color = vec3(0);
-	vec3 accum = vec3(1);
+	vec3 color = vec3(0, 0, 0);
+	vec3 accum = vec3(1, 1, 1);
 	ray_t ray = primary_ray;
 
 	for (int i = 0; i < 2; i++) {
@@ -123,10 +123,8 @@ vec3 render(_in(ray_t) primary_ray)
 		if (mat.reflectivity > 0.) {
 			accum *= f;
 			vec3 reflect_dir = normalize(reflect(hit.normal, ray.direction));
-			ray = _begin(ray_t)
-				hit.origin + reflect_dir * BIAS,
-				reflect_dir
-			_end;
+			ray.origin = hit.origin + reflect_dir * BIAS;
+			ray.direction = reflect_dir;
 		} else {
 			break;
 		}

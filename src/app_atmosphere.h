@@ -23,13 +23,13 @@ bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout
 }
 
 // scattering coefficients at sea level (m)
-const vec3 betaR = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh 
-const vec3 betaM = vec3(21e-6); // Mie
+_constant(vec3) betaR = vec3(5.5e-6, 13.0e-6, 22.4e-6); // Rayleigh 
+_constant(vec3) betaM = vec3(21e-6, 21e-6, 21e-6); // Mie
 
 // scale height (m)
 // thickness of the atmosphere if its density were uniform
-const float hR = 7994.0; // Rayleigh
-const float hM = 1200.0; // Mie
+_constant(float) hR = 7994.0; // Rayleigh
+_constant(float) hM = 1200.0; // Mie
 
 float rayleigh_phase_func(float mu)
 {
@@ -43,7 +43,7 @@ float rayleigh_phase_func(float mu)
 // represents the average cosine of the scattered directions
 // 0 is isotropic scattering
 // > 1 is forward scattering, < 1 is backwards
-const float g = 0.76;
+_constant(float) g = 0.76;
 float henyey_greenstein_phase_func(float mu)
 {
 	return
@@ -54,7 +54,7 @@ float henyey_greenstein_phase_func(float mu)
 
 // Schlick Phase Function factor
 // Pharr and  Humphreys [2004] equivalence to g above
-const float k = 1.55*g - 0.55 * (g*g*g);
+_constant(float) k = 1.55*g - 0.55 * (g*g*g);
 float schlick_phase_func(float mu)
 {
 	return
@@ -63,18 +63,18 @@ float schlick_phase_func(float mu)
 		(4. * PI * (1. + k*mu) * (1. + k*mu));
 }
 
-const float earth_radius = 6360e3; // (m)
-const float atmosphere_radius = 6420e3; // (m)
+_constant(float) earth_radius = 6360e3; // (m)
+_constant(float) atmosphere_radius = 6420e3; // (m)
 
-vec3 sun_dir = vec3(0, 1, 0);
-const float sun_power = 20.0;
+_mutable(vec3) sun_dir = vec3(0, 1, 0);
+_constant(float) sun_power = 20.0;
 
-const sphere_t atmosphere = _begin(sphere_t)
+_constant(sphere_t) atmosphere = _begin(sphere_t)
 	vec3(0, 0, 0), atmosphere_radius, 0
 _end;
 
-const int num_samples = 16;
-const int num_samples_light = 8;
+_constant(int) num_samples = 16;
+_constant(int) num_samples_light = 8;
 
 bool get_sun_light(
 	_in(ray_t) ray,
@@ -110,7 +110,7 @@ vec3 get_incident_light(_in(ray_t) ray)
 	float t0, t1;
 	if (!isect_sphere(
 		ray, atmosphere, t0, t1)) {
-		return vec3(0);
+		return vec3(0., 0., 0.);
 	}
 
 	float march_step = t1 / float(num_samples);
@@ -138,8 +138,8 @@ vec3 get_incident_light(_in(ray_t) ray)
 	float optical_depthR = 0.;
 	float optical_depthM = 0.;
 
-	vec3 sumR = vec3(0);
-	vec3 sumM = vec3(0);
+	vec3 sumR = vec3(0, 0, 0);
+	vec3 sumM = vec3(0, 0, 0);
 	float march_pos = 0.;
 
 	for (int i = 0; i < num_samples; i++) {
@@ -192,11 +192,11 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	vec2 point_ndc = fragCoord.xy / u_res.xy;
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
-	vec3 col = vec3(0);
+	vec3 col = vec3(0, 0, 0);
 
 	// sun
 	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
-	sun_dir *= rot;
+	sun_dir = mul(sun_dir, rot);
 
 #if 1
 	// sky dome angles

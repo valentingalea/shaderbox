@@ -14,7 +14,7 @@ struct material_t {
 #define num_materials 8
 #define mat_invalid -1
 #define mat_debug 0
-material_t materials[num_materials];
+_mutable(material_t) materials[num_materials];
 
 material_t get_material(
 	_in(int) index

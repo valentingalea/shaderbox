@@ -19,14 +19,19 @@ void setup_scene()
 #define mat_debug 0
 #define mat_ground 0
 #define mat_phong 0
-	materials[mat_debug] = _begin(material_t) vec3(0., 1., 0.), 0., 0.9, 1., 0., 0. _end;
+	materials[mat_debug].base_color = vec3(0., 1., 0.);
+	materials[mat_debug].metallic = 0.;
+	materials[mat_debug].roughness = .9;
+	materials[mat_debug].ior = 1.;
+	materials[mat_debug].reflectivity = 0.;
+	materials[mat_debug].translucency = 0.;
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
 	mat3 rot = rotate_around_y (u_time * 50.);
-	eye = rot * vec3(2, 2, 4);
-	look_at = vec3(0);
+	eye = mul(rot, vec3(2, 2, 4));
+	look_at = vec3(0, 0, 0);
 }
 
 vec3 illuminate(_in(vec3) eye, _in(hit_t) hit)
@@ -54,7 +59,7 @@ vec3 illuminate(_in(vec3) eye, _in(hit_t) hit)
 vec2 sdf(_in(vec3) p)
 {
 	vec2 box = vec2 (
-		sd_box (p + vec3 (1, 0, 0), vec3 (1)),
+		sd_box (p + vec3 (1, 0, 0), vec3 (1, 1, 1)),
 		mat_phong);
 		
 	vec2 globe = vec2 (
@@ -97,7 +102,8 @@ vec3 sdf_ao(_in(hit_t) hit)
 		occlusion += 1. / pow(2., i) * (dt * i - d);
 	}
 	
-	return vec3 (1. - clamp(occlusion, 0., 1.));
+	float c = 1. - clamp(occlusion, 0., 1.);
+	return vec3 (c, c, c);
 }
 
 #define EPSILON 0.01
