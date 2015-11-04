@@ -14,7 +14,7 @@ ScopeExit<F> MakeScopeExit(F f) {
 #define SCOPE_EXIT(code) \
     auto STRING_JOIN2(scope_exit_, __LINE__) = MakeScopeExit([&](){code;})
 
-#define SafeRelease(T) if (T) { T->Release(); }
+#define SafeRelease(T) if (T) { T->Release(); T = NULL; }
 
 #include <d3d11.h>
 #include <D3Dcompiler.h>
@@ -142,8 +142,8 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	// pixel shader
 	ID3D11PixelShader* pPS = NULL;
 	SCOPE_EXIT(SafeRelease(pPS));
-	//D3D_SHADER_MACRO PSShaderMacros[1] = { "__HLSL", "1" };
-	hr = D3DCompileFromFile(szArglist[1], NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0, &pBlob, &pErrorBlob);
+	D3D_SHADER_MACRO PSShaderMacros[2] = { { "__HLSL", "1" }, { 0, 0 } };
+	hr = D3DCompileFromFile(szArglist[1], PSShaderMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
 		ShowError("pixel compilation error", pErrorBlob);
@@ -187,20 +187,18 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		auto timerNow = std::chrono::high_resolution_clock::now();
 		auto timeElapsted = std::chrono::duration_cast<std::chrono::milliseconds>(timerNow - timerStart).count();
 
-#if 0 // TODO: doesn't seem to work - CPU/GPU trample over each other
-		// update the uniforms - potential bottleneck here as CPU/GPU fight for the resource
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		pImmediateContext->Map(pUniformBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-		// must be careful not to read from data, only write
-		volatile PS_CONSTANT_BUFFER *pBuff = (PS_CONSTANT_BUFFER *)mappedResource.pData;
-		pBuff->time = (float)(timeElapsted / 1000.f);
-		pImmediateContext->Unmap(pUniformBuff, 0);
-#endif
-
 		pImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		pImmediateContext->Draw(3, 0);
 
 		pSwapChain->Present(0, 0);
+
+		// update the uniforms - potential bottleneck here as CPU/GPU fight for the resource
+		D3D11_MAPPED_SUBRESOURCE mappedResource;
+		pImmediateContext->Map(pUniformBuff, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource); //TODO: only in win8+
+		// must be careful not to read from data, only write
+		volatile PS_CONSTANT_BUFFER *pBuff = (PS_CONSTANT_BUFFER *)mappedResource.pData;
+		pBuff->time = (float)(timeElapsted / 1000.f);
+		pImmediateContext->Unmap(pUniformBuff, 0);
 	} while (true);
 	
 	return ERROR_SUCCESS;
