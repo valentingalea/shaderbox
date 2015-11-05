@@ -137,9 +137,10 @@ vec2 sdf(_in(vec3) P)
 		sd_plane(P, vec3(0., 1., 0.), wheel_pos.y + 0.5),
 		mat_ground);
 
-	return op_add(
-		ground,
-		op_add(legs, op_add(egg, op_add(feet, bike))));
+	vec2 _1 = op_add(feet, bike);
+	vec2 _2 = op_add(egg, _1);
+	vec2 _3 = op_add(legs, _2);
+	return op_add(ground, _3);
 }
 
 vec3 sdf_normal(_in(vec3) p)
