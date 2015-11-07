@@ -192,12 +192,18 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 
 		pSwapChain->Present(0, 0);
 
-		// update the uniforms - potential bottleneck here as CPU/GPU fight for the resource
+		// update the uniforms - use DISCARD to avoid CPU/GPU fighting for the resource
+		// but this means we need to re-send everything
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		pImmediateContext->Map(pUniformBuff, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource); //TODO: only in win8+
+		hr = pImmediateContext->Map(pUniformBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		_ASSERT(SUCCEEDED(hr));
 		// must be careful not to read from data, only write
 		volatile PS_CONSTANT_BUFFER *pBuff = (PS_CONSTANT_BUFFER *)mappedResource.pData;
-		pBuff->time = (float)(timeElapsted / 1000.f);
+		pBuff->resolution.x = WIDTH;
+		pBuff->resolution.y = HEIGHT;
+		pBuff->time = timeElapsted / 1000.f;
+		pBuff->mouse.x = 0.;
+		pBuff->mouse.y = 0.;
 		pImmediateContext->Unmap(pUniformBuff, 0);
 	} while (true);
 	
