@@ -22,13 +22,11 @@ APP_2D         | old-skool demoscene tunnel effect                  |
 APP_ATMOSPHERE | study of Rayleigh/Mie air scattering               | https://www.shadertoy.com/view/XtBXDz
 APP_CLOUDS     | study of volumetric clouds                         | https://www.shadertoy.com/view/XtBXDw
 
-## Requirements
-* a C++11 capable compiler. Tested on
-Visual Studio 2013, GCC 4.8
-* any GLSL/WebGL environment. Tested on
-shadertoy.com and glslsandbox.com
-* any HLSL environment. Curently experimental and
-only tested with fxc.exe
+## Support
+* Visual Studio C++ 2015. Has a dependency on SDL 1.2 (included).
+* [C4droid](https://play.google.com/store/apps/details?id=com.n0n3m4.droidc&hl=en_GB) on Android.
+* any GLSL ES environment. Tested on [Shadertoy](https://www.shadertoy.com/) and [GLSL Sandbox](http://glslsandbox.com/).
+* any DirectX 11 HLSL environment. Tested with included hlsltoy utility.
 
 ## Features
 Over time various things were added and some
@@ -40,5 +38,12 @@ can be extracted and used separately.
 * 2D two bone IK solver
 * a library of different noise functions
 * Rayleigh/Mie atmospheric scattering solver
-* a bare-bones #include expander utility to compose files
 * primitive animated GIF output
+
+## Utilities
+The util/ folder contains separate, independent projects:
+
+Project   | Description
+----------|-----------------------------------------------------------------------------------
+inclxpnd  | a bare-bones #include expander utility to compose files
+hlsltoy   | minimal one-file DX 11 framework that runs a fullscreen pixel shader
