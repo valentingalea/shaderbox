@@ -1,6 +1,6 @@
 #include "def.h"
 
-//#define USE_TEXTURE
+#define USE_TEXTURE
 
 #ifdef USE_TEXTURE
 #ifdef __cplusplus
@@ -8,6 +8,10 @@
 #endif
 #ifdef SHADERTOY
 	#define u_tex0 iChannel0
+#endif
+#ifdef __HLSL
+	Texture2D u_tex0 : register(t0);
+	SamplerState u_sampler0 : register(s0);
 #endif
 #else
 #include "noise_iq.h"
@@ -19,7 +23,11 @@ vec4 sample (
 	_in(vec2) uv
 ){
 #ifdef USE_TEXTURE
-	return texture (u_tex0, uv);
+#ifdef __HLSL
+	return u_tex0.Sample(u_sampler0, uv);
+#else
+	return texture(u_tex0, uv);
+#endif
 #else
 	float n = fbm (vec3(uv, 1.));
 	return vec4 (n, n, n, 1.);
