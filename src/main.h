@@ -59,7 +59,7 @@ void mainImage(
 
 	for (int i = 0; i < MSAA_PASSES; i++) {
 		vec2 point_ndc = (fragCoord.xy + msaa[i]) / u_res.xy;
-#ifdef __HLSL
+#ifdef HLSL
 		point_ndc.y = 1. - point_ndc.y;
 #endif
 		vec3 point_cam = vec3(

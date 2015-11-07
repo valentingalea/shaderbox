@@ -93,7 +93,7 @@ struct hit_t {
 	vec3 origin;
 };
 #define max_dist 1e8
-hit_t no_hit = _begin(hit_t)
+_constant(hit_t) no_hit = _begin(hit_t)
 	float(max_dist + 1e1), // 'infinite' distance
 	-1, // material id
 	vec3(0., 0., 0.), // normal

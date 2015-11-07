@@ -107,23 +107,26 @@ void mainImage(
 	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
 	float fov = tan(radians(45.0));
 	vec2 point_ndc = fragCoord.xy / u_res.xy;
+#ifdef HLSL
+	point_ndc.y = 1. - point_ndc.y;
+#endif
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
 	vec3 col = vec3(0, 0, 0);
 
-//	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
-//	sun_dir *= rot;
+	//mat3 rot = rotate_around_x(abs(sin(u_time / 2.)) * 45.);
+	//sun_dir = mul(rot, sun_dir);
 
 	vec3 eye = vec3(0, 1., 0);
 	vec3 look_at = vec3(0, 1.5, -1);
 	ray_t eye_ray = get_primary_ray(point_cam, eye, look_at);
 
-//	eye_ray.direction.yz *= rotate_2d(+u_mouse.y * .13);
-//	eye_ray.direction.xz *= rotate_2d(-u_mouse.x * .33);
+	eye_ray.direction.yz = mul(rotate_2d(+u_mouse.y * .13), eye_ray.direction.yz);
+	eye_ray.direction.xz = mul(rotate_2d(-u_mouse.x * .33), eye_ray.direction.xz);
 
 	plane_t ground = _begin(plane_t)
 		vec3(0., -1., 0.), 0., 0
-		_end;
+	_end;
 	hit_t hit = no_hit;
 	intersect_plane(eye_ray, ground, hit);
 
