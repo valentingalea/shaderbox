@@ -21,7 +21,7 @@
 precision mediump float;
 #endif
 
-#ifdef __HLSL
+#ifdef HLSL
 #define _in(T) const in T
 #define _inout(T) inout T
 #define _out(T) out T
@@ -49,13 +49,13 @@ void mainImage(_out(float4) fragColor, _in(float2) fragCoord);
 float4 main(float4 uv : SV_Position) : SV_Target{ float4 col; mainImage(col, uv.xy); return col; }
 #endif
 
-#if defined(__cplusplus) || defined(__SHADERTOY)
+#if defined(__cplusplus) || defined(SHADERTOY)
 #define u_res iResolution
 #define u_time iGlobalTime
 #define u_mouse iMouse
 #endif
 
-#ifdef __GLSLSANDBOX
+#ifdef GLSLSANDBOX
 uniform float time;
 uniform vec2 mouse;
 uniform vec2 resolution;

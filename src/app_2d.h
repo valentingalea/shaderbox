@@ -6,10 +6,10 @@
 #ifdef __cplusplus
 	sampler2D u_tex0("", sampler2D::Repeat);
 #endif
-#ifdef __SHADERTOY
+#ifdef SHADERTOY
 	#define u_tex0 iChannel0
 #endif
-#ifdef __HLSL
+#ifdef HLSL
 	Texture2D u_tex0 : register(t0);
 	SamplerState u_sampler0 : register(s0);
 #endif
@@ -23,7 +23,7 @@ vec4 sample (
 	_in(vec2) uv
 ){
 #ifdef USE_TEXTURE
-#ifdef __HLSL
+#ifdef HLSL
 	return u_tex0.Sample(u_sampler0, uv);
 #else
 	return texture(u_tex0, uv);
