@@ -6,7 +6,7 @@
 #ifdef __cplusplus
 	sampler2D u_tex0("", sampler2D::Repeat);
 #endif
-#ifdef SHADERTOY
+#ifdef __SHADERTOY
 	#define u_tex0 iChannel0
 #endif
 #ifdef __HLSL
