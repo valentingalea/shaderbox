@@ -10,6 +10,7 @@
 #include "intersect.h"
 
 _mutable(vec3) sun_dir = vec3(0, 0, -1);
+_mutable(float) coverage = 0.;
 
 vec3 render_sky_color(
 	_in(ray_t) eye
@@ -27,11 +28,15 @@ _constant(float) absorption = 1.25;
 
 float density(
 	_in(vec3) pos,
-	_in(vec3) offset
+	_in(vec3) offset,
+	_in(float) t
 ){
 	vec3 p = pos * .0002242 + offset;
 	float dens = fbm(p);
-	return smoothstep(.526, 1., dens);	
+	dens *= coverage;
+	//dens *= smoothstep(.526, 1., dens);
+	//dens *= ramp (.1, .3, .6, t);
+	return dens;	
 }
 
 // TODO: not working correctly
@@ -47,7 +52,8 @@ float light(
 	float T = 1.; // transmitance
 	
 	for (int i = 0; i < steps; i++) {
-		float dens = density (pos, vec3(0, 0, 0));
+		float dens = density (pos, 
+		vec3(0, 0, 0), 0);
 
 		float T_i = exp(-absorption * dens * march_step);
 
@@ -81,7 +87,9 @@ vec4 render_clouds(
 	float alpha = 0.;
 
 	for (int i = 0; i < steps; i++) {
-		float dens = density (pos, vec3(0, 0, u_time * .5));
+		float t = float (i) / float (steps);
+		float dens = density (pos,
+		vec3(0, 0, u_time * .5), t);
 
 		float T_i = exp(-absorption * dens * march_step);
 
@@ -116,6 +124,11 @@ void mainImage(
 
 	//mat3 rot = rotate_around_x(abs(sin(u_time / 2.)) * 45.);
 	//sun_dir = mul(rot, sun_dir);
+	
+	coverage = fbm (point_cam);
+	coverage = smoothstep (.25, .75, coverage);
+	//fragColor = vec4 (vec3 ((cov)), 1.);
+	//return;
 
 	vec3 eye = vec3(0, 1., 0);
 	vec3 look_at = vec3(0, 1.5, -1);
