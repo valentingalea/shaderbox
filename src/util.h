@@ -81,3 +81,13 @@ float checkboard_pattern(
 	return mod(pattern.x + pattern.y, 2.0);
 }
 
+float ramp (
+	_in(float) start,
+	_in(float) peak,
+	_in(float) end,
+	_in(float) t
+){
+	return
+	smoothstep (start, peak, t) *
+	(1. - smoothstep (peak, end, t));
+}
