@@ -81,7 +81,7 @@ float checkboard_pattern(
 	return mod(pattern.x + pattern.y, 2.0);
 }
 
-float ramp (
+float band (
 	_in(float) start,
 	_in(float) peak,
 	_in(float) end,
