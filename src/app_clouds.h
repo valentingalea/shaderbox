@@ -12,6 +12,19 @@
 _mutable(vec3) sun_dir = vec3(0, 0, -1);
 _mutable(float) coverage = 0.;
 
+_constant(float) absorption = 1.0725;
+
+_constant(sphere_t) atmosphere = _begin(sphere_t)
+	vec3(0, -450, 0), 500., 0
+_end;
+_constant(sphere_t) atmosphere_2 = _begin(sphere_t)
+	atmosphere.origin, atmosphere.radius + 50.f, 0
+_end;
+
+_constant(plane_t) ground = _begin(plane_t)
+	vec3(0., -1., 0.), 0., 1
+_end;
+
 vec3 render_sky_color(
 	_in(ray_t) eye
 ){
@@ -24,63 +37,41 @@ vec3 render_sky_color(
 	return sky;
 }
 
-_constant(float) absorption = 1.25;
-
 float density(
 	_in(vec3) pos,
 	_in(vec3) offset,
 	_in(float) t
 ){
-	vec3 p = pos * .0002242 + offset;
+	vec3 p = pos * .02242 +offset;
 	float dens = fbm(p);
-	dens *= coverage;
-	//dens *= smoothstep(.526, 1., dens);
-	//dens *= ramp (.1, .3, .6, t);
+	dens *= step(.5, dens);
+	//dens *= coverage;
+	//dens *= smoothstep(.526, 54., dens);
+	//dens *= band (.4, .5, .6, dens);
 	return dens;	
-}
-
-// TODO: not working correctly
-float light(
-	_in (vec3) origin
-){
-	const int steps = 2;
-	float march_step = .025;
-	
-	vec3 pos = origin;
-	vec3 dir_step = sun_dir * march_step;
-	
-	float T = 1.; // transmitance
-	
-	for (int i = 0; i < steps; i++) {
-		float dens = density (pos, 
-		vec3(0, 0, 0), 0);
-
-		float T_i = exp(-absorption * dens * march_step);
-
-		T *= T_i;
-		if (T < .01)
-			break;
-			
-		pos += dir_step;
-	}
-	
-	return T;
 }
 
 vec4 render_clouds(
 	_in(ray_t) eye
 ){
-	const int steps = 64;
-	const float thickness = 100.;
+	hit_t hit = no_hit;
+	intersect_sphere(eye, atmosphere, hit);
+
+	hit_t hit_2 = no_hit;
+	intersect_sphere(eye, atmosphere_2, hit_2);
+
+	const float thickness = length(hit_2.origin - hit.origin);
+	const float r = 1. - ((atmosphere_2.radius - atmosphere.radius) / thickness);
+	const int steps = 64 + int(32. * r);
 	float march_step = thickness / float(steps);
 
-	// create vanishing point by projection with Y
-	const float sky_height = 200.0;
-	float dist = sky_height / eye.direction.y;
-	vec3 dir = eye.direction * dist;
+	//return vec4(r, r, r, 1);
 
-	vec3 dir_step = dir * march_step;
-	vec3 pos = eye.origin;
+	vec3 dir_step = eye.direction * march_step;
+	vec3 pos = hit.origin;
+
+	//coverage = density(pos, vec3(u_time * .5, 0, 0), 0);
+	//coverage = smoothstep(.25, .75, coverage);
 
 	float T = 1.; // transmitance
 	vec3 C = vec3(0, 0, 0); // color
@@ -88,8 +79,7 @@ vec4 render_clouds(
 
 	for (int i = 0; i < steps; i++) {
 		float t = float (i) / float (steps);
-		float dens = density (pos,
-		vec3(0, 0, u_time * .5), t);
+		float dens = density (pos, vec3(u_time * .5, 0, 0), 0);
 
 		float T_i = exp(-absorption * dens * march_step);
 
@@ -125,9 +115,9 @@ void mainImage(
 	//mat3 rot = rotate_around_x(abs(sin(u_time / 2.)) * 45.);
 	//sun_dir = mul(rot, sun_dir);
 	
-	coverage = fbm (point_cam);
-	coverage = smoothstep (.25, .75, coverage);
-	//fragColor = vec4 (vec3 ((cov)), 1.);
+	//coverage = fbm (point_cam + vec3(0, 0, u_time));
+	//coverage = smoothstep (.25, .75, coverage);
+	//fragColor = vec4 (vec3 (coverage, coverage, coverage), 1.);
 	//return;
 
 	vec3 eye = vec3(0, 1., 0);
@@ -137,19 +127,25 @@ void mainImage(
 	eye_ray.direction.yz = mul(rotate_2d(+u_mouse.y * .13), eye_ray.direction.yz);
 	eye_ray.direction.xz = mul(rotate_2d(-u_mouse.x * .33), eye_ray.direction.xz);
 
-	plane_t ground = _begin(plane_t)
-		vec3(0., -1., 0.), 0., 0
-	_end;
 	hit_t hit = no_hit;
 	intersect_plane(eye_ray, ground, hit);
 
-	if (hit.t < max_dist) {
+	if (hit.material_id == 1) {
 		float cb = checkboard_pattern(hit.origin.xz, .5);
 		col = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), cb);
 	} else {
+#if 1
 		vec3 sky = render_sky_color(eye_ray);
 		vec4 cld = render_clouds(eye_ray);
 		col = mix(sky, cld.rgb, cld.a);
+#else
+		intersect_sphere(eye_ray, atmosphere, hit);
+		vec3 d = hit.normal;
+		float u = .5 + atan(d.z, d.x) / (2. * PI);
+		float v = .5 - asin(d.y) / PI;
+		float cb = checkboard_pattern(vec2(u, v), 50.);
+		col = vec3(cb, cb, cb);
+#endif
 	}
 
 	fragColor = vec4(col, 1);
