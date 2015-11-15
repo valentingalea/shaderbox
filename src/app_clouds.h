@@ -10,8 +10,8 @@
 #include "intersect.h"
 
 _mutable(vec3) sun_dir = vec3(0, 0, -1);
-_mutable(float) coverage = 0.;
 
+_mutable(float) coverage = 0.5;
 _constant(float) absorption = 1.0725;
 
 _constant(sphere_t) atmosphere = _begin(sphere_t)
@@ -42,12 +42,19 @@ float density(
 	_in(vec3) offset,
 	_in(float) t
 ){
+	// signal
 	vec3 p = pos * .02242 +offset;
 	float dens = fbm(p);
-	dens *= step(.5, dens);
-	//dens *= coverage;
-	//dens *= smoothstep(.526, 54., dens);
-	//dens *= band (.4, .5, .6, dens);
+	
+	// height or cloud shape
+	dens = band (.1, .3, .6, dens);
+	
+	// cover
+	dens *= step(coverage, dens);
+	
+	// density over height
+	dens *= smoothstep (.2, 1., dens);
+	
 	return dens;	
 }
 
@@ -69,9 +76,6 @@ vec4 render_clouds(
 
 	vec3 dir_step = eye.direction * march_step;
 	vec3 pos = hit.origin;
-
-	//coverage = density(pos, vec3(u_time * .5, 0, 0), 0);
-	//coverage = smoothstep(.25, .75, coverage);
 
 	float T = 1.; // transmitance
 	vec3 C = vec3(0, 0, 0); // color
@@ -114,11 +118,6 @@ void mainImage(
 
 	//mat3 rot = rotate_around_x(abs(sin(u_time / 2.)) * 45.);
 	//sun_dir = mul(rot, sun_dir);
-	
-	//coverage = fbm (point_cam + vec3(0, 0, u_time));
-	//coverage = smoothstep (.25, .75, coverage);
-	//fragColor = vec4 (vec3 (coverage, coverage, coverage), 1.);
-	//return;
 
 	vec3 eye = vec3(0, 1., 0);
 	vec3 look_at = vec3(0, 1.5, -1);
