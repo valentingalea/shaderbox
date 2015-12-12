@@ -4,14 +4,18 @@
 // http://www.srh.noaa.gov/srh/jetstream/clouds/cloudwise/types.html
 
 #include "def.h"
-#include "noise_iq.h"
-#include "fbm.h"
 #include "util.h"
 #include "intersect.h"
 
+#include "noise_iq.h"
+#include "noise_worley.h"
+//#define noise(x) noise_iq(x)
+#define noise(x) (1. - noise_w(x).r)
+//#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
+#include "fbm.h"
+
 _mutable(vec3) sun_dir = vec3(0, 0, -1);
 
-_mutable(float) coverage = 0.5;
 _constant(float) absorption = 1.0725;
 
 _constant(sphere_t) atmosphere = _begin(sphere_t)
@@ -43,19 +47,14 @@ float density(
 	_in(float) t
 ){
 	// signal
-	vec3 p = pos * .02242 +offset;
+	vec3 p = pos *.0212242 + offset;
 	float dens = fbm(p);
 	
-	// height or cloud shape
-	dens = band (.1, .3, .6, dens);
-	
-	// cover
-	dens *= step(coverage, dens);
-	
-	// density over height
-	dens *= smoothstep (.2, 1., dens);
-	
-	return dens;	
+	//dens = band (.1, .3, .6, dens);
+	//dens *= step(.5, dens);
+	dens *= smoothstep (.4, 1., dens);
+
+	return abs(dens);	
 }
 
 vec4 render_clouds(
@@ -64,15 +63,14 @@ vec4 render_clouds(
 	hit_t hit = no_hit;
 	intersect_sphere(eye, atmosphere, hit);
 
-	hit_t hit_2 = no_hit;
-	intersect_sphere(eye, atmosphere_2, hit_2);
+	//hit_t hit_2 = no_hit;
+	//intersect_sphere(eye, atmosphere_2, hit_2);
 
-	const float thickness = length(hit_2.origin - hit.origin);
-	const float r = 1. - ((atmosphere_2.radius - atmosphere.radius) / thickness);
-	const int steps = 64 + int(32. * r);
-	float march_step = thickness / float(steps);
-
+	const float thickness = 50.; // length(hit_2.origin - hit.origin);
+	//const float r = 1. - ((atmosphere_2.radius - atmosphere.radius) / thickness);
 	//return vec4(r, r, r, 1);
+	const int steps = 64;// +int(32. * r);
+	float march_step = thickness / float(steps);
 
 	vec3 dir_step = eye.direction * march_step;
 	vec3 pos = hit.origin;
@@ -82,8 +80,8 @@ vec4 render_clouds(
 	float alpha = 0.;
 
 	for (int i = 0; i < steps; i++) {
-		float t = float (i) / float (steps);
-		float dens = density (pos, vec3(u_time * .5, 0, 0), 0);
+		float t = float(i) / float(steps);
+		float dens = density (pos, vec3(0, 0, -u_time * .5), t);
 
 		float T_i = exp(-absorption * dens * march_step);
 
@@ -114,13 +112,19 @@ void mainImage(
 #endif
 	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
+#if 0
+	float n = fbm(point_cam);
+	fragColor = vec4(vec3(n, n, n), 1);
+	return;
+#endif
+
 	vec3 col = vec3(0, 0, 0);
 
 	//mat3 rot = rotate_around_x(abs(sin(u_time / 2.)) * 45.);
 	//sun_dir = mul(rot, sun_dir);
 
 	vec3 eye = vec3(0, 1., 0);
-	vec3 look_at = vec3(0, 1.5, -1);
+	vec3 look_at = vec3(0, 1.6, -1);
 	ray_t eye_ray = get_primary_ray(point_cam, eye, look_at);
 
 	eye_ray.direction.yz = mul(rotate_2d(+u_mouse.y * .13), eye_ray.direction.yz);

@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// Noise function by iq (from https://www.shadertoy.com/view/4sfGzS)
+// Noise function by iq from https://www.shadertoy.com/view/4sfGzS
 // ----------------------------------------------------------------------------
 
 float hash(
@@ -8,7 +8,7 @@ float hash(
 	return fract(sin(n)*753.5453123);
 }
 
-float noise(
+float noise_iq(
 	_in(vec3) x
 ){
     vec3 p = floor(x);
