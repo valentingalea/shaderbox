@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "inclxpnd", "..\util\inclxpn
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hlsltoy", "..\util\hlsltoy\prj\hlsltoy.vcxproj", "{F663DDF3-DF54-4DB7-B7A1-48B6D4E9EA0D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ddsvolgen", "..\util\ddsvolgen\prj\ddsvolgen.vcxproj", "{204D1B9B-465C-4941-B6A1-39E9E95B8BC2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -37,6 +39,12 @@ Global
 		{F663DDF3-DF54-4DB7-B7A1-48B6D4E9EA0D}.Release|Win32.Build.0 = Release|Win32
 		{F663DDF3-DF54-4DB7-B7A1-48B6D4E9EA0D}.Release|x64.ActiveCfg = Release|x64
 		{F663DDF3-DF54-4DB7-B7A1-48B6D4E9EA0D}.Release|x64.Build.0 = Release|x64
+		{204D1B9B-465C-4941-B6A1-39E9E95B8BC2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{204D1B9B-465C-4941-B6A1-39E9E95B8BC2}.Debug|Win32.Build.0 = Debug|Win32
+		{204D1B9B-465C-4941-B6A1-39E9E95B8BC2}.Debug|x64.ActiveCfg = Debug|Win32
+		{204D1B9B-465C-4941-B6A1-39E9E95B8BC2}.Release|Win32.ActiveCfg = Release|Win32
+		{204D1B9B-465C-4941-B6A1-39E9E95B8BC2}.Release|Win32.Build.0 = Release|Win32
+		{204D1B9B-465C-4941-B6A1-39E9E95B8BC2}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
