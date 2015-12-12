@@ -1,6 +1,7 @@
 #include <d3d11.h>
 #include "../../../lib/DirectXTex/DirectXTex/DDS.h"
 #include <cstdio>
+#include <memory>
 #include <new>
 
 using namespace DirectX;
@@ -32,14 +33,15 @@ int main(int argc, char* argv[])
 	dds.header.dwCaps = DDS_SURFACE_FLAGS_TEXTURE | DDS_SURFACE_FLAGS_CUBEMAP;
 	dds.header.dwCaps2 = DDS_FLAGS_VOLUME;
 
-	dds.header10.dxgiFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	dds.header10.dxgiFormat = DXGI_FORMAT_R32_FLOAT;
 	dds.header10.resourceDimension = DDS_DIMENSION_TEXTURE3D;
 	dds.header10.arraySize = 1;
 	dds.header10.miscFlag = 0;
 	dds.header10.miscFlags2 = 0;
 
 	const auto total_size = size * size* size * (sizeof(FLOAT) * channels);
-	auto *data = new (std::nothrow) FLOAT[total_size];
+	std::unique_ptr<FLOAT[]> data;
+	data.reset(new (std::nothrow) FLOAT[total_size]);
 	if (!data) {
 		return 1;
 	}
@@ -47,20 +49,23 @@ int main(int argc, char* argv[])
 	for (int z = 0; z < size; z++) {
 		for (int y = 0; y < size; y++) {
 			for (int x = 0; x < size; x++) {
-				*(data + size*size*z + size*y + x) = 1.;
+				*(data.get() + size*size*z + size*y + x) = 1.;
 			}
 		}
 	}
 
-	FILE *file = fopen("noise3d.dds", "wb+");
+	struct FileCloser {
+		void operator()(FILE *f) {
+			::fclose(f);
+		}
+	};
+	std::unique_ptr<FILE, FileCloser> file;
+	file.reset(fopen("noise3d.dds", "wb+"));
 	if (!file) {
 		return 2;
 	}
-	fwrite(&dds, sizeof(dds), 1, file);
-	fwrite(data, sizeof(FLOAT) * channels, size * size * size, file);
-	fclose(file);
-
-	delete[] data;
+	fwrite(&dds, sizeof(dds), 1, file.get());
+	fwrite(data.get(), sizeof(FLOAT) * channels, size * size * size, file.get());
 
 	return 0;
 }
