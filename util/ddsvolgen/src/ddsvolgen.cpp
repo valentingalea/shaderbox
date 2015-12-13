@@ -1,3 +1,24 @@
+#include <swizzle/glsl/naive/vector.h>
+#include <swizzle/glsl/naive/matrix.h>
+#include <swizzle/glsl/texture_functions.h>
+#include <swizzle/glsl/vector_functions.h>
+typedef float real_t;
+typedef swizzle::glsl::naive::vector< int, 2 > ivec2;
+typedef swizzle::glsl::naive::vector< real_t, 2 > vec2;
+typedef swizzle::glsl::naive::vector< real_t, 3 > vec3;
+typedef swizzle::glsl::naive::vector< real_t, 4 > vec4;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 2, 2> mat2;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 3, 3> mat3;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4> mat4;
+
+#include "../../../src/def.h"
+#include "../../../src/noise_iq.h"
+#include "../../../src/noise_worley.h"
+#define noise(x) noise_iq(x)
+//#define noise(x) (1. - noise_w(x).r)
+//#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
+#include "../../../src/fbm.h"
+
 #include <d3d11.h>
 #include "../../../lib/DirectXTex/DirectXTex/DDS.h"
 #include <cstdio>
@@ -46,10 +67,17 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	#pragma loop( hint_parallel(8) )
 	for (int z = 0; z < size; z++) {
+		#pragma loop( hint_parallel(8) )
 		for (int y = 0; y < size; y++) {
+			#pragma loop( hint_parallel(8) )
 			for (int x = 0; x < size; x++) {
-				*(data.get() + size*size*z + size*y + x) = 1.;
+				FLOAT _x = FLOAT(x) / FLOAT(size);
+				FLOAT _y = FLOAT(y) / FLOAT(size);
+				FLOAT _z = FLOAT(z) / FLOAT(size);
+				vec3 input{ _x, _y, _z };
+				*(data.get() + size*size*z + size*y + x) = fbm(input);
 			}
 		}
 	}
