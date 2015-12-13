@@ -54,13 +54,8 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	struct FileCloser {
-		void operator()(FILE *f) {
-			::fclose(f);
-		}
-	};
-	std::unique_ptr<FILE, FileCloser> file;
-	file.reset(fopen("noise3d.dds", "wb+"));
+	auto file_closer = [](FILE* f) { fclose(f); };
+	std::unique_ptr<FILE, decltype(file_closer)> file = { fopen("noise3d.dds", "wb+"), file_closer };
 	if (!file) {
 		return 2;
 	}
