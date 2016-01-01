@@ -4,8 +4,12 @@
 
 void mainImage(
 	_out(vec4) fragColor,
-	_in(vec2) fragCoord)
-{
+#ifdef SHADERTOY
+	vec2 fragCoord
+#else
+	_in(vec2) fragCoord
+#endif
+){
 	// The pipeline transform
 	//
 	// 1. fragCoord is in raster space [0..resolution]
