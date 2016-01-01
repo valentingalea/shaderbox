@@ -5,11 +5,15 @@
 vec3 hash_w(
 	_in(vec3) x
 ){
+#if 1
 	vec3 xx = vec3(dot(x, vec3(127.1, 311.7, 74.7)),
 		dot(x, vec3(269.5, 183.3, 246.1)),
 		dot(x, vec3(113.5, 271.9, 124.6)));
 
 	return fract(sin(xx)*43758.5453123);
+#else
+	return texture2D(iChannel0, (x.xy + vec2(3.0, 1.0)*x.z + 0.5) / 256.0, -100.0).xyz;
+#endif
 }
 
 // returns closest, second closest, and cell id
