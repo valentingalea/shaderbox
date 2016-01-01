@@ -22,6 +22,7 @@ ScopeExit<F> MakeScopeExit(F f) {
 #include <CRTDBG.H>
 #include <cstdio>
 #include <chrono>
+#include "../../../lib/DirectXTex/DirectXTex/DirectXTex.h" 
 
 void ShowError(LPCSTR szErrMsg, ID3D10Blob* pExtraErrorMsg = NULL)
 {
@@ -76,6 +77,30 @@ ID3D11Texture2D* CreateTextureCheckboard(ID3D11Device *pd3dDevice, UINT w, UINT 
 	return tex;
 }
 
+ID3D11ShaderResourceView* CreateNoiseTexture(ID3D11Device *pd3dDevice, LPCWSTR lpszPath)
+{
+	using namespace DirectX;
+
+	TexMetadata mdata;
+	HRESULT hr = GetMetadataFromDDSFile(lpszPath, DDS_FLAGS_NONE, mdata);
+	_ASSERT(SUCCEEDED(hr));
+	_ASSERT(mdata.IsVolumemap());
+
+	ScratchImage image;
+	hr = LoadFromDDSFile(lpszPath, DDS_FLAGS_NONE, &mdata, image);
+	if (FAILED(hr)) {
+		WCHAR buff[2048];
+		swprintf_s(buff, L"Failed to load texture file\n\nFilename = %ls\nHRESULT %08X", lpszPath, hr);
+		return NULL;
+	}
+
+	ID3D11ShaderResourceView* pView = NULL;
+	hr = CreateShaderResourceView(pd3dDevice, image.GetImages(), image.GetImageCount(), mdata, &pView);
+	_ASSERT(SUCCEEDED(hr));
+
+	return pView;
+}
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	if (uMsg == WM_CLOSE)
@@ -128,6 +153,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SCOPE_EXIT(SafeRelease(pTexV));
 	hr = pd3dDevice->CreateShaderResourceView(pTex, NULL/*whole res*/, &pTexV);
 	_ASSERT(SUCCEEDED(hr));
+
+	ID3D11ShaderResourceView *pNoiseTexV = CreateNoiseTexture(pd3dDevice, LR"(W:\Dev\OpenSource\shaderbox\util\ddsvolgen\prj\noise3d.dds)");
+	SCOPE_EXIT(SafeRelease(pNoiseTexV));
 
 	ID3D11SamplerState *pSampler = NULL;
 	SCOPE_EXIT(SafeRelease(pSampler));
@@ -216,6 +244,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	pImmediateContext->PSSetShader(pPS, NULL, 0);
 	pImmediateContext->PSSetConstantBuffers(0, 1, &pUniformBuff);
 	pImmediateContext->PSSetShaderResources(0, 1, &pTexV);
+	pImmediateContext->PSSetShaderResources(1, 1, &pNoiseTexV);
 	pImmediateContext->PSSetSamplers(0, 1, &pSampler);
 
 // message pump and rendering
