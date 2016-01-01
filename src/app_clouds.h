@@ -1,7 +1,10 @@
-// https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Cloud_types_en.svg/960px-Cloud_types_en.svg.png
-// http://oceanservice.noaa.gov/education/yos/resource/JetStream/synoptic/clouds_max.htm#max
-// http://www.metoffice.gov.uk/learning/clouds/cloud-spotting-guide
-// http://www.srh.noaa.gov/srh/jetstream/clouds/cloudwise/types.html
+#define COVERAGE		.5
+#define WIND			vec3(0, 0, -u_time * .25)
+#define NOISE_FREQ		3.
+//#define NOISE_WORLEY
+#define ABSORPTION		1.030725
+//#define SIMULATE_LIGHT
+#define FAKE_LIGHT
 
 #include "def.h"
 #include "util.h"
@@ -11,31 +14,29 @@
 #include "noise_worley.h"
 //#include "../lib/ashima-noise/src/classicnoise3D.glsl"
 
-#define noise(x) noise_iq(x)
-//#define noise(x) pnoise(x, vec3(128, 128, 128))
-//#define noise(x) (1. - noise_w(x).r)
+#ifdef NOISE_WORLEY
+#define noise(x) (1. - noise_w(x).r)
 //#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
+#else
+#define noise(x) noise_iq(x)
+#endif
 #include "fbm.h"
 
 #ifdef HLSL
 Texture3D u_tex_noise : register(t1);
 SamplerState u_sampler0 : register(s0);
 #endif
-
 float get_noise(_in(vec3) x)
 {
 #if 0
 	return u_tex_noise.Sample(u_sampler0, x);
 #else
-	return fbm(x);
+	return fbm(x, NOISE_FREQ);
 #endif
 }
 
 _constant(vec3) sun_color = vec3(1., .7, .55);
 _mutable(vec3) sun_dir = normalize(vec3(0, 0.1, -1));
-
-_mutable(vec3) wind_dir = vec3(0, 0, -u_time * .5);
-_constant(float) absorption = .30725;
 
 _constant(sphere_t) atmosphere = _begin(sphere_t)
 	vec3(0, -450, 0), 500., 0
@@ -66,12 +67,12 @@ float density(
 	_in(float) t
 ){
 	// signal
-	vec3 p = pos * .0212242 +offset;
+	vec3 p = pos * .0212242 + offset;
 	float dens = get_noise(p);
 	
 	//dens = band (.1, .3, .6, dens);
 	//dens *= step(.5, dens);
-	dens *= smoothstep (.55, .6, dens);
+	dens *= smoothstep (COVERAGE, COVERAGE + .05, dens);
 	//dens -= .5;
 
 	return clamp(dens, 0., 1.);	
@@ -88,9 +89,9 @@ float light(
 	float T = 1.; // transmitance
 
 	for (int i = 0; i < steps; i++) {
-		float dens = density(pos, wind_dir, 0.);
+		float dens = density(pos, WIND, 0.);
 
-		float T_i = exp(-absorption * dens * march_step);
+		float T_i = exp(-ABSORPTION * dens * march_step);
 		T *= T_i;
 		//if (T < .01) break;
 
@@ -105,9 +106,8 @@ vec4 render_clouds(
 ){
 	hit_t hit = no_hit;
 	intersect_sphere(eye, atmosphere, hit);
-
-	hit_t hit_2 = no_hit;
-	intersect_sphere(eye, atmosphere_2, hit_2);
+	//hit_t hit_2 = no_hit;
+	//intersect_sphere(eye, atmosphere_2, hit_2);
 
 	const float thickness = 25.; // length(hit_2.origin - hit.origin);
 	//const float r = 1. - ((atmosphere_2.radius - atmosphere.radius) / thickness);
@@ -124,17 +124,24 @@ vec4 render_clouds(
 
 	for (int i = 0; i < steps; i++) {
 		float h = float(i) / float(steps);
-		float dens = density (pos, wind_dir, h);
+		float dens = density (pos, WIND, h);
 
-		float T_i = exp(-absorption * dens * march_step);
+		float T_i = exp(-ABSORPTION * dens * march_step);
 		T *= T_i;
 		//if (T < .01) break;
 
-		C += T * light(pos) * /*color*/ dens * march_step;
+		C += T * 
+#ifdef SIMULATE_LIGHT
+			light(pos) *
+#endif
+#ifdef FAKE_LIGHT
+			(exp(h) / 1.75) *
+#endif
+			dens * march_step;
 		alpha += (1. - T_i) * (1. - alpha);
 
 		pos += dir_step;
-		if (length(pos) > 1e3) break;
+		//if (length(pos) > 1e3) break;
 	}
 
 	return vec4(C, alpha);
@@ -142,7 +149,11 @@ vec4 render_clouds(
 
 void mainImage(
 	_out(vec4) fragColor,
+#ifdef SHADERTOY
+	vec2 fragCoord
+#else
 	_in(vec2) fragCoord
+#endif
 ){
 	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
 	float fov = tan(radians(45.0));
