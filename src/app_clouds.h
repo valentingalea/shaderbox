@@ -1,10 +1,18 @@
+/**** TWEAK *****************************************************************/
 #define COVERAGE		.5
-#define WIND			vec3(0, 0, -u_time * .25)
-#define NOISE_FREQ		3.
-//#define NOISE_WORLEY
 #define ABSORPTION		1.030725
+#define WIND			vec3(0, 0, -u_time * .25)
+
+#define FBM_FREQ		3.
+#define NOISE_VALUE
+//#define NOISE_WORLEY
+//#define NOISE_PERLIN
+
 //#define SIMULATE_LIGHT
 #define FAKE_LIGHT
+
+#define STEPS			50
+/******************************************************************************/
 
 #include "def.h"
 #include "util.h"
@@ -12,13 +20,17 @@
 
 #include "noise_iq.h"
 #include "noise_worley.h"
-//#include "../lib/ashima-noise/src/classicnoise3D.glsl"
+#include "../lib/ashima-noise/src/classicnoise3D.glsl"
 
+#ifdef NOISE_VALUE
+#define noise(x) noise_iq(x)
+#endif
 #ifdef NOISE_WORLEY
 #define noise(x) (1. - noise_w(x).r)
 //#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
-#else
-#define noise(x) noise_iq(x)
+#endif
+#ifdef NOISE_PERLIN
+#define noise(x) abs(cnoise(x))
 #endif
 #include "fbm.h"
 
@@ -31,7 +43,7 @@ float get_noise(_in(vec3) x)
 #if 0
 	return u_tex_noise.Sample(u_sampler0, x);
 #else
-	return fbm(x, NOISE_FREQ);
+	return fbm(x, FBM_FREQ);
 #endif
 }
 
@@ -70,10 +82,11 @@ float density(
 	vec3 p = pos * .0212242 + offset;
 	float dens = get_noise(p);
 	
+	float cov = 1. - COVERAGE;
 	//dens = band (.1, .3, .6, dens);
-	//dens *= step(.5, dens);
-	dens *= smoothstep (COVERAGE, COVERAGE + .05, dens);
-	//dens -= .5;
+	//dens *= step(cov, dens);
+	//dens -= cov;
+	dens *= smoothstep (cov, cov + .05, dens);
 
 	return clamp(dens, 0., 1.);	
 }
@@ -111,7 +124,7 @@ vec4 render_clouds(
 
 	const float thickness = 25.; // length(hit_2.origin - hit.origin);
 	//const float r = 1. - ((atmosphere_2.radius - atmosphere.radius) / thickness);
-	const int steps = 50; // +int(32. * r);
+	const int steps = STEPS; // +int(32. * r);
 	float march_step = thickness / float(steps);
 
 	vec3 dir_step = eye.direction /* eye.direction.y */ * march_step;
