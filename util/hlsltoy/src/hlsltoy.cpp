@@ -36,8 +36,8 @@ void ShowError(LPCSTR szErrMsg, ID3D10Blob* pExtraErrorMsg = NULL)
 
 LPCTSTR lpszClassName = "tinyDX11";
 LPCTSTR lpszAppName = "hlsltoy";
-constexpr int WIDTH = 800;
-constexpr int HEIGHT = 600;
+constexpr int WIDTH = 1280;
+constexpr int HEIGHT = 720;
 
 DXGI_SWAP_CHAIN_DESC SwapChainDesc =
 {
