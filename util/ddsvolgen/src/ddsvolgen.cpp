@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 				FLOAT _y = FLOAT(y) / FLOAT(size);
 				FLOAT _z = FLOAT(z) / FLOAT(size);
 				vec3 input{ _x, _y, _z };
-				*(data.get() + size*size*z + size*y + x) = fbm(input);
+				*(data.get() + size*size*z + size*y + x) = fbm(input, 3.f);
 			}
 		}
 	}
