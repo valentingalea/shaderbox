@@ -1,17 +1,19 @@
 /**** TWEAK *****************************************************************/
-#define COVERAGE		.5
+#define COVERAGE		.50
+#define THICKNESS		15.
 #define ABSORPTION		1.030725
-#define WIND			vec3(0, 0, -u_time * .25)
+#define WIND			vec3(0, 0, -u_time * .2)
 
-#define FBM_FREQ		3.
-#define NOISE_VALUE
-//#define NOISE_WORLEY
+#define FBM_FREQ		2.76434
+//#define NOISE_VALUE
+#define NOISE_WORLEY
 //#define NOISE_PERLIN
 
 //#define SIMULATE_LIGHT
 #define FAKE_LIGHT
+#define SUN_DIR			normalize(vec3(0, abs(sin(u_time * .3)), -1))
 
-#define STEPS			50
+#define STEPS			25
 /******************************************************************************/
 
 #include "def.h"
@@ -48,7 +50,6 @@ float get_noise(_in(vec3) x)
 }
 
 _constant(vec3) sun_color = vec3(1., .7, .55);
-_mutable(vec3) sun_dir = normalize(vec3(0, 0.1, -1));
 
 _constant(sphere_t) atmosphere = _begin(sphere_t)
 	vec3(0, -450, 0), 500., 0
@@ -64,7 +65,7 @@ vec3 render_sky_color(
 	_in(ray_t) eye
 ){
 	vec3 rd = eye.direction;
-	float sun_amount = max(dot(rd, sun_dir), 0.0);
+	float sun_amount = max(dot(rd, SUN_DIR), 0.0);
 
 	vec3  sky = mix(vec3(.0, .1, .4), vec3(.3, .6, .8), 1.0 - rd.y);
 	sky = sky + sun_color * min(pow(sun_amount, 1500.0) * 5.0, 1.0);
@@ -98,7 +99,7 @@ float light(
 	float march_step = 1.;
 
 	vec3 pos = origin;
-	vec3 dir_step = sun_dir * march_step;
+	vec3 dir_step = SUN_DIR * march_step;
 	float T = 1.; // transmitance
 
 	for (int i = 0; i < steps; i++) {
@@ -117,19 +118,19 @@ float light(
 vec4 render_clouds(
 	_in(ray_t) eye
 ){
-	hit_t hit = no_hit;
-	intersect_sphere(eye, atmosphere, hit);
+	//hit_t hit = no_hit;
+	//intersect_sphere(eye, atmosphere, hit);
 	//hit_t hit_2 = no_hit;
 	//intersect_sphere(eye, atmosphere_2, hit_2);
 
-	const float thickness = 25.; // length(hit_2.origin - hit.origin);
+	const float thickness = THICKNESS; // length(hit_2.origin - hit.origin);
 	//const float r = 1. - ((atmosphere_2.radius - atmosphere.radius) / thickness);
 	const int steps = STEPS; // +int(32. * r);
 	float march_step = thickness / float(steps);
 
-	vec3 dir_step = eye.direction /* eye.direction.y */ * march_step;
-	vec3 pos = //eye.origin + eye.direction * 100.; 
-		hit.origin;
+	vec3 dir_step = eye.direction / eye.direction.y * march_step;
+	vec3 pos = eye.origin + eye.direction * 100.; 
+		//hit.origin;
 
 	float T = 1.; // transmitance
 	vec3 C = vec3(0, 0, 0); // color
