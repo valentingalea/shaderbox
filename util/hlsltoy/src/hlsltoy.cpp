@@ -91,6 +91,7 @@ ID3D11ShaderResourceView* CreateNoiseTexture(ID3D11Device *pd3dDevice, LPCWSTR l
 	if (FAILED(hr)) {
 		WCHAR buff[2048];
 		swprintf_s(buff, L"Failed to load texture file\n\nFilename = %ls\nHRESULT %08X", lpszPath, hr);
+		MessageBoxW(0, buff, L"Error", MB_ICONERROR);
 		return NULL;
 	}
 
@@ -154,7 +155,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateShaderResourceView(pTex, NULL/*whole res*/, &pTexV);
 	_ASSERT(SUCCEEDED(hr));
 
-	ID3D11ShaderResourceView *pNoiseTexV = CreateNoiseTexture(pd3dDevice, LR"(W:\Dev\OpenSource\shaderbox\util\ddsvolgen\prj\noise3d.dds)");
+	ID3D11ShaderResourceView *pNoiseTexV = CreateNoiseTexture(pd3dDevice, LR"(..\bin\noise3d.dds)");
 	SCOPE_EXIT(SafeRelease(pNoiseTexV));
 
 	ID3D11SamplerState *pSampler = NULL;
