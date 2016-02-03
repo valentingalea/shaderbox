@@ -2,7 +2,7 @@
 #define COVERAGE		.50
 #define THICKNESS		15.
 #define ABSORPTION		1.030725
-#define WIND			vec3(0, 0, -u_time * .2)
+#define WIND_DIR		vec3(0, 0, -u_time * .2)
 
 #define FBM_FREQ		2.76434
 //#define NOISE_VALUE
@@ -17,12 +17,14 @@
 /******************************************************************************/
 
 #include "def.h"
+#ifndef UE4
 #include "util.h"
 #include "intersect.h"
+#endif
 
 #include "noise_iq.h"
 #include "noise_worley.h"
-#include "../lib/ashima-noise/src/classicnoise3D.glsl"
+//#include "../lib/ashima-noise/src/classicnoise3D.glsl"
 
 #ifdef NOISE_VALUE
 #define noise(x) noise_iq(x)
@@ -36,10 +38,11 @@
 #endif
 #include "fbm.h"
 
-#ifdef HLSL
+#ifdef HLSLTOY
 Texture3D u_tex_noise : register(t1);
 SamplerState u_sampler0 : register(s0);
 #endif
+
 float get_noise(_in(vec3) x)
 {
 #if 0
@@ -49,21 +52,11 @@ float get_noise(_in(vec3) x)
 #endif
 }
 
-_constant(vec3) sun_color = vec3(1., .7, .55);
-
-_constant(sphere_t) atmosphere = _begin(sphere_t)
-	vec3(0, -450, 0), 500., 0
-_end;
-_constant(sphere_t) atmosphere_2 = _begin(sphere_t)
-	atmosphere.origin, atmosphere.radius + 50., 0
-_end;
-_constant(plane_t) ground = _begin(plane_t)
-	vec3(0., -1., 0.), 0., 1
-_end;
-
 vec3 render_sky_color(
 	_in(ray_t) eye
 ){
+	_constant(vec3) sun_color = vec3(1., .7, .55);
+
 	vec3 rd = eye.direction;
 	float sun_amount = max(dot(rd, SUN_DIR), 0.0);
 
@@ -79,7 +72,6 @@ float density(
 	_in(vec3) offset,
 	_in(float) t
 ){
-	// signal
 	vec3 p = pos * .0212242 + offset;
 	float dens = get_noise(p);
 	
@@ -92,7 +84,7 @@ float density(
 	return clamp(dens, 0., 1.);	
 }
 
-float light(
+float gather_light(
 	_in(vec3) origin
 ){
 	const int steps = 8;
@@ -100,14 +92,13 @@ float light(
 
 	vec3 pos = origin;
 	vec3 dir_step = SUN_DIR * march_step;
-	float T = 1.; // transmitance
+	float T = 1.;
 
 	for (int i = 0; i < steps; i++) {
-		float dens = density(pos, WIND, 0.);
+		float dens = density(pos, WIND_DIR, 0.);
 
 		float T_i = exp(-ABSORPTION * dens * march_step);
 		T *= T_i;
-		//if (T < .01) break;
 
 		pos += dir_step;
 	}
@@ -118,27 +109,40 @@ float light(
 vec4 render_clouds(
 	_in(ray_t) eye
 ){
-	//hit_t hit = no_hit;
-	//intersect_sphere(eye, atmosphere, hit);
-	//hit_t hit_2 = no_hit;
-	//intersect_sphere(eye, atmosphere_2, hit_2);
+#if 0 // atmosphere 'sphere' intersect
+	_constant(sphere_t) atmosphere = _begin(sphere_t)
+		vec3(0, -450, 0), 500., 0
+	_end;
+	_constant(sphere_t) atmosphere_2 = _begin(sphere_t)
+		atmosphere.origin, atmosphere.radius + float(50.), 0
+	_end;
 
-	const float thickness = THICKNESS; // length(hit_2.origin - hit.origin);
-	//const float r = 1. - ((atmosphere_2.radius - atmosphere.radius) / thickness);
-	const int steps = STEPS; // +int(32. * r);
+	hit_t hit = no_hit;
+	intersect_sphere(eye, atmosphere, hit);
+	hit_t hit_2 = no_hit;
+	intersect_sphere(eye, atmosphere_2, hit_2);
+
+	const float thickness = length(hit_2.origin - hit.origin);
+	const float r = 1. - ((atmosphere_2.radius - atmosphere.radius) / thickness);
+	const int steps = STEPS + int(32. * r);
 	float march_step = thickness / float(steps);
-
+	vec3 dir_step = eye.direction * march_step;
+	vec3 pos = hit.origin;
+#else // plane projection
+	const float thickness = THICKNESS;
+	const int steps = STEPS;
+	float march_step = thickness / float(steps);
 	vec3 dir_step = eye.direction / eye.direction.y * march_step;
-	vec3 pos = eye.origin + eye.direction * 100.; 
-		//hit.origin;
+	vec3 pos = eye.origin + eye.direction * 100.;
+#endif
 
-	float T = 1.; // transmitance
-	vec3 C = vec3(0, 0, 0); // color
+	float T = 1.;
+	vec3 C = vec3(0, 0, 0);
 	float alpha = 0.;
 
 	for (int i = 0; i < steps; i++) {
 		float h = float(i) / float(steps);
-		float dens = density (pos, WIND, h);
+		float dens = density (pos, WIND_DIR, h);
 
 		float T_i = exp(-ABSORPTION * dens * march_step);
 		T *= T_i;
@@ -146,7 +150,7 @@ vec4 render_clouds(
 
 		C += T * 
 #ifdef SIMULATE_LIGHT
-			light(pos) *
+			gather_light(pos) *
 #endif
 #ifdef FAKE_LIGHT
 			(exp(h) / 1.75) *
@@ -161,6 +165,22 @@ vec4 render_clouds(
 	return vec4(C, alpha);
 }
 
+#ifdef UE4
+vec3 ue4_render_clouds(
+	_in(vec3) cam_dir,
+	_in(float) time
+){
+	ray_t eye_ray = _begin(ray_t)
+		vec3(0, 0, 0),
+		cam_dir
+	_end;
+	u_time = time;
+
+	vec3 sky = render_sky_color(eye_ray);
+	vec4 cld = render_clouds(eye_ray);
+	return mix(sky, cld.rgb, cld.a);
+}
+#else
 void mainImage(
 	_out(vec4) fragColor,
 #ifdef SHADERTOY
@@ -169,15 +189,7 @@ void mainImage(
 	_in(vec2) fragCoord
 #endif
 ){
-	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
-	float fov = tan(radians(45.0));
-	vec2 point_ndc = fragCoord.xy / u_res.xy;
-#ifdef HLSL
-	point_ndc.y = 1. - point_ndc.y;
-#endif
-	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
-
-#if 0
+#if 0 // DEBUG
 	float n = saturate(get_noise(point_cam));
 	fragColor = vec4(vec3(n, n, n), 1);
 	return;
@@ -185,8 +197,13 @@ void mainImage(
 
 	vec3 col = vec3(0, 0, 0);
 
-	//mat3 rot = rotate_around_x(abs(sin(u_time / 2.)) * 45.);
-	//sun_dir = mul(rot, sun_dir);
+	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
+	float fov = tan(radians(45.0));
+	vec2 point_ndc = fragCoord.xy / u_res.xy;
+#ifdef HLSLTOY
+	point_ndc.y = 1. - point_ndc.y;
+#endif
+	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
 
 	vec3 eye = vec3(0, 1., 0);
 	vec3 look_at = vec3(0, 1.6, -1);
@@ -196,6 +213,9 @@ void mainImage(
 	eye_ray.direction.xz = mul(rotate_2d(-u_mouse.x * .33), eye_ray.direction.xz);
 
 	hit_t hit = no_hit;
+	_constant(plane_t) ground = _begin(plane_t)
+		vec3(0., -1., 0.), 0., 1
+	_end;
 	intersect_plane(eye_ray, ground, hit);
 
 	if (hit.material_id == 1) {
@@ -218,3 +238,4 @@ void mainImage(
 
 	fragColor = vec4(col, 1);
 }
+#endif

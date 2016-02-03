@@ -213,7 +213,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 // pixel shader
 	ID3D11PixelShader* pPS = NULL;
 	SCOPE_EXIT(SafeRelease(pPS));
-	D3D_SHADER_MACRO PSShaderMacros[2] = { { "HLSL", "5.0" }, { 0, 0 } };
+	D3D_SHADER_MACRO PSShaderMacros[] = { { "HLSL", "5.0" },{ "HLSLTOY", "1.0" }, { 0, 0 } };
 	hr = D3DCompileFromFile(szArglist[1], PSShaderMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
