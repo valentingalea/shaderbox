@@ -5,8 +5,8 @@
 #define WIND_DIR		vec3(0, 0, -u_time * .2)
 
 #define FBM_FREQ		2.76434
-//#define NOISE_VALUE
-#define NOISE_WORLEY
+#define NOISE_VALUE
+//#define NOISE_WORLEY
 //#define NOISE_PERLIN
 
 //#define SIMULATE_LIGHT
@@ -17,13 +17,11 @@
 /******************************************************************************/
 
 #include "def.h"
-#ifndef UE4
 #include "util.h"
 #include "intersect.h"
-#endif
 
 #include "noise_iq.h"
-#include "noise_worley.h"
+//#include "noise_worley.h"
 //#include "../lib/ashima-noise/src/classicnoise3D.glsl"
 
 #ifdef NOISE_VALUE
@@ -43,7 +41,7 @@ Texture3D u_tex_noise : register(t1);
 SamplerState u_sampler0 : register(s0);
 #endif
 
-float get_noise(_in(vec3) x)
+float noise_func(_in(vec3) x)
 {
 #if 0
 	return u_tex_noise.Sample(u_sampler0, x);
@@ -53,51 +51,54 @@ float get_noise(_in(vec3) x)
 }
 
 vec3 render_sky_color(
-	_in(ray_t) eye
+	_in(vec3) eye_dir,
+	_in(vec3) sun_dir
 ){
 	_constant(vec3) sun_color = vec3(1., .7, .55);
 
-	vec3 rd = eye.direction;
-	float sun_amount = max(dot(rd, SUN_DIR), 0.0);
+	float sun_amount = max(dot(eye_dir, sun_dir), 0.);
 
-	vec3  sky = mix(vec3(.0, .1, .4), vec3(.3, .6, .8), 1.0 - rd.y);
+	vec3  sky = mix(vec3(.0, .1, .4), vec3(.3, .6, .8), 1.0 - eye_dir.y);
 	sky = sky + sun_color * min(pow(sun_amount, 1500.0) * 5.0, 1.0);
 	sky = sky + sun_color * min(pow(sun_amount, 10.0) * .6, 1.0);
 
 	return sky;
 }
 
-float density(
+float density_func(
 	_in(vec3) pos,
 	_in(vec3) offset,
-	_in(float) t
+	_in(float) coverage
 ){
 	vec3 p = pos * .0212242 + offset;
-	float dens = get_noise(p);
+	float dens = noise_func(p);
 	
-	float cov = 1. - COVERAGE;
 	//dens = band (.1, .3, .6, dens);
 	//dens *= step(cov, dens);
 	//dens -= cov;
-	dens *= smoothstep (cov, cov + .05, dens);
+	dens *= smoothstep (coverage, coverage + .05, dens);
 
 	return clamp(dens, 0., 1.);	
 }
 
 float gather_light(
-	_in(vec3) origin
+	_in(vec3) origin,
+	_in(vec3) sun_dir,
+	_in(vec3) wind_dir,
+	_in(float) coverage,
+	_in(float) absorbtion
 ){
 	const int steps = 8;
-	float march_step = 1.;
+	const float march_step = 1.;
 
 	vec3 pos = origin;
-	vec3 dir_step = SUN_DIR * march_step;
+	vec3 dir_step = sun_dir * march_step;
 	float T = 1.;
 
 	for (int i = 0; i < steps; i++) {
-		float dens = density(pos, WIND_DIR, 0.);
+		float dens = density_func(pos, wind_dir, coverage);
 
-		float T_i = exp(-ABSORPTION * dens * march_step);
+		float T_i = exp(-absorbtion * dens * march_step);
 		T *= T_i;
 
 		pos += dir_step;
@@ -107,7 +108,12 @@ float gather_light(
 }
 
 vec4 render_clouds(
-	_in(ray_t) eye
+	_in(ray_t) eye,
+	_in(vec3) sun_dir,
+	_in(vec3) wind_dir,
+	_in(float) coverage,
+	_in(float) thickness,
+	_in(float) absorbtion
 ){
 #if 0 // atmosphere 'sphere' intersect
 	_constant(sphere_t) atmosphere = _begin(sphere_t)
@@ -129,7 +135,6 @@ vec4 render_clouds(
 	vec3 dir_step = eye.direction * march_step;
 	vec3 pos = hit.origin;
 #else // plane projection
-	const float thickness = THICKNESS;
 	const int steps = STEPS;
 	float march_step = thickness / float(steps);
 	vec3 dir_step = eye.direction / eye.direction.y * march_step;
@@ -142,9 +147,9 @@ vec4 render_clouds(
 
 	for (int i = 0; i < steps; i++) {
 		float h = float(i) / float(steps);
-		float dens = density (pos, WIND_DIR, h);
+		float dens = density_func (pos, wind_dir, coverage);
 
-		float T_i = exp(-ABSORPTION * dens * march_step);
+		float T_i = exp(-absorbtion * dens * march_step);
 		T *= T_i;
 		//if (T < .01) break;
 
@@ -168,7 +173,12 @@ vec4 render_clouds(
 #ifdef UE4
 vec3 ue4_render_clouds(
 	_in(vec3) cam_dir,
-	_in(float) time
+	_in(float) time,
+	_in(float) coverage,
+	_in(float) thickness,
+	_in(float) absorbtion,
+	_in(vec3) sun_dir,
+	_in(vec3) wind_dir
 ){
 	ray_t eye_ray = _begin(ray_t)
 		vec3(0, 0, 0),
@@ -176,11 +186,22 @@ vec3 ue4_render_clouds(
 	_end;
 	u_time = time;
 
-	vec3 sky = render_sky_color(eye_ray);
-	vec4 cld = render_clouds(eye_ray);
+	vec3 sky = render_sky_color(
+		eye_ray.direction,
+		sun_dir
+		);
+	vec4 cld = render_clouds(
+		eye_ray,
+		sun_dir,
+		wind_dir,
+		1. - coverage,
+		thickness,
+		absorbtion
+	);
 	return mix(sky, cld.rgb, cld.a);
 }
-#else
+#endif
+
 void mainImage(
 	_out(vec4) fragColor,
 #ifdef SHADERTOY
@@ -223,8 +244,18 @@ void mainImage(
 		col = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), cb);
 	} else {
 #if 1
-		vec3 sky = render_sky_color(eye_ray);
-		vec4 cld = render_clouds(eye_ray);
+		vec3 sky = render_sky_color(
+			eye_ray.direction,
+			SUN_DIR
+		);
+		vec4 cld = render_clouds(
+			eye_ray, 
+			SUN_DIR,
+			WIND_DIR,
+			1. - COVERAGE,
+			THICKNESS,
+			ABSORPTION
+		);
 		col = mix(sky, cld.rgb, cld.a);
 #else
 		intersect_sphere(eye_ray, atmosphere, hit);
@@ -238,4 +269,3 @@ void mainImage(
 
 	fragColor = vec4(col, 1);
 }
-#endif
