@@ -1,0 +1,265 @@
+#define UE4
+#define HLSL
+
+/**** TWEAK *****************************************************************/
+#define COVERAGE		.50
+#define THICKNESS		15.
+#define ABSORPTION		1.030725
+#define FUZZINESS		0.035
+
+#define FBM_FREQ		2.76434
+#define NOISE_VALUE
+//#define NOISE_WORLEY
+
+#define WIND_DIR		vec3(0, 0, -u_time * .2)
+#define SUN_DIR			normalize(vec3(0, abs(sin(u_time * .3)), -1))
+
+#define STEPS			25
+/******************************************************************************/
+
+#ifdef HLSL
+#define _in(T) const in T
+#define _inout(T) inout T
+#define _out(T) out T
+#define _begin(type) {
+#define _end }
+#define _mutable(T) static T
+#define _constant(T) static const T
+#define vec2 float2
+#define vec3 float3
+#define vec4 float4
+#define mat2 float2x2
+#define mat3 float3x3
+#define mat4 float4x4
+#define mix lerp
+#define fract frac
+#define mod fmod
+#pragma pack_matrix(row_major)
+#endif
+
+#ifdef UE4
+_constant(vec2) u_res = vec2(0, 0);
+_constant(vec2) u_mouse = vec2(0, 0);
+_mutable(float) u_time = 0;
+#endif
+
+#define PI 3.14159265359
+
+struct ray_t {
+	vec3 origin;
+	vec3 direction;
+};
+#define BIAS 1e-4 // small offset to avoid self-intersections
+
+struct sphere_t {
+	vec3 origin;
+	float radius;
+	int material;
+};
+
+struct plane_t {
+	vec3 direction;
+	float distance;
+	int material;
+};
+
+struct hit_t {
+	float t;
+	int material_id;
+	vec3 normal;
+	vec3 origin;
+};
+#define max_dist 1e8
+_constant(hit_t) no_hit = _begin(hit_t)
+	float(max_dist + 1e1), // 'infinite' distance
+	-1, // material id
+	vec3(0., 0., 0.), // normal
+	vec3(0., 0., 0.) // origin
+_end;
+
+
+// ----------------------------------------------------------------------------
+// Noise function by iq from https://www.shadertoy.com/view/4sfGzS
+// ----------------------------------------------------------------------------
+
+float hash(
+	_in(float) n
+){
+	return fract(sin(n)*753.5453123);
+}
+
+float noise_iq(
+	_in(vec3) x
+){
+	vec3 p = floor(x);
+	vec3 f = fract(x);
+	f = f*f*(3.0 - 2.0*f);
+
+#if 1
+    float n = p.x + p.y*157.0 + 113.0*p.z;
+    return mix(mix(mix( hash(n+  0.0), hash(n+  1.0),f.x),
+                   mix( hash(n+157.0), hash(n+158.0),f.x),f.y),
+               mix(mix( hash(n+113.0), hash(n+114.0),f.x),
+                   mix( hash(n+270.0), hash(n+271.0),f.x),f.y),f.z);
+#else
+	vec2 uv = (p.xy + vec2(37.0, 17.0)*p.z) + f.xy;
+	vec2 rg = texture2D(iChannel0, (uv + 0.5) / 256.0, -100.0).yx;
+	return mix(rg.x, rg.y, f.z);
+#endif
+}
+
+#ifdef NOISE_VALUE
+#define noise(x) noise_iq(x)
+#endif
+#ifdef NOISE_WORLEY
+#define noise(x) (1. - noise_w(x).r)
+//#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
+#endif
+
+// ----------------------------------------------------------------------------
+// Fractal Brownian Motion
+// ----------------------------------------------------------------------------
+
+float fbm(
+	_in(vec3) pos,
+	_in(float) lacunarity
+){
+	vec3 p = pos;
+	float
+	t  = 0.51749673 * noise(p); p *= lacunarity;
+	t += 0.25584929 * noise(p); p *= lacunarity;
+	t += 0.12527603 * noise(p); p *= lacunarity;
+	t += 0.06255931 * noise(p);
+	
+	return t;
+}
+
+#ifdef HLSLTOY
+Texture3D u_tex_noise : register(t1);
+SamplerState u_sampler0 : register(s0);
+#endif
+
+float noise_func(_in(vec3) x)
+{
+#if 0
+	return u_tex_noise.Sample(u_sampler0, x);
+#else
+	return fbm(x, FBM_FREQ);
+#endif
+}
+
+vec3 render_sky_color(
+	_in(vec3) eye_dir,
+	_in(vec3) sun_dir
+){
+	_constant(vec3) sun_color = vec3(1., .7, .55);
+	float sun_amount = max(dot(eye_dir, sun_dir), 0.);
+
+	vec3 sky = mix(vec3(.0, .1, .4), vec3(.3, .6, .8), 1.0 - eye_dir.y);
+	sky += sun_color * min(pow(sun_amount, 1500.0) * 5.0, 1.0);
+	sky += sun_color * min(pow(sun_amount, 10.0) * .6, 1.0);
+
+	return sky;
+}
+
+float density_func(
+	_in(vec3) pos,
+	_in(vec3) offset,
+	_in(float) coverage,
+	_in(float) fuziness
+){
+	vec3 p = pos * .0212242 + offset;
+	float dens = noise_func(p);
+	
+	//dens *= step(coverage, dens);
+	//dens -= coverage;
+	dens *= smoothstep (coverage, coverage + fuziness, dens);
+
+	return clamp(dens, 0., 1.);	
+}
+
+vec4 render_clouds(
+	_in(ray_t) eye,
+	_in(vec3) sun_dir,
+	_in(vec3) wind_dir,
+	_in(float) coverage,
+	_in(float) thickness,
+	_in(float) absorbtion,
+	_in(float) fuzziness
+){
+#if 0 // atmosphere 'sphere' intersect
+	_constant(sphere_t) atmosphere = _begin(sphere_t)
+		vec3(0, -450, 0), 500., 0
+	_end;
+
+	hit_t hit = no_hit;
+	intersect_sphere(eye, atmosphere, hit);
+
+	const int steps = STEPS;
+	float march_step = thickness / float(steps);
+	vec3 dir_step = eye.direction * march_step;
+	vec3 pos = hit.origin;
+#else // plane projection
+	const int steps = STEPS;
+	float march_step = thickness / float(steps);
+	vec3 dir_step = eye.direction / eye.direction.y * march_step;
+	vec3 pos = eye.origin + eye.direction * 100.;
+#endif
+
+	float T = 1.;
+	vec3 C = vec3(0, 0, 0);
+	float alpha = 0.;
+
+	for (int i = 0; i < steps; i++) {
+		float h = float(i) / float(steps);
+		float dens = density_func(pos, wind_dir, coverage, fuzziness);
+
+		float T_i = exp(-absorbtion * dens * march_step);
+		T *= T_i;
+		//if (T < .01) break;
+
+		C += T * 
+			(exp(h) / 1.75) * // fake light
+			dens * march_step;
+		alpha += (1. - T_i) * (1. - alpha);
+
+		pos += dir_step;
+		//if (length(pos) > 1e3) break;
+	}
+
+	return vec4(C, alpha);
+}
+
+#ifdef UE4
+vec3 ue4_render_clouds(
+	_in(vec3) cam_dir,
+	_in(float) time,
+	_in(float) coverage,
+	_in(float) thickness,
+	_in(float) absorbtion,
+	_in(float) fuzziness,
+	_in(vec3) sun_dir,
+	_in(vec3) wind_dir
+){
+	ray_t eye_ray = _begin(ray_t)
+		vec3(0, 0, 0),
+		cam_dir
+	_end;
+	u_time = time;
+
+	vec3 sky = render_sky_color(
+		eye_ray.direction,
+		sun_dir
+	);
+	vec4 cld = render_clouds(
+		eye_ray,
+		sun_dir,
+		wind_dir,
+		1. - coverage,
+		thickness,
+		absorbtion,
+		fuzziness
+	);
+	return mix(sky, cld.rgb, cld.a);
+}
+#endif
