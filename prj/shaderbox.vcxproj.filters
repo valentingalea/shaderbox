@@ -73,6 +73,9 @@
     <ClInclude Include="..\src\app_atmosphere.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\app_planet.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\src\Makefile">
