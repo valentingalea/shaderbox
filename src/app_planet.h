@@ -49,7 +49,13 @@ vec3 render(
 		return background (eye);
 	}
 	
-	float n = fbm(hit.origin, 4);
+	vec3 d = mul(rotate_around_x(u_time * 16.), hit.normal);
+#ifdef HLSL
+#define atan(y, x) atan2(x, y)
+#endif
+	float u = .5 + atan(d.z, d.x) / (2. * PI);
+	float v = .5 - asin(d.y) / (1. * PI);
+	float n = checkboard_pattern(vec2(u, v), 100.);
 
 	vec3 color = vec3(n, n, n);	
 	return color;
