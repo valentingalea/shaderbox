@@ -4,7 +4,7 @@
 # $< the name of the related file that caused the action.
 # $* the prefix shared by target and dependent files.
 
-all: clouds
+all: planet
 
 OUT = shaderbox
 SIZE = -DSCREEN_WIDTH=100 -DSCREEN_HEIGHT=100
@@ -38,6 +38,11 @@ atmosphere.o : app.cpp app_atmosphere.h def.h util.h
 	$(CXX) $(CXXFLAGS) -o $(OUT) 2d.o $(LFLAGS) $(LIBS)
 2d.o : app.cpp app_2d.h def.h noise.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_2D $(SIZE) -c -o 2d.o $<
+
+planet: planet.o
+	$(CXX) $(CXXFLAGS) -o $(OUT) planet.o $(LFLAGS) $(LIBS)
+planet.o : app.cpp app_planet.h main.h def.h util.h intersect.h noise_iq.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_PLANET $(SIZE) -c -o planet.o $<
 
 clean:
 	rm *.o
