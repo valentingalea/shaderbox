@@ -55,9 +55,15 @@ vec3 render(
 #endif
 	float u = .5 + atan(d.z, d.x) / (2. * PI);
 	float v = .5 - asin(d.y) / (1. * PI);
-	float n = checkboard_pattern(vec2(u, v), 100.);
-
-	vec3 color = vec3(n, n, n);	
+	float n = //checkboard_pattern(vec2(u, v), 50.);
+	fbm (vec3 (u, v, 0) * 4., 3.);
+	
+	float s = smoothstep (.45, .5, n);
+	vec3 color = mix (
+		vec3(.1, .1, .9),
+		vec3(n),
+		s);
+	
 	return color;
 }
 
