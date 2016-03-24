@@ -34,8 +34,8 @@ void setup_camera(
 	_inout(vec3) eye,
 	_inout(vec3) look_at
 ){
-	eye = vec3 (0, 0, -2.5);
-	look_at = vec3 (0, 0, -1);
+	eye = vec3 (0, 1, 0);
+	look_at = vec3 (0, .75, 1);
 }
 
 float density_func(
@@ -113,13 +113,13 @@ vec3 render_planet(
 #ifdef HLSL
 #define atan(y, x) atan2(x, y)
 #endif
-#if 1
+#if 0
 	float u = .5 + atan(d.z, d.x) / (2. * PI);
 	float v = .5 - asin(d.y) / (1. * PI);
 	float n = checkboard_pattern(vec2(u, v), 20.);
 	vec3 color = vec3 (n, n, n);
 #else
-	float n = fbm (d * 4., 3.);
+	float n = fbm (d * 4., 2.);
 	
 	float s = smoothstep (.45, .5, n);
 	vec3 color = mix (
@@ -131,10 +131,32 @@ vec3 render_planet(
 	return color;
 }
 
+float terrain (vec2 p)
+{
+	vec3 d = vec3 (p.x, 0, p.y);
+	float n = fbm (d * 2. + u_time, 2.);
+	//float s = smoothstep (.45, .5, n);
+	return n;
+}
+
 vec3 render(
 	_in(ray_t) eye
 ){
-	vec3 pln = render_planet(eye);
+	float t_min = .1;
+	float t_max = 5.;
+	const float t_step = .525;
+	for (float t = t_min;
+	t < t_max; t += t_step) {
+		vec3 p = eye.origin + t * eye.direction;
+		float h = terrain (p.xz);
+		if (p.y < h) {
+			return vec3 (h);
+		}
+	}
+	return vec3 (0, .56, 0);
+	
+	vec3 pln;
+	return render_planet(eye);
 
 	vec4 cld = render_clouds(
 		eye,
