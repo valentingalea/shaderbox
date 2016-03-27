@@ -1,4 +1,4 @@
-#include "def.h"
+ #include "def.h"
 #include "util.h"
 #include "intersect.h"
 
@@ -34,8 +34,8 @@ void setup_camera(
 	_inout(vec3) eye,
 	_inout(vec3) look_at
 ){
-	eye = vec3 (0, 1, 0);
-	look_at = vec3 (0, .75, 1);
+	eye = vec3 (0, 0, -2.5);
+	look_at = vec3 (0, 0, 2);
 }
 
 float density_func(
@@ -103,12 +103,16 @@ vec4 render_clouds(
 vec3 render_planet(
 	_in(ray_t) eye
 ){
+	const float max_height = .2;
+	
 	hit_t hit = no_hit;
-	intersect_sphere(eye, planet, hit);
+	sphere_t atmosphere = planet;
+	atmosphere.radius += max_height;
+	intersect_sphere(eye, atmosphere, hit);
 	if (hit.material_id < 0) {
 		return background (eye);
 	}
-	
+/*	
 	vec3 d = mul(rotate_around_x(u_time * 16.), hit.normal);
 #ifdef HLSL
 #define atan(y, x) atan2(x, y)
@@ -127,24 +131,48 @@ vec3 render_planet(
 		vec3(n, n, n),
 		s);
 #endif
+*/
+	float t_min = .01;
+	float t_max = max_height * 3;
+	const float t_step = t_max / 20.;
+
+	for (float t = t_min; t < t_max; t += t_step) {
+		vec3 p = hit.origin + t * eye.direction;
 	
-	return color;
+		vec3 n = p;// - planet.origin;
+		normalize (n);
+		n = mul(rotate_around_x(u_time * 4.), n);
+		
+		float h = fbm (n * 4., 2.);
+		float hs = smoothstep (.45, 1., h);
+		float hhs = hs * max_height;
+		h = planet.radius + hhs;
+		
+		if (dot (p, p) < (h*h)) {
+			//return vec3 (hs);
+			return  mix (
+				vec3(.1, .1, .9),
+				vec3(h),
+				hs);
+		}
+	}
+	return background (eye);
 }
 
 float terrain (vec2 p)
 {
 	vec3 d = vec3 (p.x, 0, p.y);
 	float n = fbm (d * 2. + u_time, 2.);
-	//float s = smoothstep (.45, .5, n);
-	return n;
+	float s = smoothstep (.45, .5, n);
+	return s;
 }
 
 vec3 render(
 	_in(ray_t) eye
-){
+){/*
 	float t_min = .1;
 	float t_max = 5.;
-	const float t_step = .525;
+	const float t_step = .125;
 	for (float t = t_min;
 	t < t_max; t += t_step) {
 		vec3 p = eye.origin + t * eye.direction;
@@ -154,7 +182,7 @@ vec3 render(
 		}
 	}
 	return vec3 (0, .56, 0);
-	
+*/
 	vec3 pln;
 	return render_planet(eye);
 
