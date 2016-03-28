@@ -45,7 +45,7 @@ float density_func(
 	_in(float) fuziness
 ){
 	vec3 p = pos;// * .0212242 + offset;
-	float dens = fbm(p * 4., 3);
+	float dens = fbm(p * 6., 1.);
 	
 	//dens *= step(coverage, dens);
 	//dens -= coverage;
@@ -134,8 +134,12 @@ vec3 render_planet(
 */
 	float t_min = .01;
 	float t_max = max_height * 3;
-	const float t_step = t_max / 20.;
-
+	float t_step = t_max / 20.;
+	
+	float T = 1.;
+	vec3 C = vec3(0, 0, 0);
+	float alpha = 0.;
+	
 	for (float t = t_min; t < t_max; t += t_step) {
 		vec3 p = hit.origin + t * eye.direction;
 	
@@ -143,20 +147,28 @@ vec3 render_planet(
 		normalize (n);
 		n = mul(rotate_around_x(u_time * 4.), n);
 		
-		float h = fbm (n * 4., 2.);
-		float hs = smoothstep (.45, 1., h);
+		float h = fbm (n * 2., 2.);
+		float hs = smoothstep (.35, 1., h);
 		float hhs = hs * max_height;
 		h = planet.radius + hhs;
 		
+		float dens = density_func(n, .75634, .035);
+		float T_i = exp(-5.03 * dens * t_step);
+		T *= T_i;
+		C += T * (exp(hs) / 1.75) * // fake light
+			dens * t_step;
+		alpha += (1. - T_i) * (1. - alpha);
+		
 		if (dot (p, p) < (h*h)) {
-			//return vec3 (hs);
-			return  mix (
+			vec3 a =  mix (
 				vec3(.1, .1, .9),
-				vec3(h),
+				vec3(1, 0, 0),
 				hs);
+			return mix (a, C, alpha);
 		}
+		//t_step += .001 * t;
 	}
-	return background (eye);
+	return mix (background (eye), C, alpha);
 }
 
 float terrain (vec2 p)
