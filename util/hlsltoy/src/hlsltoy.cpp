@@ -155,8 +155,8 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateShaderResourceView(pTex, NULL/*whole res*/, &pTexV);
 	_ASSERT(SUCCEEDED(hr));
 
-	ID3D11ShaderResourceView *pNoiseTexV = CreateNoiseTexture(pd3dDevice, LR"(..\bin\noise3d.dds)");
-	SCOPE_EXIT(SafeRelease(pNoiseTexV));
+	//ID3D11ShaderResourceView *pNoiseTexV = CreateNoiseTexture(pd3dDevice, LR"(..\bin\noise3d.dds)");
+	//SCOPE_EXIT(SafeRelease(pNoiseTexV));
 
 	ID3D11SamplerState *pSampler = NULL;
 	SCOPE_EXIT(SafeRelease(pSampler));
@@ -245,7 +245,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	pImmediateContext->PSSetShader(pPS, NULL, 0);
 	pImmediateContext->PSSetConstantBuffers(0, 1, &pUniformBuff);
 	pImmediateContext->PSSetShaderResources(0, 1, &pTexV);
-	pImmediateContext->PSSetShaderResources(1, 1, &pNoiseTexV);
+	//pImmediateContext->PSSetShaderResources(1, 1, &pNoiseTexV);
 	pImmediateContext->PSSetSamplers(0, 1, &pSampler);
 
 // message pump and rendering
