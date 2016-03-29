@@ -7,7 +7,7 @@
 #include "fbm.h"
 
 _constant(sphere_t) planet = _begin(sphere_t)
-	vec3(0, 0, 0), 1, 0
+	vec3(0, 0, 0), 1., 0
 _end;
 
 vec3 background(
@@ -45,7 +45,7 @@ void clouds_map(
 	_inout(float) alpha,
 	_in(float) t_step
 ){
-	float dens = fbm(pos * 8, 1.);
+	float dens = fbm(pos * 8., 1.);
 
 	const float coverage = .75;
 	const float fuziness = .035;
@@ -94,10 +94,11 @@ vec3 render_planet(
 	return vec3(n, n, n);
 #endif
 
-	float t_min = .01;
-	float t_max = max_height * 3;
-	float t_step = t_max / 20.;
+	const float t_min = .01;
+	const float t_max = max_height * 3; //TODO: optimal value
+	const float t_step = t_max / 20.; //TODO: more steps
 
+	//TODO: better names (way to handle this)
 	float T = 1.;
 	vec3 C = vec3(0, 0, 0);
 	float alpha = 0.;
@@ -105,7 +106,7 @@ vec3 render_planet(
 	for (float t = t_min; t < t_max; t += t_step) {
 		vec3 p = hit.origin + t * eye.direction;
 
-		vec3 n = p;// - planet.origin;
+		vec3 n = p;// - planet.origin; //TODO: generalise for non origin centered
 		normalize(n);
 		n = mul(rotate_around_x(u_time * 16.), n);
 
@@ -115,6 +116,9 @@ vec3 render_planet(
 		clouds_map(n, T, C, alpha, t_step);
 
 		if (dot(p, p) < (h*h)) {
+			//TODO: find more accurate intersection
+			// A.linear interpolate from prev data
+			// B. bsearch like https://www.shadertoy.com/view/4slGD4
 			vec3 terr = mix(
 				vec3(.1, .1, .9),
 				vec3(1, 1, 1),
@@ -122,7 +126,7 @@ vec3 render_planet(
 			return mix(terr, C, alpha);
 		}
 
-		//t_step += .001 * t;
+		//t_step += .001 * t; //TODO: research adaptive step/error
 	}
 
 	return mix(background(eye), C, alpha);
