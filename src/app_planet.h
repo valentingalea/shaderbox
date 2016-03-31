@@ -69,6 +69,38 @@ float terrain_map(
 	return hs;
 }
 
+vec3 terrain_normal(
+	_in(vec3) p
+){
+	float dt = 0.001;
+	vec3 x = vec3(dt, 0, 0);
+	vec3 y = vec3(0, dt, 0);
+	vec3 z = vec3(0, 0, dt);
+#define sdf terrain_map
+	return normalize(vec3(
+		sdf(p + x) - sdf(p - x),
+		sdf(p + y) - sdf(p - y),
+		sdf(p + z) - sdf(p - z)
+	));
+}
+
+vec3 illuminate(
+	_in(vec3) V,
+	_in(vec3) L,
+	_in(hit_t) hit,
+	_in(vec3) color
+){
+	vec3 diffuse = max(0., dot(L, hit.normal))
+		* color;
+
+	vec3 H = normalize(L + V);
+	vec3 specular = pow(
+		max(0., dot(H, hit.normal)),
+		25.) * vec3(1, 1, 1);
+
+	return diffuse + specular;
+}
+
 vec3 render_planet(
 	_in(ray_t) eye
 ){
@@ -113,17 +145,36 @@ vec3 render_planet(
 		float hs = terrain_map(n);
 		float h = planet.radius + hs * max_height;
 
-		clouds_map(n, T, C, alpha, t_step);
+		//clouds_map(n, T, C, alpha, t_step);
 
 		if (dot(p, p) < (h*h)) {
 			//TODO: find more accurate intersection
 			// A.linear interpolate from prev data
 			// B. bsearch like https://www.shadertoy.com/view/4slGD4
-			vec3 terr = mix(
+			
+			vec3 tn = terrain_normal(p);
+			//if (dot(tn, tn) < .01*.01) {
+			//	tn = n;
+			//}
+			
+			hit_t impact = _begin(hit_t)
+				t, // ray length at impact
+				0, // material id
+				tn, // normal
+				p // point of impact				
+			_end;
+			
+			vec3 terr = illuminate(
+				eye.direction,
+				vec3 (1, 0, 0),
+				impact,
+				vec3 (1, 1, 1));
+			
+			vec3 c = mix(
 				vec3(.1, .1, .9),
-				vec3(1, 1, 1),
+				terr,
 				hs);
-			return mix(terr, C, alpha);
+			return mix(c, C, alpha);
 		}
 
 		//t_step += .001 * t; //TODO: research adaptive step/error
