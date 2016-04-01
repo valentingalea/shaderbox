@@ -96,7 +96,7 @@ vec3 illuminate(
 	vec3 H = normalize(L + V);
 	vec3 specular = pow(
 		max(0., dot(H, hit.normal)),
-		25.) * vec3(1, 1, 1);
+		50.) * vec3(1, 1, 1);
 
 	return diffuse + specular;
 }
@@ -104,7 +104,7 @@ vec3 illuminate(
 vec3 render_planet(
 	_in(ray_t) eye
 ){
-	const float max_height = .25;
+	const float max_height = .35;
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -152,7 +152,7 @@ vec3 render_planet(
 			// A.linear interpolate from prev data
 			// B. bsearch like https://www.shadertoy.com/view/4slGD4
 			
-			vec3 tn = terrain_normal(p);
+			//vec3 tn = terrain_normal(p);
 			//if (dot(tn, tn) < .01*.01) {
 			//	tn = n;
 			//}
@@ -160,20 +160,35 @@ vec3 render_planet(
 			hit_t impact = _begin(hit_t)
 				t, // ray length at impact
 				0, // material id
-				tn, // normal
+				n, // normal
 				p // point of impact				
 			_end;
-			
+#if 0			
 			vec3 terr = illuminate(
 				eye.direction,
-				vec3 (1, 0, 0),
+				mul(rotate_around_y(u_time * 16.),
+				vec3 (1, 0, 0)),
 				impact,
 				vec3 (1, 1, 1));
-			
+#endif
+
+			vec3 snow = mix(
+				vec3(.5, .5, .5),
+				vec3(1, 1, 1),
+				smoothstep(.75, 1., hs));
+			vec3 rock = mix(
+				vec3(1, 0, 0),
+				snow,
+				smoothstep(.4, .75, hs));			
+			vec3 grass = mix(
+				vec3(0, 1, 0),
+				rock,
+				smoothstep(.1, .4, hs));				
 			vec3 c = mix(
 				vec3(.1, .1, .9),
-				terr,
-				hs);
+				grass,
+				smoothstep (0, .1, hs));
+				
 			return mix(c, C, alpha);
 		}
 
