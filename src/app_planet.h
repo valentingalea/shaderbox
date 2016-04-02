@@ -75,15 +75,12 @@ float terrain_map(
 vec3 terrain_normal(
 	_in(vec3) p
 ){
-	float dt = 0.001;
-	vec3 x = vec3(dt, 0, 0);
-	vec3 y = vec3(0, dt, 0);
-	vec3 z = vec3(0, 0, dt);
+	vec3 dt = vec3(0.001, 0, 0);
 #define sdf terrain_map
 	return normalize(vec3(
-		sdf(p + x) - sdf(p - x),
-		sdf(p + y) - sdf(p - y),
-		sdf(p + z) - sdf(p - z)
+		sdf(p + dt.xzz) - sdf(p - dt.xzz),
+		sdf(p + dt.zxz) - sdf(p - dt.zxz),
+		sdf(p + dt.zzx) - sdf(p - dt.zzx)
 	));
 }
 
@@ -156,10 +153,11 @@ vec3 render_planet(
 			// B. bsearch like https://www.shadertoy.com/view/4slGD4
 			
 			//TODO: fix normals
-			//vec3 tn = terrain_normal(p);
+			vec3 tn = terrain_normal(n);
 			//if (dot(tn, tn) < .01*.01) {
 			//	tn = n;
 			//}
+			return tn;
 			
 			hit_t impact = _begin(hit_t)
 				t, // ray length at impact
