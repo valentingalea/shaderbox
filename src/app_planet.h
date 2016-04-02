@@ -43,19 +43,22 @@ void clouds_map(
 	_inout(float) T,
 	_inout(vec3) C,
 	_inout(float) alpha,
-	_in(float) t_step
+	_in(float) t_step,
+	_in(float) h
 ){
-	float dens = fbm(pos * 8., 1.);
+	//TODO: add offset and rot matrix to distrib
+	// the noise better - right now seems to
+	// follow the terrain
+	float dens = fbm(pos * 2.234343, 1.76001263);
 
-	const float coverage = .75;
-	const float fuziness = .035;
-	//dens *= step(coverage, dens);
-	dens *= smoothstep(coverage, coverage + fuziness, dens);
+	const float coverage = .575675;
+	dens *= step(coverage, dens);
+	dens *= band(.2, .4, .6, exp(h) / 4.);
 
-	const float absorbtion = 5.3434;
+	const float absorbtion = 33.93434;
 	float T_i = exp(-absorbtion * dens * t_step);
 	T *= T_i;
-	C += T // * (exp(hs) / 1.75)
+	C += T  * (exp(h) / .055)
 		* dens * t_step;
 	alpha += (1. - T_i) * (1. - alpha);
 }
@@ -128,7 +131,7 @@ vec3 render_planet(
 
 	const float t_min = .01;
 	const float t_max = max_height * 3; //TODO: optimal value
-	const float t_step = t_max / 20.; //TODO: more steps
+	const float t_step = t_max / 120.; //TODO: optimal num of steps
 
 	//TODO: better names (way to handle this)
 	float T = 1.;
@@ -139,19 +142,22 @@ vec3 render_planet(
 		vec3 p = hit.origin + t * eye.direction;
 
 		vec3 n = p;// - planet.origin; //TODO: generalise for non origin centered
-		normalize(n);
+		//normalize(n); //TODO: not needed because centered on origin (i think)
 		n = mul(rotate_around_x(u_time * 16.), n);
 
 		float hs = terrain_map(n);
 		float h = planet.radius + hs * max_height;
 
-		//clouds_map(n, T, C, alpha, t_step);
+		float p_len = length(p); //TODO: possible to get rid of?
+		clouds_map(n, T, C, alpha, t_step,
+			(p_len - planet.radius) / max_height);
 
-		if (dot(p, p) < (h*h)) {
+		if (p_len < h) {
 			//TODO: find more accurate intersection
 			// A.linear interpolate from prev data
 			// B. bsearch like https://www.shadertoy.com/view/4slGD4
 			
+			//TODO: fix normals
 			//vec3 tn = terrain_normal(p);
 			//if (dot(tn, tn) < .01*.01) {
 			//	tn = n;
