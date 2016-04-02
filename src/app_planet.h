@@ -46,13 +46,12 @@ void clouds_map(
 	_in(float) t_step,
 	_in(float) h
 ){
-	//TODO: add offset and rot matrix to distrib
-	// the noise better - right now seems to
-	// follow the terrain
-	float dens = fbm(pos * 2.234343, 1.76001263);
+	float dens = fbm(pos * 1.2343 
+		+ vec3(1.35, 3.35, 2.67), 2.9760);
 
 	const float coverage = .575675;
 	dens *= step(coverage, dens);
+	//dens *= smoothstep(coverage, coverage + 0.0343, dens);
 	dens *= band(.2, .4, .6, exp(h) / 4.);
 
 	const float absorbtion = 33.93434;
