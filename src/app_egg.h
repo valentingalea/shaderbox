@@ -22,8 +22,8 @@ void setup_scene()
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
-	eye = vec3(1, 2, 5);
-	look_at = vec3(0, 0, 0);
+	eye = vec3(.0, .25, 5.25);
+	look_at = vec3(.0, .25, .0);
 }
 
 vec3 illuminate(_in(hit_t) hit)
@@ -37,8 +37,8 @@ vec3 illuminate(_in(hit_t) hit)
 #define BEZIER
 vec2 sdf(_in(vec3) P)
 {
-	vec3 p = mul(rotate_around_y(u_time * -50.0), P) -
-		vec3(0, 0.5, 1.75);
+	vec3 p = mul(rotate_around_y(u_time * -100.0), P)
+		- vec3(0, 0.5, 3.5);
 
 	int material = mat_egg;
 
@@ -67,7 +67,7 @@ vec2 sdf(_in(vec3) P)
 
 	vec3 wheel_pos = vec3(0, 1.2, 0);
 	float pedal_radius = 0.3;
-	float pedal_speed = 300.;
+	float pedal_speed = 400.;
 	float pedal_off = 0.2;
 
 	mat3 rot_z = rotate_around_z(-u_time * pedal_speed);
@@ -185,9 +185,11 @@ float shadowmarch(_in(ray_t) ray)
 	return umbra;
 }
 
+_mutable(float) depth = -max_dist;
+
 vec3 render(_in(ray_t) ray)
 {
-	const int steps = 75;
+	const int steps = 80;
 	const float end = 15.;
 
 	float t = 0.;
@@ -203,6 +205,10 @@ vec3 render(_in(ray_t) ray)
 				vec3(0, 0, 0), // sdf_normal(p),
 				p // point of impact				
 			_end;
+
+			if (h.material_id == mat_egg || h.material_id == mat_bike) {
+				depth = max(depth, p.z);
+			}
 
 			float s = 1.;
 #if 1 // soft shadows
@@ -224,4 +230,45 @@ vec3 render(_in(ray_t) ray)
 	return background(ray);
 }
 
-#include "main.h"
+void mainImage(
+	_out(vec4) fragColor,
+#ifdef SHADERTOY
+	vec2 fragCoord
+#else
+	_in(vec2) fragCoord
+#endif
+){
+	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
+	float fov = tan(radians(30.0));
+
+	vec3 final_color = vec3(0, 0, 0);
+
+	vec3 eye, look_at;
+	setup_camera(eye, look_at);
+
+	setup_scene();
+
+	vec2 point_ndc = fragCoord.xy / u_res.xy;
+#ifdef HLSL
+		point_ndc.y = 1. - point_ndc.y;
+#endif
+	vec3 point_cam = vec3(
+		(2.0 * point_ndc - 1.0) * aspect_ratio,// * fov,
+		-1.0);
+	ray_t ray = get_primary_ray(point_cam, eye, look_at);
+
+	final_color += render(ray);
+
+#if 1
+	// from https://www.shadertoy.com/view/4sjGzc
+#define BAR_SEPARATION 0.6
+#define BAR_WIDTH 0.05
+#define BAR_DEPTH 1.
+#define BAR_COLOR vec3(.6, .6, .6)
+	float bar_factor = 1.0 - smoothstep(0.0, 0.01, abs((abs(point_cam.x) - BAR_SEPARATION)) - BAR_WIDTH);
+	float depth_factor = 1. - step(BAR_DEPTH, depth);
+	final_color = mix(final_color, BAR_COLOR, bar_factor * depth_factor);
+#endif
+
+	fragColor = vec4(corect_gamma(final_color, 2.25), 1.);
+}
