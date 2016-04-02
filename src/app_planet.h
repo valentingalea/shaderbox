@@ -108,6 +108,7 @@ vec3 render_planet(
 	_in(ray_t) eye
 ){
 	const float max_height = .35;
+	const mat3 rot = rotate_around_x(u_time * 16.);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -119,7 +120,7 @@ vec3 render_planet(
 	}
 
 #if 0 // test with checkboard pattern
-	vec3 d = mul(rotate_around_x(u_time * 16.), hit.normal);
+	vec3 d = mul(rot, hit.normal);
 #ifdef HLSL
 #define atan(y, x) atan2(x, y)
 #endif
@@ -140,15 +141,12 @@ vec3 render_planet(
 
 	for (float t = t_min; t < t_max; t += t_step) {
 		vec3 p = hit.origin + t * eye.direction;
-
-		vec3 n = p;// - planet.origin; //TODO: generalise for non origin centered
-		//normalize(n); //TODO: not needed because centered on origin (i think)
-		n = mul(rotate_around_x(u_time * 16.), n);
+		vec3 n = mul(rot, p);
 
 		float hs = terrain_map(n);
 		float h = planet.radius + hs * max_height;
 
-		float p_len = length(p); //TODO: possible to get rid of?
+		float p_len = length(n); //TODO: possible to get rid of?
 		clouds_map(n, T, C, alpha, t_step,
 			(p_len - planet.radius) / max_height);
 
