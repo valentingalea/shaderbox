@@ -105,7 +105,7 @@ vec3 render_planet(
 	_in(ray_t) eye
 ){
 	const float max_height = .35;
-	const mat3 rot = rotate_around_x(u_time * 16.);
+	mat3 rot = rotate_around_x(u_time * 16.);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -128,7 +128,7 @@ vec3 render_planet(
 #endif
 
 	const float t_min = .01;
-	const float t_max = max_height * 3; //TODO: optimal value
+	const float t_max = max_height * 4.; //TODO: optimal value
 	const float t_step = t_max / 120.; //TODO: optimal num of steps
 
 	//TODO: better names (way to handle this)
@@ -153,11 +153,8 @@ vec3 render_planet(
 			// B. bsearch like https://www.shadertoy.com/view/4slGD4
 			
 			//TODO: fix normals
-			vec3 tn = terrain_normal(n);
-			//if (dot(tn, tn) < .01*.01) {
-			//	tn = n;
-			//}
-			return tn;
+			//vec3 tn = terrain_normal(n);
+			//if (dot(tn, tn) < .01*.01) tn = n;
 			
 			hit_t impact = _begin(hit_t)
 				t, // ray length at impact
@@ -189,7 +186,7 @@ vec3 render_planet(
 			vec3 c = mix(
 				vec3(.1, .1, .9),
 				grass,
-				smoothstep (0, .1, hs));
+				smoothstep (.0, .1, hs));
 				
 			return mix(c, C, alpha);
 		}
