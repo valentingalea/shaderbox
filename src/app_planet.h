@@ -106,6 +106,7 @@ vec3 render_planet(
 ){
 	const float max_height = .35;
 	mat3 rot = rotate_around_x(u_time * 16.);
+	mat3 rot2 = rotate_around_x(u_time * -8.);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -144,8 +145,12 @@ vec3 render_planet(
 		float h = planet.radius + hs * max_height;
 
 		float p_len = length(n); //TODO: possible to get rid of?
-		clouds_map(n, T, C, alpha, t_step,
+#if 1
+		clouds_map(
+			mul(rot2, p),
+			T, C, alpha, t_step,
 			(p_len - planet.radius) / max_height);
+#endif
 
 		if (p_len < h) {
 			//TODO: find more accurate intersection
