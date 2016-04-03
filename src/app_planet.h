@@ -49,10 +49,15 @@ void clouds_map(
 	float dens = fbm(pos * 1.2343 
 		+ vec3(1.35, 3.35, 2.67), 2.9760);
 
-	const float coverage = .575675;
-	dens *= step(coverage, dens);
-	//dens *= smoothstep(coverage, coverage + 0.0343, dens);
-	dens *= band(.2, .4, .6, exp(h) / 4.);
+	const float coverage = .575675; // higher=less clouds
+	const float fuzziness = .0335; // higher=fuzzy, lower=blockier
+	//dens *= step(coverage, dens);
+	dens *= smoothstep(coverage, coverage + fuzziness, dens);
+
+	// these 2 are identical ways to "band" vertically
+	//TODO: understand why the exp thing really works
+	//dens *= band(.2, .4, .6, exp(h) / 4.);
+	dens *= 1. - smoothstep(.4, .6, exp(h) / 4.);
 
 	const float absorbtion = 33.93434;
 	float T_i = exp(-absorbtion * dens * t_step);
