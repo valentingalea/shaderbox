@@ -74,13 +74,29 @@ float terrain_map(
 vec3 terrain_normal(
 	_in(vec3) p
 ){
+#define F terrain_map
+#if 1
 	vec3 dt = vec3(0.001, 0, 0);
-#define sdf terrain_map
+
 	return normalize(vec3(
-		sdf(p + dt.xzz) - sdf(p - dt.xzz),
-		sdf(p + dt.zxz) - sdf(p - dt.zxz),
-		sdf(p + dt.zzx) - sdf(p - dt.zzx)
+		F(p + dt.xzz) - F(p - dt.xzz),
+		F(p + dt.zxz) - F(p - dt.zxz),
+		F(p + dt.zzx) - F(p - dt.zzx)
 	));
+#else
+	const float dt = 0.001;
+
+	vec3 n = normalize(p);
+	vec3 tangent, binormal;
+	fast_orthonormal_basis(n, tangent, binormal);
+
+	return normalize(vec3(
+		F(p + binormal*dt) - F(p - binormal*dt),
+		F(p + n*dt) - F(p - n*dt),
+		F(p + tangent*dt) - F(p - tangent*dt)
+	));
+#endif
+#undef F
 }
 
 vec3 illuminate(
@@ -159,22 +175,8 @@ vec3 render_planet(
 			//TODO: fix normals
 			//vec3 tn = terrain_normal(n);
 			//if (dot(tn, tn) < .01*.01) tn = n;
+			//return tn;
 			
-			hit_t impact = _begin(hit_t)
-				t, // ray length at impact
-				0, // material id
-				n, // normal
-				p // point of impact				
-			_end;
-#if 0			
-			vec3 terr = illuminate(
-				eye.direction,
-				mul(rotate_around_y(u_time * 16.),
-				vec3 (1, 0, 0)),
-				impact,
-				vec3 (1, 1, 1));
-#endif
-
 			vec3 snow = mix(
 				vec3(.5, .5, .5),
 				vec3(1, 1, 1),
@@ -191,7 +193,20 @@ vec3 render_planet(
 				vec3(.1, .1, .9),
 				grass,
 				smoothstep (.0, .1, hs));
-				
+#if 0
+			hit_t impact = _begin(hit_t)
+				t, // ray length at impact
+				0, // material id
+				tn, // normal
+				p // point of impact				
+				_end;
+			
+			c = illuminate(
+				eye.direction,
+				vec3(1, 0, 0),
+				impact,
+				c);
+#endif
 			return mix(c, C, alpha);
 		}
 

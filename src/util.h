@@ -15,7 +15,7 @@ ray_t get_primary_ray(
 	ray_t r = _begin(ray_t)
 		cam_origin,
 		normalize(fwd + up * cam_local_point.y + right * cam_local_point.x)
-		_end;
+	_end;
 	return r;
 }
 
@@ -91,3 +91,17 @@ float band (
 	smoothstep (start, peak, t) *
 	(1. - smoothstep (peak, end, t));
 }
+
+// from https://www.shadertoy.com/view/4sSSW3
+// original http://orbit.dtu.dk/fedora/objects/orbit:113874/datastreams/file_75b66578-222e-4c7d-abdf-f7e255100209/content
+void fast_orthonormal_basis(
+	_in(vec3) n,
+	_out(vec3) f,
+	_out(vec3) r
+){
+	float a = 1. / (1. + n.z);
+	float b = -n.x*n.y*a;
+	f = vec3(1. - n.x*n.x*a, b, -n.x);
+	r = vec3(b, 1. - n.y*n.y*a, -n.y);
+}
+
