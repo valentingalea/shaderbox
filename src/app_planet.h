@@ -76,19 +76,10 @@ float terrain_map(
 	return hs;
 }
 
-vec2 sdf_map(
-	_in(vec3) pos
-){
-	float n = terrain_map (pos);
-	return vec2 (
-		length (pos) - planet.radius - n * .35,
-		n);
-}
-
 vec3 terrain_normal(
 	_in(vec3) p
 ){
-#define F(p) sdf_map(p).x
+#define F terrain_map
 #if 1
 	vec3 dt = vec3(0.001, 0, 0);
 
@@ -159,7 +150,7 @@ vec3 render_planet(
 
 	const float t_min = .01;
 	const float t_max = max_height * 4.; //TODO: optimal value
-	const float t_step = t_max / 20.; //TODO: optimal num of steps
+	const float t_step = t_max / 120.; //TODO: optimal num of steps
 	vec3 prev_p = hit.origin;
 
 	//TODO: better names (way to handle this)
@@ -167,34 +158,30 @@ vec3 render_planet(
 	vec3 C = vec3(0, 0, 0);
 	float alpha = 0.;
 
-	//for (float t = t_min; t < t_max; t += t_step) {
-	float t = 0.;
-	for (int i = 0; i < 30; i++) {
+	for (float t = t_min; t < t_max; t += t_step) {
 		vec3 o = hit.origin + t * eye.direction;
 		vec3 p = mul(rot, o - planet.origin);
-		vec2 d = sdf_map (p);
 
-		//float hs = terrain_map(p);
-		//float h = planet.radius + hs * max_height;
-		
-		//float p_len = length(p); //TODO: possible to get rid of?
-#if 0
-		vec3 cp = mul(rot2, o - planet.origin);
+		float hs = terrain_map(p);
+		float h = planet.radius + hs * max_height;
+
+		float p_len = length(p); //TODO: possible to get rid of?
+#if 1
 		clouds_map(
-			cp, T, C, alpha, d.x,//1 t_step,
-			(length(cp) - planet.radius) / max_height);
+			mul(rot2, o),
+			T, C, alpha, t_step,
+			(p_len - planet.radius) / max_height);
 #endif
 
-		//if (p_len < h) {
-		if (d.x < .01) {
+		if (p_len < h) {
 			//TODO: find more accurate intersection
 			// A.linear interpolate from prev data
 			// B. bsearch like https://www.shadertoy.com/view/4slGD4
-			//vec3 H = prev_p + (prev_p - p) * .5;
-			//float hs = terrain_map(H);
-			float hs = d.y;
+			vec3 H = prev_p + (prev_p - p) * .5;
+			float hs = terrain_map(H);
+			
 			//TODO: fix normals
-			//vec3 n = terrain_normal(p);
+			//vec3 n = terrain_normal(H);
 			//if (dot(tn, tn) < .01*.01) tn = n;
 			//return n;
 			
@@ -230,8 +217,7 @@ vec3 render_planet(
 #endif
 			return mix(c, C, alpha);
 		}
-		
-		t += d.x;
+
 		prev_p = p;
 		//t_step += .001 * t; //TODO: research adaptive step/error
 	}
