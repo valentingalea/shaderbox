@@ -9,6 +9,7 @@
 _constant(sphere_t) planet = _begin(sphere_t)
 	vec3(0, 0, 0), 1., 0
 _end;
+_constant(float) max_height = .35;
 
 vec3 background(
 	_in(ray_t) eye
@@ -76,11 +77,17 @@ float terrain_map(
 	return hs;
 }
 
+float sdf_map(
+	_in(vec3) pos
+){
+	float n = terrain_map(pos);
+	return length(pos) - planet.radius - n * max_height;
+}
+
 vec3 terrain_normal(
 	_in(vec3) p
 ){
-#define F terrain_map
-#if 1
+#define F sdf_map
 	vec3 dt = vec3(0.001, 0, 0);
 
 	return normalize(vec3(
@@ -88,19 +95,6 @@ vec3 terrain_normal(
 		F(p + dt.zxz) - F(p - dt.zxz),
 		F(p + dt.zzx) - F(p - dt.zzx)
 	));
-#else
-	const float dt = 0.001;
-
-	vec3 n = normalize(p);
-	vec3 tangent, binormal;
-	fast_orthonormal_basis(n, tangent, binormal);
-
-	return normalize(vec3(
-		F(p + binormal*dt) - F(p - binormal*dt),
-		F(p + n*dt) - F(p - n*dt),
-		F(p + tangent*dt) - F(p - tangent*dt)
-	));
-#endif
 #undef F
 }
 
@@ -124,7 +118,6 @@ vec3 illuminate(
 vec3 render_planet(
 	_in(ray_t) eye
 ){
-	const float max_height = .35;
 	mat3 rot = rotate_around_x(u_time * 16.);
 	mat3 rot2 = rotate_around_x(u_time * -8.);
 
@@ -175,14 +168,11 @@ vec3 render_planet(
 
 		if (p_len < h) {
 			//TODO: find more accurate intersection
-			// A.linear interpolate from prev data
-			// B. bsearch like https://www.shadertoy.com/view/4slGD4
+			// bsearch like https://www.shadertoy.com/view/4slGD4
 			vec3 H = prev_p + (prev_p - p) * .5;
 			float hs = terrain_map(H);
 			
-			//TODO: fix normals
-			//vec3 n = terrain_normal(H);
-			//if (dot(tn, tn) < .01*.01) tn = n;
+			vec3 n = terrain_normal(H);
 			//return n;
 			
 			vec3 snow = mix(
@@ -207,7 +197,7 @@ vec3 render_planet(
 				0, // material id
 				n, // normal
 				p // point of impact				
-				_end;
+			_end;
 			
 			c = illuminate(
 				eye.direction,
