@@ -39,15 +39,30 @@ void setup_camera(
 	look_at = vec3(0, 0, 2);
 }
 
-void clouds_map(
-	_in(vec3) pos,
-	_inout(float) T,
-	_inout(vec3) C,
-	_inout(float) alpha,
-	_in(float) t_step,
-	_in(float) h
+struct cloud_drop_t {
+	vec3 pos;
+	float h;
+	float T;
+	vec3 C;
+	float alpha;
+};
+
+cloud_drop_t start_cloud(
+	_in(vec3) p
 ){
-	float dens = fbm(pos * 1.2343 
+	return _begin(cloud_drop_t)
+		p, 0., 1., vec3 (0., 0., 0.), 0.
+	_end;
+}
+
+_mutable(cloud_drop_t) cloud;
+
+void clouds_map(
+	_inout(cloud_drop_t) cloud,
+	_in(float) t_step
+){
+	float H = exp(cloud.h);
+	float dens = fbm(cloud.pos * 1.2343 
 		+ vec3(1.35, 3.35, 2.67), 2.9760);
 
 	const float coverage = .575675; // higher=less clouds
@@ -58,14 +73,15 @@ void clouds_map(
 	// these 2 are identical ways to "band" vertically
 	//TODO: understand why the exp thing really works
 	//dens *= band(.2, .4, .6, exp(h) / 4.);
-	dens *= 1. - smoothstep(.4, .6, exp(h) / 4.);
+	dens *= 1. - smoothstep(.4, .6, H / 4.);
 
 	const float absorbtion = 33.93434;
 	float T_i = exp(-absorbtion * dens * t_step);
-	T *= T_i;
-	C += T  * (exp(h) / .055)
+	cloud.T *= T_i;
+	cloud.C +=
+		cloud.T * (H / .055)
 		* dens * t_step;
-	alpha += (1. - T_i) * (1. - alpha);
+	cloud.alpha += (1. - T_i) * (1. - cloud.alpha);
 }
 
 float terrain_map(
@@ -146,10 +162,7 @@ vec3 render_planet(
 	const float t_step = t_max / 120.; //TODO: optimal num of steps
 	vec3 prev_p = hit.origin;
 
-	//TODO: better names (way to handle this)
-	float T = 1.;
-	vec3 C = vec3(0, 0, 0);
-	float alpha = 0.;
+	cloud = start_cloud (hit.origin);
 
 	for (float t = t_min; t < t_max; t += t_step) {
 		vec3 o = hit.origin + t * eye.direction;
@@ -160,10 +173,9 @@ vec3 render_planet(
 
 		float p_len = length(p); //TODO: possible to get rid of?
 #if 1
-		clouds_map(
-			mul(rot2, o),
-			T, C, alpha, t_step,
-			(p_len - planet.radius) / max_height);
+		cloud.pos = mul(rot2, o);
+		cloud.h = (p_len - planet.radius) / max_height;
+		clouds_map(cloud, t_step);
 #endif
 
 		if (p_len < h) {
@@ -205,14 +217,14 @@ vec3 render_planet(
 				impact,
 				c);
 #endif
-			return mix(c, C, alpha);
+			return mix(c, cloud.C, cloud.alpha);
 		}
 
 		prev_p = p;
 		//t_step += .001 * t; //TODO: research adaptive step/error
 	}
 
-	return mix(background(eye), C, alpha);
+	return mix(background(eye), cloud.C, cloud.alpha);
 }
 
 vec3 render(
