@@ -40,6 +40,8 @@ void setup_camera(
 }
 
 struct cloud_drop_t {
+	float t;
+	vec3 origin;
 	vec3 pos;
 	float h;
 	float T;
@@ -48,11 +50,12 @@ struct cloud_drop_t {
 };
 
 cloud_drop_t start_cloud(
-	_in(vec3) p
+	_in(vec3) origin
 ){
-	return _begin(cloud_drop_t)
-		p, 0., 1., vec3 (0., 0., 0.), 0.
+	cloud_drop_t c = _begin(cloud_drop_t)
+		0., origin, origin, 0., 1., vec3 (0., 0., 0.), 0.
 	_end;
+	return c;
 }
 
 _mutable(cloud_drop_t) cloud;
@@ -73,7 +76,7 @@ void clouds_map(
 	// these 2 are identical ways to "band" vertically
 	//TODO: understand why the exp thing really works
 	//dens *= band(.2, .4, .6, exp(h) / 4.);
-	dens *= 1. - smoothstep(.4, .6, H / 4.);
+	dens *= 1. - smoothstep(.4, .5, H / 4.);
 
 	const float absorbtion = 33.93434;
 	float T_i = exp(-absorbtion * dens * t_step);
@@ -82,6 +85,27 @@ void clouds_map(
 		cloud.T * (H / .055)
 		* dens * t_step;
 	cloud.alpha += (1. - T_i) * (1. - cloud.alpha);
+}
+
+void clouds_march(
+	_in(ray_t) eye,
+	_inout(cloud_drop_t) cloud,
+	_in(float) exit_dist
+){
+	const int steps = 75;
+	float t_step = (max_height * 4.) / float(steps);
+	mat3 rot2 = rotate_around_x(u_time * -8.);
+
+	for (int i = 0; i < steps; i++) {
+		vec3 o = cloud.origin + cloud.t * eye.direction;
+		cloud.pos = mul(rot2, o - planet.origin);
+
+		cloud.h = (length(cloud.pos) - planet.radius) / max_height;
+		cloud.t += t_step;
+
+		clouds_map(cloud, t_step);
+		if (cloud.t > exit_dist) return;
+	}
 }
 
 float terrain_map(
@@ -93,17 +117,17 @@ float terrain_map(
 	return hs;
 }
 
-float sdf_map(
+vec2 sdf_map(
 	_in(vec3) pos
 ){
 	float n = terrain_map(pos);
-	return length(pos) - planet.radius - n * max_height;
+	return vec2(length(pos) - planet.radius - n * max_height, n);
 }
 
 vec3 terrain_normal(
 	_in(vec3) p
 ){
-#define F sdf_map
+#define F(t) sdf_map(t).x
 	vec3 dt = vec3(0.001, 0, 0);
 
 	return normalize(vec3(
@@ -135,7 +159,6 @@ vec3 render_planet(
 	_in(ray_t) eye
 ){
 	mat3 rot = rotate_around_x(u_time * 16.);
-	mat3 rot2 = rotate_around_x(u_time * -8.);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -157,35 +180,23 @@ vec3 render_planet(
 	return vec3(n, n, n);
 #endif
 
-	const float t_min = .01;
-	const float t_max = max_height * 4.; //TODO: optimal value
-	const float t_step = t_max / 120.; //TODO: optimal num of steps
-	vec3 prev_p = hit.origin;
-
 	cloud = start_cloud (hit.origin);
 
-	for (float t = t_min; t < t_max; t += t_step) {
+	float t = 0.;
+	for (int i = 0; i < 30; i++) {
 		vec3 o = hit.origin + t * eye.direction;
 		vec3 p = mul(rot, o - planet.origin);
 
-		float hs = terrain_map(p);
-		float h = planet.radius + hs * max_height;
+		vec2 d = sdf_map(p);
 
-		float p_len = length(p); //TODO: possible to get rid of?
-#if 1
-		cloud.pos = mul(rot2, o);
-		cloud.h = (p_len - planet.radius) / max_height;
-		clouds_map(cloud, t_step);
-#endif
+		clouds_march(eye, cloud, max_height);
 
-		if (p_len < h) {
-			//TODO: find more accurate intersection
-			// bsearch like https://www.shadertoy.com/view/4slGD4
-			vec3 H = prev_p + (prev_p - p) * .5;
-			float hs = terrain_map(H);
-			
-			vec3 n = terrain_normal(H);
+		if (d.x < .01) {
+			float hs = d.y;
+			vec3 n = terrain_normal(p);
 			//return n;
+
+			clouds_march(eye, cloud, t);
 			
 			vec3 snow = mix(
 				vec3(.5, .5, .5),
@@ -220,10 +231,10 @@ vec3 render_planet(
 			return mix(c, cloud.C, cloud.alpha);
 		}
 
-		prev_p = p;
-		//t_step += .001 * t; //TODO: research adaptive step/error
+		t += d.x;
 	}
 
+	clouds_march(eye, cloud, max_dist);
 	return mix(background(eye), cloud.C, cloud.alpha);
 }
 
