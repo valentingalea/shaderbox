@@ -10,6 +10,13 @@ vec2 op_add( // union
 	return d1.x < d2.x ? d1 : d2;
 }
 
+float op_add( // union
+	_in(float) d1,
+	_in(float) d2
+){
+	return min(d1, d2);
+}
+
 float op_sub( // difference
 	_in(float) d1,
 	_in(float) d2
