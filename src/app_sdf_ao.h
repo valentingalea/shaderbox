@@ -63,12 +63,14 @@ vec3 illuminate(_in(vec3) eye, _in(hit_t) hit)
 	return max(0., dot(L, hit.normal))
 	* base_color + vec3(.01, .01, .01);
 }
-_constant(vec3) size = vec3(1.3, 1, 1.25);
+
+_constant(vec3) size = vec3(1.3, 1., 1.25);
 
 vec2 sdf_pipe(_in(vec3) pos)
 {
-	vec3 p = pos;
-	p.y -= size.y;
+	// origin
+	// ramp(box and cylinder)
+	vec3 p = pos - vec3(0, size.y, 0);
 
 	float b = sd_box(p, size);
 
@@ -82,7 +84,45 @@ vec2 sdf_pipe(_in(vec3) pos)
 		op_sub(b, c),
 		mat_pipe);
 
-	return pipe;
+	// revert
+	// copping bars
+	p = pos - vec3(0, size.y, 0);
+
+	p -= vec3(-size.x + .525, size.y, 0);
+	p = mul(p, rotate_around_x(-90.));
+	vec2 copping = vec2(
+		sd_y_cylinder(p,
+			.025, // radius
+			2. * size.z), // height
+		mat_copping);
+
+	// revert
+	// the deck railing
+	p = pos - vec3(0, size.y * 2., 0);
+
+	float rail = sd_box(
+		p + vec3(size.x, -.25, 0),
+		vec3(.025, .05, size.z));
+
+	const vec3 B = vec3(.025, .125, .025);
+	const float H = -.125;
+	float bar_1 = sd_box(p + vec3(size.x, H, 0), B);
+	float bar_2 = sd_box(p + vec3(size.x, H, size.z / 2.), B);
+	float bar_3 = sd_box(p + vec3(size.x, H, size.z), B);
+	float bar_4 = sd_box(p + vec3(size.x, H, -size.z / 2.), B);
+	float bar_5 = sd_box(p + vec3(size.x, H, -size.z), B);
+	float b_a = op_add(bar_1, bar_2);
+	float b_b = op_add(b_a, bar_3);
+	float b_c = op_add(bar_4, bar_5);
+	float b_d = op_add(b_b, b_c);
+	float bars = b_d;
+
+	vec2 railing = vec2(
+		op_add(rail, bars),
+		mat_deck);
+	vec2 deck = op_add(railing, copping);
+
+	return op_add(pipe, deck);
 }
 
 vec2 sdf(_in(vec3) pos)
@@ -112,14 +152,14 @@ vec2 sdf(_in(vec3) pos)
 	vec2 pipe = op_add(pipe1, pipe2);
 
 	vec2 ref = vec2(
-		sd_box(pos, vec3(.125, 15, .125)),
+		sd_box(pos, vec3(.025, 15, .025)),
 		mat_debug);
 
 	vec2 ground = vec2(
 		sd_plane(pos, vec3(0, 1, 0), 0.),
 		mat_ground);
 
-	vec2 g = op_add(ground, ref);
+	vec2 g = ground; // op_add(ground, ref);
 	vec2 b = op_add(pipe, bottom);
 	return op_add(b, g);
 }
