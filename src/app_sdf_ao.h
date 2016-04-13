@@ -54,6 +54,27 @@ vec3 illuminate(_in(vec3) eye, _in(hit_t) hit)
 	return max(0., dot(L, hit.normal))
 	* mat.base_color + ambient_light;
 }
+_constant(vec3) size = vec3(1.3, 1, 1.25);
+
+vec2 sdf_pipe(_in(vec3) pos)
+{
+	vec3 p = pos;
+	p.y -= size.y;
+
+	float b = sd_box(p, size);
+
+	p -= vec3(.7, .5, 0);
+	p = mul(p, rotate_around_x(-90.));
+	float c = sd_y_cylinder(p,
+		size.y + .55, // radius
+		2. * size.z + .1); // height
+
+	vec2 pipe = vec2(
+		op_sub(b, c),
+		mat_pipe);
+
+	return pipe;
+}
 
 vec2 sdf(_in(vec3) pos)
 {
@@ -62,37 +83,36 @@ vec2 sdf(_in(vec3) pos)
 	// with inverse then doing
 	// the opposite before next
 	// effectively doing push/pop
-	
-	// NOTE: all measurements are in halfs
-	
-	vec3 p = pos; //- vec3 (0, 1, 0);
-	
-	const vec3 size = vec3 (1, 1, 1.25);
-	
-	p.y -= size.y;
-	float b = sd_box (p, size);
-	
-	p -= vec3 (.65, .5, 0);
-	p = mul (p, rotate_around_x (-90));
-	float c = sd_y_cylinder (p,
-		size.y + .25, // radius
-		2. * size.z + .1); // height
-		
-	vec2 pipe = vec2 (
-		op_sub (b, c),
-		mat_pipe);
 
-	vec2 ref = vec2 (
-		sd_box(pos, vec3 (.125, 15, .125)),
+	// NOTE: all measurements are in halfs
+	// due to the above
+
+	const float B = .15;
+	vec3 p = pos - vec3(0, B, 0);
+
+	vec2 bottom = vec2(
+		sd_box(p, vec3(2.25 * size.x, B / 2., size.z)),
+		mat_flat);
+
+	vec2 pipe1 = sdf_pipe(p + vec3(1.25 * size.x, 0, 0));
+
+	p -= vec3(1.25 * size.x, 0, 0);
+	p = mul(p, rotate_around_y(180.));
+	vec2 pipe2 = sdf_pipe(p);
+
+	vec2 pipe = op_add(pipe1, pipe2);
+
+	vec2 ref = vec2(
+		sd_box(pos, vec3(.125, 15, .125)),
 		mat_debug);
-	
-	vec2 ground = vec2 (
-		sd_plane (pos, vec3 (0, 1, 0), 0.),
+
+	vec2 ground = vec2(
+		sd_plane(pos, vec3(0, 1, 0), 0.),
 		mat_ground);
 
-	return op_add (
-		pipe,
-		op_add (ground, ref));
+	vec2 g = op_add(ground, ref);
+	vec2 b = op_add(pipe, bottom);
+	return op_add(b, g);
 }
 
 vec3 sdf_normal(_in(vec3) p)
