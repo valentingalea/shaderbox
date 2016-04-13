@@ -1,9 +1,6 @@
 #include "def.h"
 #include "util.h"
 #include "sdf.h"
-#include "material.h"
-#include "util_optics.h"
-#include "light.h"
 
 // ----------------------------------------------------------------------------
 // Distance Fields Ambient Occlusion
@@ -14,23 +11,35 @@ vec3 background(_in(ray_t) ray)
 	return vec3(.1, .1, .7);
 }
 
+#define mat_debug	0
+#define mat_ground	1
+#define mat_pipe	2
+#define mat_bottom	3
+#define mat_deck	4
+#define mat_copping	5
+#define mat_count	6
+_mutable(vec3) materials[mat_count];
+
+vec3 get_material(_in(int) index)
+{
+	vec3 mat;
+	for (int i = 0; i < mat_count; ++i) {
+		if (i == index) {
+			mat = materials[i];
+			break;
+		}
+	}
+	return mat;
+}
+
 void setup_scene()
 {
-#define mat_debug 0
-#define mat_ground 0
-#define mat_phong 0
-	materials[mat_debug].base_color = vec3(0., 1., 0.);
-	materials[mat_debug].metallic = 0.;
-	materials[mat_debug].roughness = .9;
-	materials[mat_debug].ior = 1.;
-	materials[mat_debug].reflectivity = 0.;
-	materials[mat_debug].translucency = 0.;
-
-#define mat_pipe 0
-#define mat_flat 0
-#define mat_bottom 0
-#define mat_deck 0
-#define mat_copping 0
+	materials[mat_debug] = vec3(1, 1, 1);
+	materials[mat_ground] = vec3(0, 1, 0);
+	materials[mat_pipe] = vec3(.6, .6, .6);
+	materials[mat_bottom] = materials[mat_pipe];
+	materials[mat_pipe] = materials[mat_pipe];
+	materials[mat_copping] = vec3(.9, .9, .9);
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -46,13 +55,13 @@ vec3 illuminate(_in(vec3) eye, _in(hit_t) hit)
 	return vec3(hit.normal);
 #endif
 
-	material_t mat = get_material(hit.material_id);
+	vec3 base_color = get_material(hit.material_id);
 
 	vec3 V = normalize(eye - hit.origin); // view direction
-	vec3 L = normalize (vec3 (1, 1, 1)); //get_light_direction(lights[0], hit);
+	vec3 L = normalize (vec3 (0, 1, 0)); //get_light_direction(lights[0], hit);
 	
 	return max(0., dot(L, hit.normal))
-	* mat.base_color + ambient_light;
+	* base_color + vec3(.01, .01, .01);
 }
 _constant(vec3) size = vec3(1.3, 1, 1.25);
 
@@ -92,7 +101,7 @@ vec2 sdf(_in(vec3) pos)
 
 	vec2 bottom = vec2(
 		sd_box(p, vec3(2.25 * size.x, B / 2., size.z)),
-		mat_flat);
+		mat_bottom);
 
 	vec2 pipe1 = sdf_pipe(p + vec3(1.25 * size.x, 0, 0));
 
