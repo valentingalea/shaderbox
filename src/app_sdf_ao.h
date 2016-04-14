@@ -38,7 +38,7 @@ void setup_scene()
 	materials[mat_ground] = vec3(0, .2, 0);
 	materials[mat_pipe] = vec3(.1, .1, .1);
 	materials[mat_bottom] = materials[mat_pipe];
-	materials[mat_pipe] = materials[mat_pipe];
+	materials[mat_deck] = materials[mat_pipe];
 	materials[mat_coping] = vec3(.4, .4, .4);
 }
 
@@ -122,10 +122,10 @@ vec2 sdf(_in(vec3) pos)
 	// due to the above
 
 	const float B = .15;
-	vec3 p = pos - vec3(0, B, 0);
+	vec3 p = pos -vec3(0, B, 0);
 
 	vec2 bottom = vec2(
-		sd_box(p, vec3(2.25 * size.x, B / 2., size.z)),
+		sd_box(p, vec3(2.25 * size.x, B, size.z)),
 		mat_bottom);
 
 	vec2 pipe1 = sdf_pipe(p + vec3(1.25 * size.x, 0, 0));
@@ -183,9 +183,9 @@ vec3 sdf_ao(_in(hit_t) hit)
 float sdf_shadow(_in(ray_t) ray)
 {
 	const int steps = 20;
-	const float end = 10.;
-	const float penumbra_factor = 16.;
-	const float darkest = 0.05;
+	const float end = 20.;
+	const float penumbra_factor = 32.;
+	const float darkest = .05;
 	float t = 0.;
 	float umbra = 1.;
 	
@@ -206,26 +206,40 @@ float sdf_shadow(_in(ray_t) ray)
 	return umbra;
 }
 
-_constant(vec3) sun_dir = normalize (vec3 (1, 1, 1));
+_constant(vec3) sun_dir = normalize (vec3 (1, 2, 1));
 
 vec3 illuminate(
 	_in(vec3) eye,
 	_in(hit_t) hit,
 	_in(float) ao,
 	_in(float) sh
-){
+	) {
 #if 0 // debug: output the raymarching steps
 	return vec3(hit.normal);
 #endif
 	vec3 V = normalize(eye - hit.origin); // view direction
 	vec3 accum = vec3(0, 0, 0);
-	
-	// 1st light - the sun
+
+	// key light - the sun
 	float sun_ray = max(0., dot(sun_dir, hit.normal));
 	accum += sh * sun_ray * vec3(1.2, 1.3, 1.);
-	
-	vec3 base_color = get_material(hit.material_id);
-	return accum * base_color;
+
+	// fill light 1 - hemisphere (faked)
+	float h = hit.normal.y;
+	accum += ao * h * vec3(.15, .15, .4);
+
+	// fill light 2 - indirect
+	float ind = max(0., dot(sun_dir * vec3(-1, 0, -1), hit.normal));
+	accum += ao * ind * vec3(.4, .28, .2);
+
+	// base diffuse color
+	vec3 mat_c = get_material(hit.material_id);
+	if (hit.material_id == mat_ground) {
+		float cb = checkboard_pattern(hit.origin.xz, .5);
+		mat_c = mix(mat_c - .15 * mat_c, mat_c + .15 * mat_c, cb);
+	}
+
+	return accum * mat_c;
 }
 
 vec3 render(_in(ray_t) ray)
@@ -238,7 +252,7 @@ vec3 render(_in(ray_t) ray)
 		vec3 p = ray.origin + ray.direction * t;
 		vec2 d = sdf(p);
 
-		//if (t > end) break;
+		if (t > end) break;
 		if (d.x < .005) {
 			hit_t h = _begin(hit_t)
 				t, // ray length at impact
@@ -250,14 +264,14 @@ vec3 render(_in(ray_t) ray)
 			float ao = sdf_ao (h).x;
 			
 			float sh = 1.;
-#if 1
+#if 0
 			ray_t sh_ray = _begin(ray_t)
 				p + sun_dir * 0.05, sun_dir
 			_end;
 			sh = sdf_shadow (sh_ray);
 #endif           
 			
-			return illuminate(ray.origin, h, ao, 1.);
+			return illuminate(ray.origin, h, ao, sh);
 		}
 
 		t += d.x;
