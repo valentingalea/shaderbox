@@ -35,11 +35,11 @@ vec3 get_material(_in(int) index)
 void setup_scene()
 {
 	materials[mat_debug] = vec3(1, 1, 1);
-	materials[mat_ground] = vec3(0, 1, 0);
-	materials[mat_pipe] = vec3(.6, .6, .6);
+	materials[mat_ground] = vec3(0, .2, 0);
+	materials[mat_pipe] = vec3(.1, .1, .1);
 	materials[mat_bottom] = materials[mat_pipe];
 	materials[mat_pipe] = materials[mat_pipe];
-	materials[mat_coping] = vec3(.9, .9, .9);
+	materials[mat_coping] = vec3(.4, .4, .4);
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -47,21 +47,6 @@ void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 	mat3 rot = rotate_around_y (u_time * 50.);
 	eye = mul(rot, vec3(0, 3, 5));
 	look_at = vec3(0, 0, 0);
-}
-
-vec3 illuminate(_in(vec3) eye, _in(hit_t) hit)
-{
-#if 0 // debug: output the raymarching steps
-	return vec3(hit.normal);
-#endif
-
-	vec3 base_color = get_material(hit.material_id);
-
-	vec3 V = normalize(eye - hit.origin); // view direction
-	vec3 L = normalize (vec3 (0, 1, 0)); //get_light_direction(lights[0], hit);
-	
-	return max(0., dot(L, hit.normal))
-	* base_color + vec3(.01, .01, .01);
 }
 
 _constant(vec3) size = vec3(1.3, 1., 1.25);
@@ -159,7 +144,7 @@ vec2 sdf(_in(vec3) pos)
 		sd_plane(pos, vec3(0, 1, 0), 0.),
 		mat_ground);
 
-	vec2 g = ground; // op_add(ground, ref);
+	vec2 g = op_add(ground, ref);
 	vec2 b = op_add(pipe, bottom);
 	return op_add(b, g);
 }
@@ -181,9 +166,9 @@ vec3 sdf_ao(_in(hit_t) hit)
 {
 	const float dt = .5;
 	const int steps = 5;
-	
 	float d = 0.;
 	float occlusion = 0.;
+	
 	for (float i = 1.; i <= float(steps); i += 1.) {
 		vec3 p = hit.origin + dt * i * hit.normal;
 		d = sdf (p).x;
@@ -195,7 +180,53 @@ vec3 sdf_ao(_in(hit_t) hit)
 	return vec3 (c, c, c);
 }
 
-#define EPSILON 0.01
+float sdf_shadow(_in(ray_t) ray)
+{
+	const int steps = 20;
+	const float end = 10.;
+	const float penumbra_factor = 16.;
+	const float darkest = 0.05;
+	float t = 0.;
+	float umbra = 1.;
+	
+	for (int i = 0; i < steps; i++) {
+		vec3 p = ray.origin + ray.direction * t;
+		vec2 d = sdf(p);
+
+		if (t > end) break;
+		if (d.x < .005) {
+			return darkest;
+		}
+
+		t += d.x;
+		// from http://iquilezles.org/www/articles/rmshadows/rmshadows.htm
+		umbra = min(umbra, penumbra_factor * d.x / t);
+	}
+
+	return umbra;
+}
+
+_constant(vec3) sun_dir = normalize (vec3 (1, 1, 1));
+
+vec3 illuminate(
+	_in(vec3) eye,
+	_in(hit_t) hit,
+	_in(float) ao,
+	_in(float) sh
+){
+#if 0 // debug: output the raymarching steps
+	return vec3(hit.normal);
+#endif
+	vec3 V = normalize(eye - hit.origin); // view direction
+	vec3 accum = vec3(0, 0, 0);
+	
+	// 1st light - the sun
+	float sun_ray = max(0., dot(sun_dir, hit.normal));
+	accum += sh * sun_ray * vec3(1.2, 1.3, 1.);
+	
+	vec3 base_color = get_material(hit.material_id);
+	return accum * base_color;
+}
 
 vec3 render(_in(ray_t) ray)
 {
@@ -216,8 +247,17 @@ vec3 render(_in(ray_t) ray)
 				p // point of impact				
 			_end;
 
-			float ambient = sdf_ao (h).x;
-			return illuminate(ray.origin, h) * ambient;
+			float ao = sdf_ao (h).x;
+			
+			float sh = 1.;
+#if 1
+			ray_t sh_ray = _begin(ray_t)
+				p + sun_dir * 0.05, sun_dir
+			_end;
+			sh = sdf_shadow (sh_ray);
+#endif           
+			
+			return illuminate(ray.origin, h, ao, 1.);
 		}
 
 		t += d.x;
