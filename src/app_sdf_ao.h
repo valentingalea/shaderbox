@@ -16,7 +16,7 @@ vec3 background(_in(ray_t) ray)
 #define mat_pipe	2
 #define mat_bottom	3
 #define mat_deck	4
-#define mat_copping	5
+#define mat_coping	5
 #define mat_count	6
 _mutable(vec3) materials[mat_count];
 
@@ -39,7 +39,7 @@ void setup_scene()
 	materials[mat_pipe] = vec3(.6, .6, .6);
 	materials[mat_bottom] = materials[mat_pipe];
 	materials[mat_pipe] = materials[mat_pipe];
-	materials[mat_copping] = vec3(.9, .9, .9);
+	materials[mat_coping] = vec3(.9, .9, .9);
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -85,16 +85,16 @@ vec2 sdf_pipe(_in(vec3) pos)
 		mat_pipe);
 
 	// revert
-	// copping bars
+	// coping bars
 	p = pos - vec3(0, size.y, 0);
 
 	p -= vec3(-size.x + .525, size.y, 0);
 	p = mul(p, rotate_around_x(-90.));
-	vec2 copping = vec2(
+	vec2 coping = vec2(
 		sd_y_cylinder(p,
 			.025, // radius
 			2. * size.z), // height
-		mat_copping);
+		mat_coping);
 
 	// revert
 	// the deck railing
@@ -120,7 +120,7 @@ vec2 sdf_pipe(_in(vec3) pos)
 	vec2 railing = vec2(
 		op_add(rail, bars),
 		mat_deck);
-	vec2 deck = op_add(railing, copping);
+	vec2 deck = op_add(railing, coping);
 
 	return op_add(pipe, deck);
 }
