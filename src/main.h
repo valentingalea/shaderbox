@@ -1,5 +1,6 @@
 // ----------------------------------------------------------------------------
 // Main Rendering function
+// depends on external defines: FOV
 // ----------------------------------------------------------------------------
 
 void mainImage(
@@ -34,8 +35,6 @@ void mainImage(
 
 	// assuming screen width is larger than height 
 	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
-	// field of view
-	float fov = tan(radians(30.0));
 
 	vec3 color = vec3(0, 0, 0);
 
@@ -49,12 +48,12 @@ void mainImage(
 		point_ndc.y = 1. - point_ndc.y;
 #endif
 	vec3 point_cam = vec3(
-		(2.0 * point_ndc - 1.0) * aspect_ratio * fov,
+		(2.0 * point_ndc - 1.0) * aspect_ratio * FOV,
 		-1.0);
 
 	ray_t ray = get_primary_ray(point_cam, eye, look_at);
 
-	color += render(ray);
+	color += render(ray, point_cam);
 
 	fragColor = vec4(linear_to_srgb(color), 1);
 }

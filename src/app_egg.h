@@ -187,7 +187,7 @@ float shadowmarch(_in(ray_t) ray)
 
 _mutable(float) depth = -max_dist;
 
-vec3 render(_in(ray_t) ray)
+vec3 render_scene(_in(ray_t) ray)
 {
 	const int steps = 80;
 	const float end = 15.;
@@ -230,34 +230,11 @@ vec3 render(_in(ray_t) ray)
 	return background(ray);
 }
 
-void mainImage(
-	_out(vec4) fragColor,
-#ifdef SHADERTOY
-	vec2 fragCoord
-#else
-	_in(vec2) fragCoord
-#endif
+vec3 render(
+	_in(ray_t) eye,
+	_in(vec3) point_cam
 ){
-	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
-	float fov = tan(radians(30.0));
-
-	vec3 final_color = vec3(0, 0, 0);
-
-	vec3 eye, look_at;
-	setup_camera(eye, look_at);
-
-	setup_scene();
-
-	vec2 point_ndc = fragCoord.xy / u_res.xy;
-#ifdef HLSL
-		point_ndc.y = 1. - point_ndc.y;
-#endif
-	vec3 point_cam = vec3(
-		(2.0 * point_ndc - 1.0) * aspect_ratio,// * fov,
-		-1.0);
-	ray_t ray = get_primary_ray(point_cam, eye, look_at);
-
-	final_color += render(ray);
+	vec3 final_color = render_scene(eye);
 
 #if 1
 	// from https://www.shadertoy.com/view/4sjGzc
@@ -270,5 +247,8 @@ void mainImage(
 	final_color = mix(final_color, BAR_COLOR, bar_factor * depth_factor);
 #endif
 
-	fragColor = vec4(linear_to_srgb(final_color), 1.);
+	return final_color;
 }
+
+#define FOV 1. // 45 degrees
+#include "main.h"

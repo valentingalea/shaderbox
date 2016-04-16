@@ -160,36 +160,25 @@ vec3 ue4_render_clouds(
 }
 #endif
 
-void mainImage(
-	_out(vec4) fragColor,
-#ifdef SHADERTOY
-	vec2 fragCoord
-#else
-	_in(vec2) fragCoord
-#endif
+void setup_camera(
+	_inout(vec3) eye,
+	_inout(vec3) look_at
 ){
-#if 0 // DEBUG
-	float n = saturate(get_noise(point_cam));
-	fragColor = vec4(vec3(n, n, n), 1);
-	return;
-#endif
+	eye = vec3(0, 1., 0);
+	look_at = vec3(0, 1.6, -1);
+}
 
+void setup_scene()
+{
+	//eye_ray.direction.yz = mul(rotate_2d(+u_mouse.y * .13), eye_ray.direction.yz);
+	//eye_ray.direction.xz = mul(rotate_2d(-u_mouse.x * .33), eye_ray.direction.xz);
+}
+
+vec3 render(
+	_in(ray_t) eye_ray,
+	_in(vec3) point_cam
+){
 	vec3 col = vec3(0, 0, 0);
-
-	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
-	float fov = tan(radians(45.0));
-	vec2 point_ndc = fragCoord.xy / u_res.xy;
-#ifdef HLSLTOY
-	point_ndc.y = 1. - point_ndc.y;
-#endif
-	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
-
-	vec3 eye = vec3(0, 1., 0);
-	vec3 look_at = vec3(0, 1.6, -1);
-	ray_t eye_ray = get_primary_ray(point_cam, eye, look_at);
-
-	eye_ray.direction.yz = mul(rotate_2d(+u_mouse.y * .13), eye_ray.direction.yz);
-	eye_ray.direction.xz = mul(rotate_2d(-u_mouse.x * .33), eye_ray.direction.xz);
 
 	hit_t hit = no_hit;
 	_constant(plane_t) ground = _begin(plane_t)
@@ -226,5 +215,8 @@ void mainImage(
 #endif
 	}
 
-	fragColor = vec4(col, 1);
+	return col;
 }
+
+#define FOV 1. // 45 degrees
+#include "main.h"

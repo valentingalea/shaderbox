@@ -242,8 +242,10 @@ vec3 illuminate(
 	return accum * mat_c;
 }
 
-vec3 render(_in(ray_t) ray)
-{
+vec3 render(
+	_in(ray_t) ray,
+	_in(vec3) point_cam
+){
 	const int steps = 70;
 	const float end = 20.;
 
@@ -280,4 +282,5 @@ vec3 render(_in(ray_t) ray)
 	return background(ray);
 }
 
+#define FOV 1. // 45 degrees
 #include "main.h"

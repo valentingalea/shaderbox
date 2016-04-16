@@ -239,9 +239,11 @@ vec3 render_planet(
 }
 
 vec3 render(
-	_in(ray_t) eye
+	_in(ray_t) eye,
+	_in(vec3) point_cam
 ){
 	return render_planet(eye);
 }
 
+#define FOV tan(radians(30.))
 #include "main.h"

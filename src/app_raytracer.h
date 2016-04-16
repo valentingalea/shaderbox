@@ -85,8 +85,10 @@ hit_t raytrace_iteration(_in(ray_t) ray, _in(int) mat_to_ignore)
 	return hit;
 }
 
-vec3 render(_in(ray_t) primary_ray)
-{
+vec3 render(
+	_in(ray_t) primary_ray,
+	_in(vec3) point_cam
+){
 	vec3 color = vec3(0, 0, 0);
 	vec3 accum = vec3(1, 1, 1);
 	ray_t ray = primary_ray;
@@ -133,4 +135,5 @@ vec3 render(_in(ray_t) primary_ray)
 	return color;
 }
 
+#define FOV tan(radians(30.))
 #include "main.h"

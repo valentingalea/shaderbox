@@ -7,6 +7,7 @@
 
 #include "def.h"
 #include "util.h"
+#include "intersect.h"
 
 bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout(float) t1)
 {
@@ -185,20 +186,38 @@ vec3 get_incident_light(_in(ray_t) ray)
 		sumM * phaseM * betaR);
 }
 
-void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
+#define FROM_SPACE 1
+
+void setup_camera(
+	_inout(vec3) eye,
+	_inout(vec3) look_at
+){
+#ifdef FROM_SPACE
+	eye = vec3(0, 0, 0);
+	look_at = vec3(0, 0, 0);
+#else
+	eye = vec3(0, earth_radius + 1., 0);
+	look_at = vec3(0, earth_radius + 1.5, -1);
+#endif
+}
+
+void setup_scene()
 {
-	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
-	float fov = tan(radians(45.0));
-	vec2 point_ndc = fragCoord.xy / u_res.xy;
-	vec3 point_cam = vec3((2.0 * point_ndc - 1.0) * aspect_ratio * fov, -1.0);
-
-	vec3 col = vec3(0, 0, 0);
-
-	// sun
 	mat3 rot = rotate_around_x(-abs(sin(u_time / 2.)) * 90.);
 	sun_dir = mul(sun_dir, rot);
+}
 
-#if 1
+vec3 render(
+	_in(ray_t) eye,
+	_in(vec3) point_cam
+){
+	vec3 col = vec3(0, 0, 0);
+
+
+#ifdef FROM_SPACE
+#ifdef HLSL
+#define atan(y, x) atan2(x, y)
+#endif
 	// sky dome angles
 	vec3 p = point_cam;
 	float z2 = p.x * p.x + p.y * p.y;
@@ -216,12 +235,6 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	
 	col = get_incident_light(ray);
 #else
-
-	vec3 eye = vec3 (0, earth_radius + 1., 0);
-	vec3 look_at = vec3 (0, earth_radius + 1.5, -1);
-	
-	ray_t ray = get_primary_ray(point_cam, eye, look_at);
-	
 	plane_t terrain = _begin(plane_t)
 		vec3 (0, -1, 0),
 		earth_radius,
@@ -229,14 +242,17 @@ void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord)
 	_end;
 	
 	hit_t hit = no_hit;
-	intersect_plane (ray, terrain, hit);
+	intersect_plane (eye, terrain, hit);
 	
 	if (hit.t > max_dist) {
-		col = get_incident_light(ray);
+		col = get_incident_light(eye);
 	} else {
-		col = vec3 (0.333);
+		col = vec3 (.33, .33, .33);
 	}
 #endif
 
-	fragColor = vec4(col, 1);
+	return col;
 }
+
+#define FOV 1. // 45 degrees
+#include "main.h"
