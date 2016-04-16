@@ -37,23 +37,6 @@ void mainImage(
 	// field of view
 	float fov = tan(radians(30.0));
 
-	// antialising
-#if 0
-#define MSAA_PASSES 4
-	float offset = 0.25;
-	float ofst_x = offset * aspect_ratio.x;
-	float ofst_y = offset;
-	vec2 msaa[MSAA_PASSES];
-	msaa[0] = vec2(-ofst_x, -ofst_y);
-	msaa[1] = vec2(-ofst_x, +ofst_y);
-	msaa[2] = vec2(+ofst_x, -ofst_y);
-	msaa[3] = vec2(+ofst_x, +ofst_y);
-#else
-#define MSAA_PASSES 1
-	vec2 msaa[MSAA_PASSES];
-	msaa[0] = vec2(.5, .5);
-#endif
-
 	vec3 color = vec3(0, 0, 0);
 
 	vec3 eye, look_at;
@@ -61,19 +44,17 @@ void mainImage(
 
 	setup_scene();
 
-	for (int i = 0; i < MSAA_PASSES; i++) {
-		vec2 point_ndc = (fragCoord.xy + msaa[i]) / u_res.xy;
+	vec2 point_ndc = fragCoord.xy / u_res.xy;
 #ifdef HLSL
 		point_ndc.y = 1. - point_ndc.y;
 #endif
-		vec3 point_cam = vec3(
-			(2.0 * point_ndc - 1.0) * aspect_ratio * fov,
-			-1.0);
+	vec3 point_cam = vec3(
+		(2.0 * point_ndc - 1.0) * aspect_ratio * fov,
+		-1.0);
 
-		ray_t ray = get_primary_ray(point_cam, eye, look_at);
+	ray_t ray = get_primary_ray(point_cam, eye, look_at);
 
-		color += render(ray) / float(MSAA_PASSES);
-	}
+	color += render(ray);
 
 	fragColor = vec4(linear_to_srgb(color), 1);
 }
