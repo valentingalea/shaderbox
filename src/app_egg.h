@@ -270,5 +270,5 @@ void mainImage(
 	final_color = mix(final_color, BAR_COLOR, bar_factor * depth_factor);
 #endif
 
-	fragColor = vec4(corect_gamma(final_color, 2.25), 1.);
+	fragColor = vec4(linear_to_srgb(final_color), 1.);
 }

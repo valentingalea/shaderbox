@@ -75,5 +75,5 @@ void mainImage(
 		color += render(ray) / float(MSAA_PASSES);
 	}
 
-	fragColor = vec4(corect_gamma(color, 2.25), 1);
+	fragColor = vec4(linear_to_srgb(color), 1);
 }

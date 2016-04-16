@@ -55,11 +55,17 @@ mat3 rotate_around_x(
 	return mat3(1, 0, 0, 0, _cos, -_sin, 0, _sin, _cos);
 }
 
-vec3 corect_gamma(
-	_in(vec3) color,
-	_in(float) gamma
+// http://http.developer.nvidia.com/GPUGems3/gpugems3_ch24.html
+vec3 linear_to_srgb(
+	_in(vec3) color
 ){
-	float p = 1.0 / gamma;
+	const float p = 1. / 2.2;
+	return vec3(pow(color.r, p), pow(color.g, p), pow(color.b, p));
+}
+vec3 srgb_to_linear(
+	_in(vec3) color
+){
+	const float p = 2.2;
 	return vec3(pow(color.r, p), pow(color.g, p), pow(color.b, p));
 }
 
