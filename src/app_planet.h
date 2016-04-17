@@ -183,7 +183,7 @@ vec3 render_planet(
 	cloud = start_cloud (hit.origin);
 
 	float t = 0.;
-	for (int i = 0; i < 30; i++) {
+	for (int i = 0; i < 100; i++) {
 		vec3 o = hit.origin + t * eye.direction;
 		vec3 p = mul(rot, o - planet.origin);
 
@@ -191,34 +191,44 @@ vec3 render_planet(
 
 		clouds_march(eye, cloud, max_height);
 
-		if (d.x < .01) {
+		if (d.x < .005) {
 			float hs = d.y;
-			vec3 n = terrain_normal(p);
-			//return n;
+			vec3 normal = terrain_normal(p);
+			//return abs(normal);
 
 			clouds_march(eye, cloud, t);
-			
-			vec3 snow = mix(
-				vec3(.5, .5, .5),
-				vec3(1, 1, 1),
-				smoothstep(.75, 1., hs));
+
+			// colours TODO: paste in final values
+			vec3 c_water = srgb_to_linear(vec3( 38,  94, 179) / 256.);
+			vec3 c_grass = srgb_to_linear(vec3( 84, 102,  42) / 256.);
+			vec3 c_beach = srgb_to_linear(vec3(109, 115,  98) / 256.);
+			vec3 c_rock1 = srgb_to_linear(vec3(103, 109, 111) / 256.);
+			vec3 c_rock2 = srgb_to_linear(vec3(100, 107,  98) / 256.);
+			vec3 c_snow  = vec3(1, 1, 1);
+
+			// limits TODO: vary with fbm
+			const float l_water = .05;
+			const float l_shore = .1;
+			const float l_rock = .11;
+
 			vec3 rock = mix(
-				vec3(1, 0, 0),
-				snow,
-				smoothstep(.4, .75, hs));			
-			vec3 grass = mix(
-				vec3(0, 1, 0),
-				rock,
-				smoothstep(.1, .4, hs));				
+				c_rock1, c_rock2,
+				smoothstep(l_rock, 1.,
+					cos(hs * 85.47 * fbm(p * 17.24, 4.37))));
+			rock = mix(
+				rock, c_snow,
+				smoothstep(.5, 1., hs));
+			vec3 shoreline = mix(
+				c_beach, rock,
+				smoothstep(l_shore, l_rock, hs));				
 			vec3 c = mix(
-				vec3(.1, .1, .9),
-				grass,
-				smoothstep (.0, .1, hs));
+				c_water, shoreline,
+				smoothstep (l_water, l_shore, hs));
 #if 0
 			hit_t impact = _begin(hit_t)
 				t, // ray length at impact
 				0, // material id
-				n, // normal
+				normal,
 				p // point of impact				
 			_end;
 			
@@ -231,7 +241,7 @@ vec3 render_planet(
 			return mix(c, cloud.C, cloud.alpha);
 		}
 
-		t += d.x;
+		t += d.x *.7;
 	}
 
 	clouds_march(eye, cloud, max_dist);
