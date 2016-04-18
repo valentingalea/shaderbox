@@ -6,6 +6,10 @@
 #define noise(x) noise_iq(x)
 #include "fbm.h"
 
+// ----------------------------------------------------------------------------
+// Planet
+// ----------------------------------------------------------------------------
+
 _constant(sphere_t) planet = _begin(sphere_t)
 	vec3(0, 0, 0), 1., 0
 _end;
@@ -60,12 +64,14 @@ cloud_drop_t start_cloud(
 
 _mutable(cloud_drop_t) cloud;
 
+#define fbm_cloud fbm
+
 void clouds_map(
 	_inout(cloud_drop_t) cloud,
 	_in(float) t_step
 ){
 	float H = exp(cloud.h);
-	float dens = fbm(cloud.pos * 1.2343 
+	float dens = fbm_cloud(cloud.pos * 1.2343
 		+ vec3(1.35, 3.35, 2.67), 2.9760);
 
 	const float coverage = .575675; // higher=less clouds
@@ -108,26 +114,40 @@ void clouds_march(
 	}
 }
 
-float terrain_map(
-	_in(vec3) pos
-){
-	float h = fbm(pos * 2., 2.);
+#define fbm_terr fbm
+DECL_FBM_FUNC(fbm_terr_nrm, 7, .5)
+
+float terrain_map(_in(vec3) pos)
+{
+	float h = fbm_terr(pos * 2., 2.012);
 	float hs = smoothstep(.35, 1., h);
 
 	return hs;
 }
 
-vec2 sdf_map(
-	_in(vec3) pos
-){
+vec2 sdf_map(_in(vec3) pos)
+{
 	float n = terrain_map(pos);
 	return vec2(length(pos) - planet.radius - n * max_height, n);
 }
 
-vec3 terrain_normal(
-	_in(vec3) p
-){
-#define F(t) sdf_map(t).x
+float terrain_map_nrm(_in(vec3) pos)
+{
+	float h = fbm_terr_nrm(pos * 2., 2.012);
+	float hs = smoothstep(.35, 1., h);
+
+	return hs;
+}
+
+vec2 sdf_map_nrm(_in(vec3) pos)
+{
+	float n = terrain_map_nrm(pos);
+	return vec2(length(pos) - planet.radius - n * max_height, n);
+}
+
+vec3 terrain_normal(_in(vec3) p)
+{
+#define F(t) sdf_map_nrm(t).x
 	vec3 dt = vec3(0.001, 0, 0);
 
 	return normalize(vec3(
@@ -136,23 +156,6 @@ vec3 terrain_normal(
 		F(p + dt.zzx) - F(p - dt.zzx)
 	));
 #undef F
-}
-
-vec3 illuminate(
-	_in(vec3) V,
-	_in(vec3) L,
-	_in(hit_t) hit,
-	_in(vec3) color
-){
-	vec3 diffuse = max(0., dot(L, hit.normal))
-		* color;
-
-	vec3 H = normalize(L + V);
-	vec3 specular = pow(
-		max(0., dot(H, hit.normal)),
-		50.) * vec3(1, 1, 1);
-
-	return diffuse + specular;
 }
 
 vec3 render_planet(
@@ -209,7 +212,9 @@ vec3 render_planet(
 			// limits TODO: vary with fbm
 			const float l_water = .05;
 			const float l_shore = .1;
-			const float l_rock = .11;
+			const float l_rock = .211;
+
+			const vec3 L = vec3(1, 0, 0);
 
 			vec3 rock = mix(
 				c_rock1, c_rock2,
@@ -218,30 +223,20 @@ vec3 render_planet(
 			rock = mix(
 				rock, c_snow,
 				smoothstep(.5, 1., hs));
+
 			vec3 shoreline = mix(
 				c_beach, rock,
-				smoothstep(l_shore, l_rock, hs));				
+				smoothstep(l_shore, l_rock, hs));	
+			shoreline *= max(0., dot(L, normal));
+
 			vec3 c = mix(
 				c_water, shoreline,
 				smoothstep (l_water, l_shore, hs));
-#if 0
-			hit_t impact = _begin(hit_t)
-				t, // ray length at impact
-				0, // material id
-				normal,
-				p // point of impact				
-			_end;
-			
-			c = illuminate(
-				eye.direction,
-				vec3(1, 0, 0),
-				impact,
-				c);
-#endif
+
 			return mix(c, cloud.C, cloud.alpha);
 		}
 
-		t += d.x *.7;
+		t += d.x *.67;
 	}
 
 	clouds_march(eye, cloud, max_dist);
