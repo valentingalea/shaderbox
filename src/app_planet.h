@@ -13,7 +13,14 @@
 _constant(sphere_t) planet = _begin(sphere_t)
 	vec3(0, 0, 0), 1., 0
 _end;
-_constant(float) max_height = .35;
+
+#define TERR_STEPS 120
+#define TERR_EPS .005
+#define max_height .35
+#define max_ray_dist (max_height * 4.)
+
+#define CLD_STEPS 75
+#define t_cld_step (max_ray_dist / float(CLD_STEPS))
 
 vec3 background(
 	_in(ray_t) eye
@@ -93,25 +100,20 @@ void clouds_map(
 	cloud.alpha += (1. - T_i) * (1. - cloud.alpha);
 }
 
-void clouds_march(
+void clouds_march_step(
 	_in(ray_t) eye,
 	_inout(cloud_drop_t) cloud,
-	_in(float) exit_dist
+	_in(mat3) rot
 ){
-	const int steps = 75;
-	float t_step = (max_height * 4.) / float(steps);
-	mat3 rot2 = rotate_around_x(u_time * -8.);
+	if (cloud.alpha >= 1.) return;
+	
+	vec3 o = cloud.origin + cloud.t * eye.direction;
+	cloud.pos = mul(rot, o - planet.origin);
 
-	for (int i = 0; i < steps; i++) {
-		vec3 o = cloud.origin + cloud.t * eye.direction;
-		cloud.pos = mul(rot2, o - planet.origin);
+	cloud.h = (length(cloud.pos) - planet.radius) / max_height;
+	cloud.t += t_cld_step;
 
-		cloud.h = (length(cloud.pos) - planet.radius) / max_height;
-		cloud.t += t_step;
-
-		clouds_map(cloud, t_step);
-		if (cloud.t > exit_dist) return;
-	}
+	clouds_map(cloud, t_cld_step);
 }
 
 DECL_FBM_FUNC(fbm_terr, 4, .5)
@@ -162,6 +164,7 @@ vec3 render_planet(
 	_in(ray_t) eye
 ){
 	mat3 rot = rotate_around_x(u_time * 16.);
+	mat3 rot2 = rotate_around_x(u_time * -8.);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -184,25 +187,27 @@ vec3 render_planet(
 #endif
 
 	cloud = start_cloud (hit.origin);
-
 	float t = 0.;
-	for (int i = 0; i < 120; i++) {
+	vec3 c_out = vec3(0, 0, 0);
+	vec2 df = vec2(1, max_height);
+	
+	for (int i = 0; i < TERR_STEPS; i++) {
+		if (t > max_ray_dist) break;
+		
 		vec3 o = hit.origin + t * eye.direction;
 		vec3 p = mul(rot, o - planet.origin);
 
-		vec2 d = sdf_map(p);
+		df = sdf_map(p);
 
-		clouds_march(eye, cloud, max_height);
+		clouds_march_step(eye, cloud, rot);
 
-		if (d.x < .005) {
-			float h = d.y;
+		if (df.x < TERR_EPS) {
+			float h = df.y;
 			
 			vec3 normal = terrain_normal(p);
 			//return abs(normal);
 			float N = abs(normal.y);
 				//dot(normal, normalize(p));
-				
-			clouds_march(eye, cloud, t);
 
 			// colours TODO: paste in final values
 			vec3 c_water = srgb_to_linear(vec3( 38,  94, 179) / 256.);
@@ -236,18 +241,29 @@ vec3 render_planet(
 				smoothstep(l_shore, l_rock, h));
 			shoreline *= max(0., dot(L, normal)) * c_L;
 			
-			vec3 c = mix(
+			c_out = mix(
 				c_water, shoreline,
 				smoothstep (l_water, l_shore, h));
-
-			return mix(c, cloud.C, cloud.alpha);
+			
+			t = -1.;
+			break;
 		}
 
-		t += d.x *.67;
+		t += df.x *.67;
 	}
 
-	clouds_march(eye, cloud, max_dist);
-	return mix(background(eye), cloud.C, cloud.alpha);
+	// clouds - resume and finish marching
+	for (int j = 0; j < CLD_STEPS; j++) {
+		if (cloud.t > max_ray_dist) break;
+		
+		clouds_march_step(eye, cloud, rot);
+	}
+	
+	if (df.x < TERR_EPS) {
+		return mix(c_out, cloud.C, cloud.alpha);
+	} else {
+		return mix(background(eye), cloud.C, cloud.alpha);
+	}
 }
 
 vec3 render(
