@@ -186,7 +186,7 @@ vec3 render_planet(
 	cloud = start_cloud (hit.origin);
 
 	float t = 0.;
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 120; i++) {
 		vec3 o = hit.origin + t * eye.direction;
 		vec3 p = mul(rot, o - planet.origin);
 
@@ -195,10 +195,13 @@ vec3 render_planet(
 		clouds_march(eye, cloud, max_height);
 
 		if (d.x < .005) {
-			float hs = d.y;
+			float h = d.y;
+			
 			vec3 normal = terrain_normal(p);
 			//return abs(normal);
-
+			float N = abs(normal.y);
+				//dot(normal, normalize(p));
+				
 			clouds_march(eye, cloud, t);
 
 			// colours TODO: paste in final values
@@ -213,29 +216,29 @@ vec3 render_planet(
 			const float l_water = .05;
 			const float l_shore = .1;
 			const float l_rock = .211;
-
+			
+			// light
 			const vec3 L = vec3(1, 0, 0);
-			float N = //abs(normal.y);
-				dot(normal, normalize(p));
+			const vec3 c_L = vec3(1, 1, 1) * 3.;
+			const vec3 c_amb = vec3(.1, .1, .1);
 
 			//vec3 rock = mix(
 			//	c_rock1, c_rock2,
 			//	smoothstep(l_rock, 1.,
 			//		cos(hs * 85.47 * fbm(p * 17.24, 4.37))));
-			float H = smoothstep(.5, 1., hs);
-			//return vec3(H);
+			float s = smoothstep(.5, 1., h);
 			vec3 rock = mix(
 				c_rock2, c_snow,
-				smoothstep(1. - .4*H, 1. - .1*H, N));
+				smoothstep(1. - .4*s, 1. - .1*s, N));
 
 			vec3 shoreline = mix(
 				c_beach, rock,
-				smoothstep(l_shore, l_rock, hs));
-			shoreline *= max(0., dot(L, normal)) * vec3(1, 1, 1) * 3.;
-
+				smoothstep(l_shore, l_rock, h));
+			shoreline *= max(0., dot(L, normal)) * c_L;
+			
 			vec3 c = mix(
 				c_water, shoreline,
-				smoothstep (l_water, l_shore, hs));
+				smoothstep (l_water, l_shore, h));
 
 			return mix(c, cloud.C, cloud.alpha);
 		}
