@@ -117,37 +117,27 @@ void clouds_march_step(
 DECL_FBM_FUNC(fbm_terr, 4, .5)
 DECL_FBM_FUNC(fbm_terr_nrm, 7, .5)
 
-float terrain_map(_in(vec3) pos)
-{
-	float h = fbm_terr(pos * 2., 2.012);
-	float hs = smoothstep(.35, 1., h);
+#define TERR_FLAT_BIAS .35
+#define TERR_FBM_FREQ 1.9870725
+#define TERR_FBM_LAC 2.023674
 
-	return hs;
-}
-
-vec2 sdf_map(_in(vec3) pos)
+vec2 sdf_terrain_map(_in(vec3) pos)
 {
-	float n = terrain_map(pos);
+	float h = fbm_terr(pos * TERR_FBM_FREQ, TERR_FBM_LAC);
+	float n = smoothstep(TERR_FLAT_BIAS, 1., h);
 	return vec2(length(pos) - planet.radius - n * max_height, n / max_height);
 }
 
-float terrain_map_nrm(_in(vec3) pos)
+vec2 sdf_terrain_map_detail(_in(vec3) pos)
 {
-	float h = fbm_terr_nrm(pos * 2., 2.012);
-	float hs = smoothstep(.35, 1., h);
-
-	return hs;
-}
-
-vec2 sdf_map_nrm(_in(vec3) pos)
-{
-	float n = terrain_map_nrm(pos);
+	float h = fbm_terr_nrm(pos * TERR_FBM_FREQ, TERR_FBM_LAC);
+	float n = smoothstep(TERR_FLAT_BIAS, 1., h);
 	return vec2(length(pos) - planet.radius - n * max_height, n);
 }
 
-vec3 terrain_normal(_in(vec3) p)
+vec3 sdf_terrain_normal(_in(vec3) p)
 {
-#define F(t) sdf_map_nrm(t).x
+#define F(t) sdf_terrain_map_detail(t).x
 	vec3 dt = vec3(0.001, 0, 0);
 
 	return normalize(vec3(
@@ -197,12 +187,12 @@ vec3 render_planet(
 		vec3 o = hit.origin + t * eye.direction;
 		vec3 p = mul(rot, o - planet.origin);
 
-		df = sdf_map(p);
+		df = sdf_terrain_map(p);
 
 		if (df.x < TERR_EPS) {
 			float h = df.y;
 			
-			vec3 normal = terrain_normal(p);
+			vec3 normal = sdf_terrain_normal(p);
 			//return abs(normal);
 			float N = abs(normal.y);
 				//dot(normal, normalize(p));
