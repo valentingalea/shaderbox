@@ -128,7 +128,7 @@ float terrain_map(_in(vec3) pos)
 vec2 sdf_map(_in(vec3) pos)
 {
 	float n = terrain_map(pos);
-	return vec2(length(pos) - planet.radius - n * max_height, n);
+	return vec2(length(pos) - planet.radius - n * max_height, n / max_height);
 }
 
 float terrain_map_nrm(_in(vec3) pos)
@@ -215,19 +215,23 @@ vec3 render_planet(
 			const float l_rock = .211;
 
 			const vec3 L = vec3(1, 0, 0);
+			float N = //abs(normal.y);
+				dot(normal, normalize(p));
 
+			//vec3 rock = mix(
+			//	c_rock1, c_rock2,
+			//	smoothstep(l_rock, 1.,
+			//		cos(hs * 85.47 * fbm(p * 17.24, 4.37))));
+			float H = smoothstep(.5, 1., hs);
+			//return vec3(H);
 			vec3 rock = mix(
-				c_rock1, c_rock2,
-				smoothstep(l_rock, 1.,
-					cos(hs * 85.47 * fbm(p * 17.24, 4.37))));
-			rock = mix(
-				rock, c_snow,
-				smoothstep(.5, 1., hs));
+				c_rock2, c_snow,
+				smoothstep(1. - .4*H, 1. - .1*H, N));
 
 			vec3 shoreline = mix(
 				c_beach, rock,
-				smoothstep(l_shore, l_rock, hs));	
-			shoreline *= max(0., dot(L, normal));
+				smoothstep(l_shore, l_rock, hs));
+			shoreline *= max(0., dot(L, normal)) * vec3(1, 1, 1) * 3.;
 
 			vec3 c = mix(
 				c_water, shoreline,
