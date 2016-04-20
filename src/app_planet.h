@@ -81,7 +81,7 @@ void clouds_map(
 	float dens = fbm_cloud(cloud.pos * 1.2343
 		+ vec3(1.35, 3.35, 2.67), 2.9760);
 
-	const float coverage = .575675; // higher=less clouds
+	const float coverage = .4575675; // higher=less clouds
 	const float fuzziness = .0335; // higher=fuzzy, lower=blockier
 	//dens *= step(coverage, dens);
 	dens *= smoothstep(coverage, coverage + fuzziness, dens);
@@ -105,8 +105,6 @@ void clouds_march_step(
 	_inout(cloud_drop_t) cloud,
 	_in(mat3) rot
 ){
-	if (cloud.alpha >= 1.) return;
-	
 	vec3 o = cloud.origin + cloud.t * eye.direction;
 	cloud.pos = mul(rot, o - planet.origin);
 
@@ -164,7 +162,7 @@ vec3 render_planet(
 	_in(ray_t) eye
 ){
 	mat3 rot = rotate_around_x(u_time * 16.);
-	mat3 rot2 = rotate_around_x(u_time * -8.);
+	mat3 rot2 = rotate_around_x(u_time * -32.);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -186,10 +184,12 @@ vec3 render_planet(
 	return vec3(n, n, n);
 #endif
 
-	cloud = start_cloud (hit.origin);
 	float t = 0.;
-	vec3 c_out = vec3(0, 0, 0);
 	vec2 df = vec2(1, max_height);
+	vec3 c_out = vec3(0, 0, 0);
+
+	cloud = start_cloud (hit.origin);
+	float max_cld_ray_dist = max_ray_dist;
 	
 	for (int i = 0; i < TERR_STEPS; i++) {
 		if (t > max_ray_dist) break;
@@ -198,8 +198,6 @@ vec3 render_planet(
 		vec3 p = mul(rot, o - planet.origin);
 
 		df = sdf_map(p);
-
-		clouds_march_step(eye, cloud, rot);
 
 		if (df.x < TERR_EPS) {
 			float h = df.y;
@@ -245,18 +243,17 @@ vec3 render_planet(
 				c_water, shoreline,
 				smoothstep (l_water, l_shore, h));
 			
-			t = -1.;
+			max_cld_ray_dist = t;
 			break;
 		}
 
 		t += df.x *.67;
 	}
 
-	// clouds - resume and finish marching
 	for (int j = 0; j < CLD_STEPS; j++) {
-		if (cloud.t > max_ray_dist) break;
+		if (cloud.t > max_cld_ray_dist || cloud.alpha >= 1.) break;
 		
-		clouds_march_step(eye, cloud, rot);
+		clouds_march_step(eye, cloud, rot2);
 	}
 	
 	if (df.x < TERR_EPS) {
