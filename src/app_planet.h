@@ -100,18 +100,23 @@ void clouds_map(
 	cloud.alpha += (1. - T_i) * (1. - cloud.alpha);
 }
 
-void clouds_march_step(
+void clouds_march(
 	_in(ray_t) eye,
 	_inout(cloud_drop_t) cloud,
+	_in(float) max_travel,
 	_in(mat3) rot
 ){
-	vec3 o = cloud.origin + cloud.t * eye.direction;
-	cloud.pos = mul(rot, o - planet.origin);
+	for (int i = 0; i < CLD_STEPS; i++) {
+		if (cloud.t > max_travel || cloud.alpha >= 1.) return;
 
-	cloud.h = (length(cloud.pos) - planet.radius) / max_height;
-	cloud.t += t_cld_step;
+		vec3 o = cloud.origin + cloud.t * eye.direction;
+		cloud.pos = mul(rot, o - planet.origin);
 
-	clouds_map(cloud, t_cld_step);
+		cloud.h = (length(cloud.pos) - planet.radius) / max_height;
+		cloud.t += t_cld_step;
+
+		clouds_map(cloud, t_cld_step);
+	}
 }
 
 DECL_FBM_FUNC(fbm_terr, 4, .5)
@@ -240,11 +245,7 @@ vec3 render_planet(
 		t += df.x *.67;
 	}
 
-	for (int j = 0; j < CLD_STEPS; j++) {
-		if (cloud.t > max_cld_ray_dist || cloud.alpha >= 1.) break;
-		
-		clouds_march_step(eye, cloud, rot2);
-	}
+	clouds_march(eye, cloud, max_cld_ray_dist, rot2);
 	
 	if (df.x < TERR_EPS) {
 		return mix(c_out, cloud.C, cloud.alpha);
