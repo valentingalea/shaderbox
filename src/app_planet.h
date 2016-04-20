@@ -64,7 +64,7 @@ cloud_drop_t start_cloud(
 
 _mutable(cloud_drop_t) cloud;
 
-#define fbm_cloud fbm
+DECL_FBM_FUNC(fbm_cloud, 5, .5)
 
 void clouds_map(
 	_inout(cloud_drop_t) cloud,
@@ -114,7 +114,7 @@ void clouds_march(
 	}
 }
 
-#define fbm_terr fbm
+DECL_FBM_FUNC(fbm_terr, 4, .5)
 DECL_FBM_FUNC(fbm_terr_nrm, 7, .5)
 
 float terrain_map(_in(vec3) pos)
