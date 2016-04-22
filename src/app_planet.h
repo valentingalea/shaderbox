@@ -51,10 +51,8 @@ void setup_camera(
 }
 
 struct cloud_drop_t {
-	float t;
 	vec3 origin;
 	vec3 pos;
-	float h;
 	float T;
 	vec3 C;
 	float alpha;
@@ -66,7 +64,7 @@ cloud_drop_t start_cloud(
 	_in(vec3) origin
 ){
 	cloud_drop_t c = _begin(cloud_drop_t)
-		0., origin, origin, 0., 1., vec3 (0., 0., 0.), 0.
+		origin, origin, 1., vec3 (0., 0., 0.), 0.
 	_end;
 	return c;
 }
@@ -75,6 +73,7 @@ DECL_FBM_FUNC(fbm_cloud, 5, .5)
 
 void clouds_map(
 	_inout(cloud_drop_t) cloud,
+	_in(float) height,
 	_in(float) t_step
 ){
 	float dens = fbm_cloud(
@@ -85,12 +84,12 @@ void clouds_map(
 	const float fuzziness = .0335; // higher=fuzzy, lower=blockier
 	dens *= smoothstep(coverage, coverage + fuzziness, dens);
 
-	float l = noise (cloud.pos * 4.87) * .1;
-	float h = noise (cloud.pos * 5.39) * .1;
-	dens *= band(.2 + l, .5, .6 + h, cloud.h);
-	//dens *= 1. - smoothstep(.4, .5, cloud.h);
+	//float l = noise (cloud.pos * 4.87) * .1;
+	//float h = noise (cloud.pos * 5.39) * .1;
+	//dens *= band(.2 + l, .5, .6 + h, height);
+	dens *= 1. - smoothstep(.4, .5, height);
 
-	float H = exp(cloud.h);
+	float H = exp(height);
 	const float absorbtion = 33.93434;
 	float T_i = exp(-absorbtion * dens * t_step);
 	cloud.T *= T_i;
@@ -106,16 +105,17 @@ void clouds_march(
 	_in(float) max_travel,
 	_in(mat3) rot
 ){
+	float t = 0.;
 	for (int i = 0; i < CLD_STEPS; i++) {
-		if (cloud.t > max_travel || cloud.alpha >= 1.) return;
+		if (t > max_travel || cloud.alpha >= 1.) return;
 
-		vec3 o = cloud.origin + cloud.t * eye.direction;
+		vec3 o = cloud.origin + t * eye.direction;
 		cloud.pos = mul(rot, o - planet.origin);
 
-		cloud.h = (length(cloud.pos) - planet.radius) / max_height;
-		cloud.t += t_cld_step;
+		float h = (length(cloud.pos) - planet.radius) / max_height;
+		t += t_cld_step;
 
-		clouds_map(cloud, t_cld_step);
+		clouds_map(cloud, h, t_cld_step);
 	}
 }
 
