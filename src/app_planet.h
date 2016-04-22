@@ -77,17 +77,15 @@ void clouds_map(
 	_in(float) t_step
 ){
 	float dens = fbm_cloud(
-		cloud.pos * 1.2343 + vec3(1.35, 3.35, 2.67),
+		cloud.pos * 2.2343 + vec3(1.35, 3.35, 2.67),
 		2.9760);
 
-	const float coverage = .4575675; // higher=less clouds
+	const float coverage = .575675; // higher=less clouds
 	const float fuzziness = .0335; // higher=fuzzy, lower=blockier
 	dens *= smoothstep(coverage, coverage + fuzziness, dens);
 
-	//float l = noise (cloud.pos * 4.87) * .1;
-	//float h = noise (cloud.pos * 5.39) * .1;
-	//dens *= band(.2 + l, .5, .6 + h, height);
-	dens *= 1. - smoothstep(.4, .5, height);
+	dens *= band(.5, .8, .9, height);
+	//dens *= smoothstep(.75, .9, height);
 
 	float H = exp(height);
 	const float absorbtion = 33.93434;
@@ -153,11 +151,13 @@ vec3 sdf_terrain_normal(_in(vec3) p)
 #undef F
 }
 
+_constant(mat3) ident = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+
 vec3 render_planet(
 	_in(ray_t) eye
 ){
 	mat3 rot = rotate_around_x(u_time * 16.);
-	mat3 rot2 = rotate_around_x(u_time * -32.);
+	mat3 rot_cloud = rotate_around_x(u_time * -8.);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -181,7 +181,7 @@ vec3 render_planet(
 
 	float t = 0.;
 	vec2 df = vec2(1, max_height);
-	vec3 c_out = vec3(0, 0, 0);
+	vec3 c_out = vec3(0, 0, 0), p;
 
 	cloud = start_cloud (hit.origin);
 	float max_cld_ray_dist = max_ray_dist;
@@ -190,7 +190,7 @@ vec3 render_planet(
 		if (t > max_ray_dist) break;
 		
 		vec3 o = hit.origin + t * eye.direction;
-		vec3 p = mul(rot, o - planet.origin);
+		p = mul(rot, o - planet.origin);
 
 		df = sdf_terrain_map(p);
 
@@ -232,7 +232,7 @@ vec3 render_planet(
 			vec3 shoreline = mix(
 				c_beach, rock,
 				smoothstep(l_shore, l_rock, h));
-			shoreline *= max(0., dot(L, normal)) * c_L;
+			//shoreline *= max(0., dot(L, normal)) * c_L;
 			
 			c_out = mix(
 				c_water, shoreline,
@@ -245,7 +245,7 @@ vec3 render_planet(
 		t += df.x *.67;
 	}
 
-	clouds_march(eye, cloud, max_cld_ray_dist, rot2);
+	clouds_march(eye, cloud, max_cld_ray_dist, rot_cloud);
 	
 	if (df.x < TERR_EPS) {
 		return mix(c_out, cloud.C, cloud.alpha);
