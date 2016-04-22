@@ -60,6 +60,8 @@ struct cloud_drop_t {
 	float alpha;
 };
 
+_mutable(cloud_drop_t) cloud;
+
 cloud_drop_t start_cloud(
 	_in(vec3) origin
 ){
@@ -69,28 +71,26 @@ cloud_drop_t start_cloud(
 	return c;
 }
 
-_mutable(cloud_drop_t) cloud;
-
 DECL_FBM_FUNC(fbm_cloud, 5, .5)
 
 void clouds_map(
 	_inout(cloud_drop_t) cloud,
 	_in(float) t_step
 ){
-	float H = exp(cloud.h);
-	float dens = fbm_cloud(cloud.pos * 1.2343
-		+ vec3(1.35, 3.35, 2.67), 2.9760);
+	float dens = fbm_cloud(
+		cloud.pos * 1.2343 + vec3(1.35, 3.35, 2.67),
+		2.9760);
 
 	const float coverage = .4575675; // higher=less clouds
 	const float fuzziness = .0335; // higher=fuzzy, lower=blockier
-	//dens *= step(coverage, dens);
 	dens *= smoothstep(coverage, coverage + fuzziness, dens);
 
-	// these 2 are identical ways to "band" vertically
-	//TODO: understand why the exp thing really works
-	//dens *= band(.2, .4, .6, exp(h) / 4.);
-	dens *= 1. - smoothstep(.4, .5, H / 4.);
+	float l = noise (cloud.pos * 4.87) * .1;
+	float h = noise (cloud.pos * 5.39) * .1;
+	dens *= band(.2 + l, .5, .6 + h, cloud.h);
+	//dens *= 1. - smoothstep(.4, .5, cloud.h);
 
+	float H = exp(cloud.h);
 	const float absorbtion = 33.93434;
 	float T_i = exp(-absorbtion * dens * t_step);
 	cloud.T *= T_i;
