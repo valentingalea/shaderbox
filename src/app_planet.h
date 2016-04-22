@@ -104,6 +104,7 @@ void clouds_march(
 	_in(mat3) rot
 ){
 	float t = 0.;
+
 	for (int i = 0; i < CLD_STEPS; i++) {
 		if (t > max_travel || cloud.alpha >= 1.) return;
 
@@ -112,8 +113,26 @@ void clouds_march(
 
 		float h = (length(cloud.pos) - planet.radius) / max_height;
 		t += t_cld_step;
-
 		clouds_map(cloud, h, t_cld_step);
+	}
+}
+
+void clouds_shadow_march(
+	_in(vec3) dir,
+	_inout(cloud_drop_t) cloud,
+	_in(mat3) rot
+){
+	const int steps = 5;
+	const float t_step = max_height / float(steps);
+	float t = 0.;
+
+	for (int i = 0; i < steps; i++) {
+		vec3 o = cloud.origin + t * dir;
+		cloud.pos = mul(rot, o - planet.origin);
+
+		float h = (length(cloud.pos) - planet.radius) / max_height;
+		t += t_step;
+		clouds_map(cloud, h, t_step);
 	}
 }
 
@@ -156,7 +175,7 @@ _constant(mat3) ident = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
 vec3 render_planet(
 	_in(ray_t) eye
 ){
-	mat3 rot = rotate_around_x(u_time * 16.);
+	mat3 rot = ident;// rotate_around_x(u_time * 8.);
 	mat3 rot_cloud = rotate_around_x(u_time * -8.);
 
 	sphere_t atmosphere = planet;
@@ -181,7 +200,7 @@ vec3 render_planet(
 
 	float t = 0.;
 	vec2 df = vec2(1, max_height);
-	vec3 c_out = vec3(0, 0, 0), p;
+	vec3 c_out = vec3(0, 0, 0), pos;
 
 	cloud = start_cloud (hit.origin);
 	float max_cld_ray_dist = max_ray_dist;
@@ -190,14 +209,14 @@ vec3 render_planet(
 		if (t > max_ray_dist) break;
 		
 		vec3 o = hit.origin + t * eye.direction;
-		p = mul(rot, o - planet.origin);
+		pos = mul(rot, o - planet.origin);
 
-		df = sdf_terrain_map(p);
+		df = sdf_terrain_map(pos);
 
 		if (df.x < TERR_EPS) {
 			float h = df.y;
 			
-			vec3 normal = sdf_terrain_normal(p);
+			vec3 normal = sdf_terrain_normal(pos);
 			//return abs(normal);
 			float N = abs(normal.y);
 				//dot(normal, normalize(p));
@@ -248,7 +267,18 @@ vec3 render_planet(
 	clouds_march(eye, cloud, max_cld_ray_dist, rot_cloud);
 	
 	if (df.x < TERR_EPS) {
-		return mix(c_out, cloud.C, cloud.alpha);
+		vec3 c_cld = cloud.C;
+		float alpha = cloud.alpha;
+		float shadow = 1.;
+
+#if 1 // clouds ground shadows
+		cloud = start_cloud(pos);
+		vec3 local_up = normalize(pos);
+		clouds_shadow_march(local_up, cloud, rot_cloud);
+		shadow = mix(.7, 1., step(cloud.alpha, 0.33));
+#endif
+
+		return mix(c_out * shadow, c_cld, alpha);
 	} else {
 		return mix(background(eye), cloud.C, cloud.alpha);
 	}
