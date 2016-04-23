@@ -71,6 +71,22 @@ cloud_drop_t start_cloud(
 
 DECL_FBM_FUNC(fbm_cloud, 5, .5)
 
+float clouds_map_low_res(
+	_in(vec3) pos,
+	_in(float) height
+){
+	float dens = noise(
+		pos * 2.2343 + vec3(1.35, 3.35, 2.67));
+
+	const float coverage = .575675; // higher=less clouds
+	const float fuzziness = .0335; // higher=fuzzy, lower=blockier
+	dens *= smoothstep(coverage, coverage + fuzziness, dens);
+
+	dens *= band(.5, .8, .9, height);
+	//dens *= smoothstep(.75, .9, height);
+	return dens;
+}
+
 void clouds_map(
 	_inout(cloud_drop_t) cloud,
 	_in(float) height,
@@ -103,10 +119,29 @@ void clouds_march(
 	_in(float) max_travel,
 	_in(mat3) rot
 ){
+	const int steps = 15;
+	const float t_step = max_ray_dist / float(steps);
 	float t = 0.;
+	vec3 pos;
+
+	for (int i = 0; i < steps; i++) {
+		vec3 o = cloud.origin + t * eye.direction;
+		pos = mul(rot, o - planet.origin);
+		float h = (length(pos) - planet.radius) / max_height;
+		
+		t += t_step;
+		if (t > max_travel) return;
+		
+		float dens = clouds_map_low_res(pos, h);
+		if (dens > .005) break;
+	}
+	
+	cloud.origin = pos - t_step * eye.direction;
+	float travel = max_travel - t - t_step;
+	t = 0.;
 
 	for (int i = 0; i < CLD_STEPS; i++) {
-		if (t > max_travel || cloud.alpha >= 1.) return;
+		if (t > travel || cloud.alpha >= 1.) return;
 
 		vec3 o = cloud.origin + t * eye.direction;
 		cloud.pos = mul(rot, o - planet.origin);
