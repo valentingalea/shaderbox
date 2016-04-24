@@ -291,7 +291,7 @@ vec3 render(
 			break;
 		}
 
-		t += df.x * .67;
+		t += df.x * .4567;
 	}
 
 #ifdef CLOUDS
