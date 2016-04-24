@@ -179,8 +179,58 @@ vec3 sdf_terrain_normal(_in(vec3) p)
 #undef F
 }
 
-vec3 render_planet(
-	_in(ray_t) eye
+vec3 illuminate(
+	_in(vec3) pos,
+	_in(vec2) df
+){
+	float h = df.y;
+
+	vec3 normal = sdf_terrain_normal(pos);
+	//return abs(normal);
+
+	float N = abs(normal.y);
+		//dot(normal, normalize(p));
+
+	// colours TODO: paste in final values
+	vec3 c_water = srgb_to_linear(vec3(38, 94, 179) / 256.);
+	vec3 c_grass = srgb_to_linear(vec3(84, 102, 42) / 256.);
+	vec3 c_beach = srgb_to_linear(vec3(109, 115, 98) / 256.);
+	vec3 c_rock1 = srgb_to_linear(vec3(103, 109, 111) / 256.);
+	vec3 c_rock2 = srgb_to_linear(vec3(100, 107, 98) / 256.);
+	vec3 c_snow = vec3(1, 1, 1);
+
+	// limits TODO: vary with fbm
+	const float l_water = .05;
+	const float l_shore = .1;
+	const float l_rock = .211;
+
+	// light
+	const vec3 L = vec3(1, 0, 0);
+	const vec3 c_L = vec3(1, 1, 1) * 3.;
+	const vec3 c_amb = vec3(.1, .1, .1);
+
+	//vec3 rock = mix(
+	//	c_rock1, c_rock2,
+	//	smoothstep(l_rock, 1.,
+	//		cos(hs * 85.47 * fbm(p * 17.24, 4.37))));
+	float s = smoothstep(.5, 1., h);
+	vec3 rock = mix(
+		c_rock2, c_snow,
+		smoothstep(1. - .4*s, 1. - .1*s, N));
+
+	vec3 shoreline = mix(
+		c_beach, rock,
+		smoothstep(l_shore, l_rock, h));
+	//shoreline *= max(0., dot(L, normal)) * c_L;
+
+	return mix(
+		c_water, shoreline,
+		smoothstep(l_water, l_shore, h));
+}
+
+vec3 render(
+	_in(ray_t) eye,
+	_in(vec3) point_cam
 ){
 	mat3 rot = rotate_around_x(u_time * 8.);
 	mat3 rot_cloud = rotate_around_x(u_time * -8.);
@@ -196,9 +246,7 @@ vec3 render_planet(
 
 	float t = 0.;
 	vec2 df = vec2(1, max_height);
-	vec3 c_out = vec3(0, 0, 0), pos;
-
-	cloud = start_cloud (hit.origin);
+	vec3 pos;
 	float max_cld_ray_dist = max_ray_dist;
 	
 	for (int i = 0; i < TERR_STEPS; i++) {
@@ -210,49 +258,6 @@ vec3 render_planet(
 		df = sdf_terrain_map(pos);
 
 		if (df.x < TERR_EPS) {
-			float h = df.y;
-			
-			vec3 normal = sdf_terrain_normal(pos);
-			//return abs(normal);
-			float N = abs(normal.y);
-				//dot(normal, normalize(p));
-
-			// colours TODO: paste in final values
-			vec3 c_water = srgb_to_linear(vec3( 38,  94, 179) / 256.);
-			vec3 c_grass = srgb_to_linear(vec3( 84, 102,  42) / 256.);
-			vec3 c_beach = srgb_to_linear(vec3(109, 115,  98) / 256.);
-			vec3 c_rock1 = srgb_to_linear(vec3(103, 109, 111) / 256.);
-			vec3 c_rock2 = srgb_to_linear(vec3(100, 107,  98) / 256.);
-			vec3 c_snow  = vec3(1, 1, 1);
-
-			// limits TODO: vary with fbm
-			const float l_water = .05;
-			const float l_shore = .1;
-			const float l_rock = .211;
-			
-			// light
-			const vec3 L = vec3(1, 0, 0);
-			const vec3 c_L = vec3(1, 1, 1) * 3.;
-			const vec3 c_amb = vec3(.1, .1, .1);
-
-			//vec3 rock = mix(
-			//	c_rock1, c_rock2,
-			//	smoothstep(l_rock, 1.,
-			//		cos(hs * 85.47 * fbm(p * 17.24, 4.37))));
-			float s = smoothstep(.5, 1., h);
-			vec3 rock = mix(
-				c_rock2, c_snow,
-				smoothstep(1. - .4*s, 1. - .1*s, N));
-
-			vec3 shoreline = mix(
-				c_beach, rock,
-				smoothstep(l_shore, l_rock, h));
-			//shoreline *= max(0., dot(L, normal)) * c_L;
-			
-			c_out = mix(
-				c_water, shoreline,
-				smoothstep (l_water, l_shore, h));
-			
 			max_cld_ray_dist = t;
 			break;
 		}
@@ -260,9 +265,11 @@ vec3 render_planet(
 		t += df.x *.67;
 	}
 
+	cloud = start_cloud(hit.origin);
 	clouds_march(eye, cloud, max_cld_ray_dist, rot_cloud);
 	
 	if (df.x < TERR_EPS) {
+		vec3 c_terr = illuminate(pos, df);
 		vec3 c_cld = cloud.C;
 		float alpha = cloud.alpha;
 		float shadow = 1.;
@@ -275,17 +282,10 @@ vec3 render_planet(
 		shadow = mix(.7, 1., step(cloud.alpha, 0.33));
 #endif
 
-		return mix(c_out * shadow, c_cld, alpha);
+		return mix(c_terr * shadow, c_cld, alpha);
 	} else {
 		return mix(background(eye), cloud.C, cloud.alpha);
 	}
-}
-
-vec3 render(
-	_in(ray_t) eye,
-	_in(vec3) point_cam
-){
-	return render_planet(eye);
 }
 
 #define FOV tan(radians(30.))
