@@ -181,47 +181,73 @@ vec3 sdf_terrain_normal(_in(vec3) p)
 
 vec3 illuminate(
 	_in(vec3) pos,
+	_in(vec3) eye,
+	_in(mat3) local_xform,
 	_in(vec2) df
 ){
+//TODO: moves as much as possible in #define's
+//TODO: paste final material values
+	// current terrain height at position
 	float h = df.y;
 
 	vec3 normal = sdf_terrain_normal(pos);
 	//return abs(normal);
-
 	float N = abs(normal.y);
-		//dot(normal, normalize(p));
+		//dot(normal, normalize(pos));
 
-	// colours TODO: paste in final values
+	// materials
 	vec3 c_water = srgb_to_linear(vec3(38, 94, 179) / 256.);
 	vec3 c_grass = srgb_to_linear(vec3(84, 102, 42) / 256.);
 	vec3 c_beach = srgb_to_linear(vec3(109, 115, 98) / 256.);
-	vec3 c_rock1 = srgb_to_linear(vec3(103, 109, 111) / 256.);
-	vec3 c_rock2 = srgb_to_linear(vec3(100, 107, 98) / 256.);
-	vec3 c_snow = vec3(1, 1, 1);
+	vec3 c_rock1 = vec3(0.08, 0.05, 0.03);// srgb_to_linear(vec3(103, 109, 111) / (256.*3.));
+	vec3 c_rock2 = vec3(0.10, 0.09, 0.08);// srgb_to_linear(vec3(100, 107, 98) / (256.*3.));
+	vec3 c_snow = vec3(1., 1., 1.) * .4;
 
-	// limits TODO: vary with fbm
+	// accumulate light
+	vec3 diffuse = vec3(0, 0, 0);
+
+	// key light
+	vec3 V = mul(local_xform, eye);
+	vec3 L = mul(local_xform, vec3(0, 1, 0));
+		//mul(rot, mul(rotate_around_y(sin(u_time) * 50.0), normalize(vec3(-1, 1, 0))));
+	vec3 c_L = vec3(7, 5, 3);
+	diffuse += max(0., dot(L, normal)) * c_L;
+
+	// fill light 1 - faked hemisphere
+	float hemi = clamp(.5 + .5 * N, .0, 1.);
+	diffuse += hemi * vec3(.4, .6, .8) * .2;
+
+	// fill light 2 - ambient (reversed key with no height)
+	float amb = clamp(.2 + .8 * dot(normalize(vec3(-L.x, 0., L.z)), normal), 0.0, 1.0);
+	diffuse += amb * vec3(.4, .5, .6);
+
+	// limits
 	const float l_water = .05;
 	const float l_shore = .1;
 	const float l_rock = .211;
 
-	// light
-	const vec3 L = vec3(1, 0, 0);
-	const vec3 c_L = vec3(1, 1, 1) * 3.;
-	const vec3 c_amb = vec3(.1, .1, .1);
-
-	//vec3 rock = mix(
-	//	c_rock1, c_rock2,
-	//	smoothstep(l_rock, 1.,
-	//		cos(hs * 85.47 * fbm(p * 17.24, 4.37))));
+	vec3 rock_strata = mix(
+		c_rock1, c_rock2,
+		smoothstep(l_rock, 1.,
+			cos(h * 45.47 * fbm(pos * 17.24, 4.37))));
 	float s = smoothstep(.5, 1., h);
 	vec3 rock = mix(
-		c_rock2, c_snow,
+		rock_strata, c_snow,
+		//smoothstep(l_rock, 1., h));
 		smoothstep(1. - .4*s, 1. - .1*s, N));
 
 	vec3 shoreline = mix(
 		c_beach, rock,
 		smoothstep(l_shore, l_rock, h));
-	//shoreline *= max(0., dot(L, normal)) * c_L;
+	shoreline *= diffuse;
+
+#if 0
+	normal = normalize(pos);
+	vec3 w_diff = max(0., dot(L, normal)) * c_L;
+	c_water = w_diff * c_water;
+#else
+	c_water *= diffuse;
+#endif
 
 	return mix(
 		c_water, shoreline,
@@ -269,7 +295,7 @@ vec3 render(
 	clouds_march(eye, cloud, max_cld_ray_dist, rot_cloud);
 	
 	if (df.x < TERR_EPS) {
-		vec3 c_terr = illuminate(pos, df);
+		vec3 c_terr = illuminate(pos, eye.direction, rot, df);
 		vec3 c_cld = cloud.C;
 		float alpha = cloud.alpha;
 		float shadow = 1.;
