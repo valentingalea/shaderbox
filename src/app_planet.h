@@ -179,6 +179,27 @@ vec3 sdf_terrain_normal(_in(vec3) p)
 #undef F
 }
 
+vec3 setup_lights(
+	_in(vec3) L,
+	_in(vec3) normal
+){
+	vec3 diffuse = vec3(0, 0, 0);
+
+	// key light
+	vec3 c_L = vec3(7, 5, 3);
+	diffuse += max(0., dot(L, normal)) * c_L;
+
+	// fill light 1 - faked hemisphere
+	float hemi = clamp(.25 + .5 * normal.y, .0, 1.);
+	diffuse += hemi * vec3(.4, .6, .8) * .2;
+
+	// fill light 2 - ambient (reversed key with no height)
+	float amb = clamp(.12 + .8 * max(0., dot(-L, normal)), 0., 1.);
+	diffuse += amb * vec3(.4, .5, .6);
+
+	return diffuse;
+}
+
 vec3 illuminate(
 	_in(vec3) pos,
 	_in(vec3) eye,
@@ -187,39 +208,22 @@ vec3 illuminate(
 ){
 //TODO: moves as much as possible in #define's
 //TODO: paste final material values
-	// current terrain height at position
+		// current terrain height at position
 	float h = df.y;
 
 	vec3 normal = sdf_terrain_normal(pos);
+	vec3 w_normal = normalize(pos);
 	//return abs(normal);
 	float N = abs(normal.y);
-		//dot(normal, normalize(pos));
+	//dot(normal, normalize(pos));
 
-	// materials
+// materials
 	vec3 c_water = srgb_to_linear(vec3(38, 94, 179) / 256.);
 	vec3 c_grass = srgb_to_linear(vec3(84, 102, 42) / 256.);
 	vec3 c_beach = srgb_to_linear(vec3(109, 115, 98) / 256.);
-	vec3 c_rock1 = vec3(0.08, 0.05, 0.03);// srgb_to_linear(vec3(103, 109, 111) / (256.*3.));
-	vec3 c_rock2 = vec3(0.10, 0.09, 0.08);// srgb_to_linear(vec3(100, 107, 98) / (256.*3.));
+	vec3 c_rock1 = vec3(0.08, 0.05, 0.03);
+	vec3 c_rock2 = vec3(0.10, 0.09, 0.08);
 	vec3 c_snow = vec3(1., 1., 1.) * .4;
-
-	// accumulate light
-	vec3 diffuse = vec3(0, 0, 0);
-
-	// key light
-	vec3 V = mul(local_xform, eye);
-	vec3 L = mul(local_xform, vec3(0, 1, 0));
-		//mul(rot, mul(rotate_around_y(sin(u_time) * 50.0), normalize(vec3(-1, 1, 0))));
-	vec3 c_L = vec3(7, 5, 3);
-	diffuse += max(0., dot(L, normal)) * c_L;
-
-	// fill light 1 - faked hemisphere
-	float hemi = clamp(.5 + .5 * N, .0, 1.);
-	diffuse += hemi * vec3(.4, .6, .8) * .2;
-
-	// fill light 2 - ambient (reversed key with no height)
-	float amb = clamp(.2 + .8 * dot(normalize(vec3(-L.x, 0., L.z)), normal), 0.0, 1.0);
-	diffuse += amb * vec3(.4, .5, .6);
 
 	// limits
 	const float l_water = .05;
@@ -239,15 +243,12 @@ vec3 illuminate(
 	vec3 shoreline = mix(
 		c_beach, rock,
 		smoothstep(l_shore, l_rock, h));
-	shoreline *= diffuse;
 
-#if 0
-	normal = normalize(pos);
-	vec3 w_diff = max(0., dot(L, normal)) * c_L;
-	c_water = w_diff * c_water;
-#else
-	c_water *= diffuse;
-#endif
+	// lights
+	vec3 L = mul(local_xform, vec3(1, 0, 0));
+		//mul(local_xform, mul(rotate_around_y(sin(u_time) * 50.0), normalize(vec3(-1, 1, 0))));
+	shoreline *= setup_lights(L, normal);
+	c_water *= setup_lights(L, w_normal);
 
 	return mix(
 		c_water, shoreline,
