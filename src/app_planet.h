@@ -27,6 +27,7 @@ DECL_FBM_FUNC(fbm_cloud, 5, .5)
 #define TERR_FBM_FREQ 1.9870725
 #define TERR_FBM_LAC 2.023674
 
+#define CLOUDS
 #define CLD_STEPS 75
 #define t_cld_step (max_ray_dist / float(CLD_STEPS))
 #define CLD_COVERAGE .575675 // higher=less clouds
@@ -290,8 +291,10 @@ vec3 render(
 		t += df.x *.67;
 	}
 
+#ifdef CLOUDS
 	cloud = start_cloud(hit.origin);
 	clouds_march(eye, cloud, max_cld_ray_dist, rot_cloud);
+#endif
 	
 	if (df.x < TERR_EPS) {
 		vec3 c_terr = illuminate(pos, eye.direction, rot, df);
@@ -299,7 +302,7 @@ vec3 render(
 		float alpha = cloud.alpha;
 		float shadow = 1.;
 
-#if 1 // clouds ground shadows
+#ifdef CLOUDS // clouds ground shadows
 		pos = mul(transpose(rot), pos);
 		cloud = start_cloud(pos);
 		vec3 local_up = normalize(pos);
