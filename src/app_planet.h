@@ -14,8 +14,27 @@ _constant(sphere_t) planet = _begin(sphere_t)
 vec3(0, 0, 0), 1., 0
 _end;
 
+DECL_FBM_FUNC(fbm_terr, 4, .5)
+DECL_FBM_FUNC(fbm_terr_nrm, 7, .5)
+DECL_FBM_FUNC(fbm_cloud, 5, .5)
+
 #define max_height .35
 #define max_ray_dist (max_height * 4.)
+
+#define TERR_STEPS 120
+#define TERR_EPS .005
+#define TERR_FLAT_BIAS .35
+#define TERR_FBM_FREQ 1.9870725
+#define TERR_FBM_LAC 2.023674
+
+#define CLD_STEPS 75
+#define t_cld_step (max_ray_dist / float(CLD_STEPS))
+#define CLD_COVERAGE .575675 // higher=less clouds
+#define CLD_FUZZY .0335 // higher=fuzzy, lower=blockier
+#define CLD_ABSORBTION 33.93434
+#define CLD_TOP .9
+#define CLD_LOW .5
+#define CLD_MED (CLD_LOW + (CLD_TOP - CLD_LOW) / 2.)
 
 vec3 background(
 	_in(ray_t) eye
@@ -48,17 +67,6 @@ void setup_camera(
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
-
-DECL_FBM_FUNC(fbm_cloud, 5, .5)
-
-#define CLD_STEPS 75
-#define t_cld_step (max_ray_dist / float(CLD_STEPS))
-#define CLD_COVERAGE .575675 // higher=less clouds
-#define CLD_FUZZY .0335 // higher=fuzzy, lower=blockier
-#define CLD_ABSORBTION 33.93434
-#define CLD_TOP .9
-#define CLD_LOW .5
-#define CLD_MED (CLD_LOW + (CLD_TOP - CLD_LOW) / 2.)
 
 struct cloud_drop_t {
 	vec3 origin;
@@ -142,15 +150,6 @@ void clouds_shadow_march(
 // ----------------------------------------------------------------------------
 // Terrain
 // ----------------------------------------------------------------------------
-
-DECL_FBM_FUNC(fbm_terr, 4, .5)
-DECL_FBM_FUNC(fbm_terr_nrm, 7, .5)
-
-#define TERR_STEPS 120
-#define TERR_EPS .005
-#define TERR_FLAT_BIAS .35
-#define TERR_FBM_FREQ 1.9870725
-#define TERR_FBM_LAC 2.023674
 
 vec2 sdf_terrain_map(_in(vec3) pos)
 {
