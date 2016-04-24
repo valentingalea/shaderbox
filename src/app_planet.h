@@ -11,7 +11,7 @@
 // ----------------------------------------------------------------------------
 
 _constant(sphere_t) planet = _begin(sphere_t)
-vec3(0, 0, 0), 1., 0
+	vec3(0, 0, 0), 1., 0
 _end;
 
 DECL_FBM_FUNC(fbm_terr, 7, .5)
@@ -193,7 +193,7 @@ vec3 setup_lights(
 	float hemi = clamp(.25 + .5 * normal.y, .0, 1.);
 	diffuse += hemi * vec3(.4, .6, .8) * .2;
 
-	// fill light 2 - ambient (reversed key with no height)
+	// fill light 2 - ambient (reversed key)
 	float amb = clamp(.12 + .8 * max(0., dot(-L, normal)), 0., 1.);
 	diffuse += amb * vec3(.4, .5, .6);
 
@@ -208,14 +208,12 @@ vec3 illuminate(
 ){
 //TODO: moves as much as possible in #define's
 //TODO: paste final material values
-		// current terrain height at position
+	// current terrain height at position
 	float h = df.y;
 
 	vec3 normal = sdf_terrain_normal(pos);
 	vec3 w_normal = normalize(pos);
-	//return abs(normal);
-	float N = abs(normal.y);
-	//dot(normal, normalize(pos));
+	float N = dot(normal, w_normal);
 
 // materials
 	vec3 c_water = srgb_to_linear(vec3(38, 94, 179) / 256.);
@@ -234,10 +232,14 @@ vec3 illuminate(
 		c_rock1, c_rock2,
 		smoothstep(l_rock, 1.,
 			cos(h * 45.47 * fbm(pos * 17.24, 4.37))));
-	float s = smoothstep(.5, 1., h);
+
+	vec3 green_rock = mix(
+		rock_strata, c_grass,
+		step(.95, N));
+
+	float s = smoothstep(.9, 1., h);
 	vec3 rock = mix(
-		rock_strata, c_snow,
-		//smoothstep(l_rock, 1., h));
+		green_rock, c_snow,
 		smoothstep(1. - .4*s, 1. - .1*s, N));
 
 	vec3 shoreline = mix(
