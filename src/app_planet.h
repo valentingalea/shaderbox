@@ -11,16 +11,11 @@
 // ----------------------------------------------------------------------------
 
 _constant(sphere_t) planet = _begin(sphere_t)
-	vec3(0, 0, 0), 1., 0
+vec3(0, 0, 0), 1., 0
 _end;
 
-#define TERR_STEPS 120
-#define TERR_EPS .005
 #define max_height .35
 #define max_ray_dist (max_height * 4.)
-
-#define CLD_STEPS 75
-#define t_cld_step (max_ray_dist / float(CLD_STEPS))
 
 vec3 background(
 	_in(ray_t) eye
@@ -50,6 +45,21 @@ void setup_camera(
 	look_at = vec3(0, 0, 2);
 }
 
+// ----------------------------------------------------------------------------
+// Clouds
+// ----------------------------------------------------------------------------
+
+DECL_FBM_FUNC(fbm_cloud, 5, .5)
+
+#define CLD_STEPS 75
+#define t_cld_step (max_ray_dist / float(CLD_STEPS))
+#define CLD_COVERAGE .575675 // higher=less clouds
+#define CLD_FUZZY .0335 // higher=fuzzy, lower=blockier
+#define CLD_ABSORBTION 33.93434
+#define CLD_TOP .9
+#define CLD_LOW .5
+#define CLD_MED (CLD_LOW + (CLD_TOP - CLD_LOW) / 2.)
+
 struct cloud_drop_t {
 	vec3 origin;
 	vec3 pos;
@@ -69,24 +79,6 @@ cloud_drop_t start_cloud(
 	return c;
 }
 
-DECL_FBM_FUNC(fbm_cloud, 5, .5)
-
-float clouds_map_low_res(
-	_in(vec3) pos,
-	_in(float) height
-){
-	float dens = noise(
-		pos * 2.2343 + vec3(1.35, 3.35, 2.67));
-
-	const float coverage = .575675; // higher=less clouds
-	const float fuzziness = .0335; // higher=fuzzy, lower=blockier
-	dens *= smoothstep(coverage, coverage + fuzziness, dens);
-
-	dens *= band(.5, .8, .9, height);
-	//dens *= smoothstep(.75, .9, height);
-	return dens;
-}
-
 void clouds_map(
 	_inout(cloud_drop_t) cloud,
 	_in(float) height,
@@ -96,19 +88,14 @@ void clouds_map(
 		cloud.pos * 2.2343 + vec3(1.35, 3.35, 2.67),
 		2.9760);
 
-	const float coverage = .575675; // higher=less clouds
-	const float fuzziness = .0335; // higher=fuzzy, lower=blockier
-	dens *= smoothstep(coverage, coverage + fuzziness, dens);
+	dens *= smoothstep(CLD_COVERAGE, CLD_COVERAGE + CLD_FUZZY, dens);
 
-	dens *= band(.5, .8, .9, height);
-	//dens *= smoothstep(.75, .9, height);
+	dens *= band(CLD_LOW, CLD_MED, CLD_TOP, height);
 
-	float H = exp(height);
-	const float absorbtion = 33.93434;
-	float T_i = exp(-absorbtion * dens * t_step);
+	float T_i = exp(-CLD_ABSORBTION * dens * t_step);
 	cloud.T *= T_i;
 	cloud.C +=
-		cloud.T * (H / .055)
+		cloud.T * (exp(height) / .055)
 		* dens * t_step;
 	cloud.alpha += (1. - T_i) * (1. - cloud.alpha);
 }
@@ -119,29 +106,10 @@ void clouds_march(
 	_in(float) max_travel,
 	_in(mat3) rot
 ){
-	const int steps = 15;
-	const float t_step = max_ray_dist / float(steps);
 	float t = 0.;
-	vec3 pos;
-
-	for (int i = 0; i < steps; i++) {
-		vec3 o = cloud.origin + t * eye.direction;
-		pos = mul(rot, o - planet.origin);
-		float h = (length(pos) - planet.radius) / max_height;
-		
-		t += t_step;
-		if (t > max_travel) return;
-		
-		float dens = clouds_map_low_res(pos, h);
-		if (dens > .005) break;
-	}
-	
-	cloud.origin = pos - t_step * eye.direction;
-	float travel = max_travel - t - t_step;
-	t = 0.;
 
 	for (int i = 0; i < CLD_STEPS; i++) {
-		if (t > travel || cloud.alpha >= 1.) return;
+		if (t > max_travel || cloud.alpha >= 1.) return;
 
 		vec3 o = cloud.origin + t * eye.direction;
 		cloud.pos = mul(rot, o - planet.origin);
@@ -171,9 +139,15 @@ void clouds_shadow_march(
 	}
 }
 
+// ----------------------------------------------------------------------------
+// Terrain
+// ----------------------------------------------------------------------------
+
 DECL_FBM_FUNC(fbm_terr, 4, .5)
 DECL_FBM_FUNC(fbm_terr_nrm, 7, .5)
 
+#define TERR_STEPS 120
+#define TERR_EPS .005
 #define TERR_FLAT_BIAS .35
 #define TERR_FBM_FREQ 1.9870725
 #define TERR_FBM_LAC 2.023674
@@ -230,17 +204,6 @@ vec3 render_planet(
 	if (hit.material_id < 0) {
 		return background(eye);
 	}
-
-#if 0 // test with checkboard pattern
-	vec3 d = mul(rot, hit.normal);
-#ifdef HLSL
-#define atan(y, x) atan2(x, y)
-#endif
-	float u = .5 + atan(d.z, d.x) / (2. * PI);
-	float v = .5 - asin(d.y) / (1. * PI);
-	float n = checkboard_pattern(vec2(u, v), 20.);
-	return vec3(n, n, n);
-#endif
 
 	float t = 0.;
 	vec2 df = vec2(1, max_height);
