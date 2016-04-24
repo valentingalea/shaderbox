@@ -14,8 +14,8 @@ _constant(sphere_t) planet = _begin(sphere_t)
 vec3(0, 0, 0), 1., 0
 _end;
 
-DECL_FBM_FUNC(fbm_terr, 4, .5)
-DECL_FBM_FUNC(fbm_terr_nrm, 7, .5)
+DECL_FBM_FUNC(fbm_terr, 7, .5)
+DECL_FBM_FUNC(fbm_terr_nrm, 9, .5)
 DECL_FBM_FUNC(fbm_cloud, 5, .5)
 
 #define max_height .35
@@ -23,8 +23,8 @@ DECL_FBM_FUNC(fbm_cloud, 5, .5)
 
 #define TERR_STEPS 120
 #define TERR_EPS .005
-#define TERR_FLAT_BIAS .35
-#define TERR_FBM_FREQ 1.9870725
+#define TERR_FLAT_BIAS .502535
+#define TERR_FBM_FREQ 2.09870725
 #define TERR_FBM_LAC 2.023674
 
 #define CLOUDS
@@ -259,8 +259,8 @@ vec3 render(
 	_in(ray_t) eye,
 	_in(vec3) point_cam
 ){
-	mat3 rot = rotate_around_x(u_time * 8.);
-	mat3 rot_cloud = rotate_around_x(u_time * -8.);
+	mat3 rot = rotate_around_x(u_time * 32.);
+	mat3 rot_cloud = rotate_around_x(u_time * -16.);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
@@ -289,7 +289,7 @@ vec3 render(
 			break;
 		}
 
-		t += df.x *.67;
+		t += df.x * .67;
 	}
 
 #ifdef CLOUDS
