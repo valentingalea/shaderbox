@@ -19,6 +19,19 @@ ray_t get_primary_ray(
 	return r;
 }
 
+_constant(mat3) mat3_ident = mat3(1, 0, 0, 0, 1, 0, 0, 0, 1);
+
+#ifndef HLSL
+mat3 transpose(
+	_in(mat3) m
+){
+	return mat3(
+		m[0][0], m[1][0], m[2][0],
+		m[0][1], m[1][1], m[2][1],
+		m[0][2], m[1][2], m[2][2]);
+}
+#endif
+
 mat2 rotate_2d(
 	_in(float) angle_degrees
 ){
