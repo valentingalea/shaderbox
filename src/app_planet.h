@@ -9,33 +9,12 @@
 // ----------------------------------------------------------------------------
 // Planet
 // ----------------------------------------------------------------------------
-
 _constant(sphere_t) planet = _begin(sphere_t)
 	vec3(0, 0, 0), 1., 0
 _end;
 
-DECL_FBM_FUNC(fbm_terr, 7, .5)
-DECL_FBM_FUNC(fbm_terr_nrm, 9, .5)
-DECL_FBM_FUNC(fbm_cloud, 5, .5)
-
 #define max_height .35
 #define max_ray_dist (max_height * 4.)
-
-#define TERR_STEPS 120
-#define TERR_EPS .005
-#define TERR_FLAT_BIAS .502535
-#define TERR_FBM_FREQ 2.09870725
-#define TERR_FBM_LAC 2.023674
-
-#define CLOUDS
-#define CLD_STEPS 75
-#define t_cld_step (max_ray_dist / float(CLD_STEPS))
-#define CLD_COVERAGE .575675 // higher=less clouds
-#define CLD_FUZZY .0335 // higher=fuzzy, lower=blockier
-#define CLD_ABSORBTION 33.93434
-#define CLD_TOP .9
-#define CLD_LOW .5
-#define CLD_MED (CLD_LOW + (CLD_TOP - CLD_LOW) / 2.)
 
 vec3 background(
 	_in(ray_t) eye
@@ -68,6 +47,9 @@ void setup_camera(
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
+DECL_FBM_FUNC(fbm_cloud, 5, .5)
+
+#define CLOUDS
 
 struct cloud_drop_t {
 	vec3 origin;
@@ -93,15 +75,21 @@ void clouds_map(
 	_in(float) height,
 	_in(float) t_step
 ){
+#define cld_coverage .575675 // higher=less clouds
+#define cld_fuzzy .0335 // higher=fuzzy, lower=blockier
+#define cld_absorbtion 33.93434
+#define cld_top .9
+#define cld_med .7
+#define cld_low .5
 	float dens = fbm_cloud(
 		cloud.pos * 2.2343 + vec3(1.35, 3.35, 2.67),
 		2.9760);
 
-	dens *= smoothstep(CLD_COVERAGE, CLD_COVERAGE + CLD_FUZZY, dens);
+	dens *= smoothstep(cld_coverage, cld_coverage + cld_fuzzy, dens);
 
-	dens *= band(CLD_LOW, CLD_MED, CLD_TOP, height);
+	dens *= band(cld_low, cld_med, cld_top, height);
 
-	float T_i = exp(-CLD_ABSORBTION * dens * t_step);
+	float T_i = exp(-cld_absorbtion * dens * t_step);
 	cloud.T *= T_i;
 	cloud.C +=
 		cloud.T * (exp(height) / .055)
@@ -115,9 +103,11 @@ void clouds_march(
 	_in(float) max_travel,
 	_in(mat3) rot
 ){
+#define cld_steps 75
+#define t_cld_step (max_ray_dist / float(cld_steps))
 	float t = 0.;
 
-	for (int i = 0; i < CLD_STEPS; i++) {
+	for (int i = 0; i < cld_steps; i++) {
 		if (t > max_travel || cloud.alpha >= 1.) return;
 
 		vec3 o = cloud.origin + t * eye.direction;
@@ -151,6 +141,14 @@ void clouds_shadow_march(
 // ----------------------------------------------------------------------------
 // Terrain
 // ----------------------------------------------------------------------------
+DECL_FBM_FUNC(fbm_terr, 7, .5)
+DECL_FBM_FUNC(fbm_terr_nrm, 9, .5)
+
+#define TERR_STEPS 120
+#define TERR_EPS .005
+#define TERR_FLAT_BIAS .502535
+#define TERR_FBM_FREQ 2.09870725
+#define TERR_FBM_LAC 2.023674
 
 vec2 sdf_terrain_map(_in(vec3) pos)
 {
@@ -179,6 +177,9 @@ vec3 sdf_terrain_normal(_in(vec3) p)
 #undef F
 }
 
+// ----------------------------------------------------------------------------
+// Lighting
+// ----------------------------------------------------------------------------
 vec3 setup_lights(
 	_in(vec3) L,
 	_in(vec3) normal
@@ -206,8 +207,6 @@ vec3 illuminate(
 	_in(mat3) local_xform,
 	_in(vec2) df
 ){
-//TODO: moves as much as possible in #define's
-//TODO: paste final material values
 	// current terrain height at position
 	float h = df.y;
 
@@ -215,18 +214,18 @@ vec3 illuminate(
 	vec3 w_normal = normalize(pos);
 	float N = dot(normal, w_normal);
 
-// materials
-	vec3 c_water = srgb_to_linear(vec3(38, 94, 179) / 256.);
-	vec3 c_grass = srgb_to_linear(vec3(84, 102, 42) / 256.);
-	vec3 c_beach = srgb_to_linear(vec3(109, 115, 98) / 256.);
-	vec3 c_rock1 = vec3(0.08, 0.05, 0.03);
-	vec3 c_rock2 = vec3(0.10, 0.09, 0.08);
-	vec3 c_snow = vec3(1., 1., 1.) * .4;
+	// materials
+	#define c_water vec3(.015, .110, .455)
+	#define c_grass vec3(.086, .132, .018)
+	#define c_beach vec3(.153, .172, .121)
+	#define c_rock1 vec3(.080, .050, .030)
+	#define c_rock2 vec3(.100, .090, .080)
+	#define c_snow  vec3(.600, .600, .600)
 
 	// limits
-	const float l_water = .05;
-	const float l_shore = .1;
-	const float l_rock = .211;
+	#define l_water .05
+	#define l_shore .1
+	#define l_rock .211
 
 	vec3 rock_strata = mix(
 		c_rock1, c_rock2,
@@ -250,13 +249,16 @@ vec3 illuminate(
 	vec3 L = mul(local_xform, vec3(1, 0, 0));
 		//mul(local_xform, mul(rotate_around_y(sin(u_time) * 50.0), normalize(vec3(-1, 1, 0))));
 	shoreline *= setup_lights(L, normal);
-	c_water *= setup_lights(L, w_normal);
+	vec3 water = setup_lights(L, w_normal) * c_water;
 
 	return mix(
-		c_water, shoreline,
+		water, shoreline,
 		smoothstep(l_water, l_shore, h));
 }
 
+// ----------------------------------------------------------------------------
+// Rendering
+// ----------------------------------------------------------------------------
 vec3 render(
 	_in(ray_t) eye,
 	_in(vec3) point_cam
