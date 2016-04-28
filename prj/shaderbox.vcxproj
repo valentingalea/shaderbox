@@ -92,6 +92,7 @@
     <ClInclude Include="..\src\app_atmosphere.h" />
     <ClInclude Include="..\src\app_clouds.h" />
     <ClInclude Include="..\src\app_egg.h" />
+    <ClInclude Include="..\src\app_func.h" />
     <ClInclude Include="..\src\app_planet.h" />
     <ClInclude Include="..\src\app_raytracer.h" />
     <ClInclude Include="..\src\app_sdf_ao.h" />
