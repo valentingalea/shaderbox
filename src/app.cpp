@@ -95,6 +95,8 @@ namespace glsl_sandbox
 #include "app_2d.h"
 #elif defined(APP_PLANET)
 #include "app_planet.h"
+#elif defined(APP_FUNC)
+#include "app_func.h"
 #endif
 
 #undef mainImage

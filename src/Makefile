@@ -4,7 +4,7 @@
 # $< the name of the related file that caused the action.
 # $* the prefix shared by target and dependent files.
 
-all: planet
+all: func
 
 OUT = shaderbox
 SIZE = -DSCREEN_WIDTH=100 -DSCREEN_HEIGHT=100
@@ -43,6 +43,11 @@ planet: planet.o
 	$(CXX) $(CXXFLAGS) -o $(OUT) planet.o $(LFLAGS) $(LIBS)
 planet.o : app.cpp app_planet.h main.h def.h util.h intersect.h noise_iq.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_PLANET $(SIZE) -c -o planet.o $<
+
+func: func.o
+	$(CXX) $(CXXFLAGS) -o $(OUT) func.o $(LFLAGS) $(LIBS)
+func.o : app.cpp app_func.h def.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_FUNC $(SIZE) -c -o func.o $<
 
 clean:
 	rm *.o
