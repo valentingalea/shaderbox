@@ -13,12 +13,15 @@ _constant(sphere_t) planet = _begin(sphere_t)
 	vec3(0, 0, 0), 1., 0
 _end;
 
-#define max_height .35
+#define max_height .4
 #define max_ray_dist (max_height * 4.)
 
 vec3 background(
 	_in(ray_t) eye
 ){
+#if 0
+	return vec3(.15, .3, .4)
+#else
 	_constant(vec3) sun_color = vec3(1., .9, .55);
 	float sun_amount = dot(eye.direction, vec3(0, 0, 1));
 
@@ -30,6 +33,7 @@ vec3 background(
 	sky += sun_color * min(pow(sun_amount, 10.0) * .6, 1.0);
 
 	return sky;
+#endif
 }
 
 void setup_scene()
@@ -40,14 +44,19 @@ void setup_camera(
 	_inout(vec3) eye,
 	_inout(vec3) look_at
 ){
+#if 0
+	eye = vec3(.0, 0, -1.93);
+	look_at = vec3(-.1, .9, 2);
+#else
 	eye = vec3(0, 0, -2.5);
 	look_at = vec3(0, 0, 2);
+#endif
 }
 
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
-DECL_FBM_FUNC(fbm_cloud, 5, .5)
+DECL_TURB_FUNC(fbm_cloud, 4, .5)
 
 #define CLOUDS
 
@@ -75,15 +84,15 @@ void clouds_map(
 	_in(float) height,
 	_in(float) t_step
 ){
-#define cld_coverage .575675 // higher=less clouds
+#define cld_coverage .3475675 // higher=less clouds
 #define cld_fuzzy .0335 // higher=fuzzy, lower=blockier
 #define cld_absorbtion 33.93434
-#define cld_top .9
-#define cld_med .7
-#define cld_low .5
+#define cld_top .5
+#define cld_med .34
+#define cld_low .1
 	float dens = fbm_cloud(
-		cloud.pos * 2.2343 + vec3(1.35, 3.35, 2.67),
-		2.9760);
+		cloud.pos * 2.2343,// + vec3(.35, 13.35, 2.67),
+		2.02760);
 
 	dens *= smoothstep(cld_coverage, cld_coverage + cld_fuzzy, dens);
 
@@ -141,12 +150,12 @@ void clouds_shadow_march(
 // ----------------------------------------------------------------------------
 // Terrain
 // ----------------------------------------------------------------------------
-DECL_FBM_FUNC(fbm_terr, 7, .5)
+DECL_FBM_FUNC(fbm_terr, 3, .454)
 DECL_FBM_FUNC(fbm_terr_nrm, 9, .5)
 
 #define TERR_STEPS 120
 #define TERR_EPS .005
-#define TERR_FLAT_BIAS .502535
+#define TERR_FLAT_BIAS .34502535
 #define TERR_FBM_FREQ 2.09870725
 #define TERR_FBM_LAC 2.023674
 
@@ -246,8 +255,7 @@ vec3 illuminate(
 		smoothstep(l_shore, l_rock, h));
 
 	// lights
-	vec3 L = mul(local_xform, vec3(1, 0, 0));
-		//mul(local_xform, mul(rotate_around_y(sin(u_time) * 50.0), normalize(vec3(-1, 1, 0))));
+	vec3 L = mul(local_xform, normalize(vec3(1, 1, 0)));
 	shoreline *= setup_lights(L, normal);
 	vec3 water = setup_lights(L, w_normal) * c_water;
 
@@ -263,7 +271,8 @@ vec3 render(
 	_in(ray_t) eye,
 	_in(vec3) point_cam
 ){
-	mat3 rot = rotate_around_x(u_time * 32.);
+	mat3 rot_y = rotate_around_y(-45.);
+	mat3 rot = mul(rotate_around_x(u_time * 12.), rot_y);
 	mat3 rot_cloud = rotate_around_x(u_time * -16.);
 
 	sphere_t atmosphere = planet;
