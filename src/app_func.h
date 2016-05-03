@@ -1,6 +1,10 @@
 #include "def.h"
 
-#define SCALE 4.
+#include "noise_iq.h"
+#define noise(x) noise_iq(x)
+#include "fbm.h"
+
+#define SCALE 1.
 #define D (.0125 * SCALE)
 
 vec3 plot(
@@ -37,11 +41,13 @@ void mainImage(
 	col += plot(t.x, 0., vec3(1, 1, 1));
 	
 // plot custom functions	
-	//t.x += u_time * SCALE;
+	t.x += u_time * SCALE;
 	col += plot(sin(t.x), t.y, vec3(1, 0, 0));
-	col += plot(cos(t.x), t.y, vec3(0, 1, 0));
-	col += plot(abs(t.x), t.y, vec3(0, 0, 1));
-	
+	//col += plot(cos(t.x), t.y, vec3(0, 1, 0));
+	//col += plot(abs(t.x), t.y, vec3(0, 0, 1));
+	col += plot(noise(vec3(t.x, 0, 0)), t.y, vec3(0, 1, 1));
+	col += plot(fbm(vec3(t.x, 0, 0) * 1., 2.), t.y, vec3(0, 1, 0));
+
 // output
 	fragColor = vec4 (col, 1);
 }
