@@ -17,18 +17,20 @@
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
+#include "volumetric.h"
 
-#include "noise_iq.h"
-//#include "noise_worley.h"
 #ifdef NOISE_VALUE
+#include "noise_iq.h"
 #define noise(x) noise_iq(x)
 #endif
 #ifdef NOISE_WORLEY
+#include "noise_worley.h"
 #define noise(x) (1. - noise_w(x).r)
 //#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
 #endif
 
 #include "fbm.h"
+DECL_FBM_FUNC(fbm_clouds, 4, .5)
 
 #ifdef HLSLTOY
 Texture3D u_tex_noise : register(t1);
@@ -40,7 +42,7 @@ float noise_func(_in(vec3) x)
 #if 0
 	return u_tex_noise.Sample(u_sampler0, x);
 #else
-	return fbm(x, FBM_FREQ);
+	return fbm_clouds(x, FBM_FREQ);
 #endif
 }
 
@@ -71,7 +73,13 @@ float density_func(
 	//dens -= coverage;
 	dens *= smoothstep (coverage, coverage + fuziness, dens);
 
-	return clamp(dens, 0., 1.);	
+	return dens;
+}
+
+float illuminate_volume(
+	_inout(volume_sampler_t) cloud
+){
+	return exp(cloud.height) / 1.75;
 }
 
 vec4 render_clouds(
@@ -102,28 +110,18 @@ vec4 render_clouds(
 	vec3 pos = eye.origin + eye.direction * 100.;
 #endif
 
-	float T = 1.;
-	vec3 C = vec3(0, 0, 0);
-	float alpha = 0.;
+	volume_sampler_t cloud = begin_volume(pos, ABSORPTION);
 
 	for (int i = 0; i < steps; i++) {
-		float h = float(i) / float(steps);
-		float dens = density_func(pos, wind_dir, coverage, fuzziness);
+		float dens = density_func(cloud.pos, wind_dir, coverage, fuzziness);
 
-		float T_i = exp(-absorbtion * dens * march_step);
-		T *= T_i;
-		//if (T < .01) break;
+		cloud.height = float(i) / float(steps);
+		integrate_volume(cloud, dens, march_step);
 
-		C += T * 
-			(exp(h) / 1.75) * // fake light
-			dens * march_step;
-		alpha += (1. - T_i) * (1. - alpha);
-
-		pos += dir_step;
-		//if (length(pos) > 1e3) break;
+		cloud.pos += dir_step;
 	}
 
-	return vec4(C, alpha);
+	return vec4(cloud.C, cloud.alpha);
 }
 
 #ifdef UE4
