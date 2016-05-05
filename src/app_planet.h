@@ -1,6 +1,7 @@
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
+#include "volumetric.h"
 
 #include "noise_iq.h"
 #define noise(x) noise_iq(x)
@@ -56,81 +57,61 @@ void setup_camera(
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
-DECL_TURB_FUNC(fbm_cloud, 4, .5)
-
 #define CLOUDS
 
-struct cloud_drop_t {
-	vec3 origin;
-	vec3 pos;
-	float T;
-	vec3 C;
-	float alpha;
-};
+DECL_TURB_FUNC(fbm_cloud, 4, .5)
 
-_mutable(cloud_drop_t) cloud;
+#define vol_coeff_absorb 33.93434
+_mutable(volume_sampler_t) cloud;
 
-cloud_drop_t start_cloud(
-	_in(vec3) origin
+float illuminate_volume(
+	_inout(volume_sampler_t) cloud
 ){
-	cloud_drop_t c = _begin(cloud_drop_t)
-		origin, origin, 1., vec3 (0., 0., 0.), 0.
-	_end;
-	return c;
+	return exp(cloud.height) / .055;
 }
 
 void clouds_map(
-	_inout(cloud_drop_t) cloud,
-	_in(float) height,
+	_inout(volume_sampler_t) cloud,
 	_in(float) t_step
 ){
-#define cld_coverage .3475675 // higher=less clouds
-#define cld_fuzzy .0335 // higher=fuzzy, lower=blockier
-#define cld_absorbtion 33.93434
-#define cld_top .5
-#define cld_med .34
-#define cld_low .1
 	float dens = fbm_cloud(
 		cloud.pos * 2.2343,// + vec3(.35, 13.35, 2.67),
 		2.02760);
 
+	#define cld_coverage .3475675 // higher=less clouds
+	#define cld_fuzzy .0335 // higher=fuzzy, lower=blockier
 	dens *= smoothstep(cld_coverage, cld_coverage + cld_fuzzy, dens);
 
-	dens *= band(cld_low, cld_med, cld_top, height);
+	dens *= band(.1, .35, .5, cloud.height);
 
-	float T_i = exp(-cld_absorbtion * dens * t_step);
-	cloud.T *= T_i;
-	cloud.C +=
-		cloud.T * (exp(height) / .055)
-		* dens * t_step;
-	cloud.alpha += (1. - T_i) * (1. - cloud.alpha);
+	integrate_volume(cloud, dens, t_step);
 }
 
 void clouds_march(
 	_in(ray_t) eye,
-	_inout(cloud_drop_t) cloud,
+	_inout(volume_sampler_t) cloud,
 	_in(float) max_travel,
 	_in(mat3) rot
 ){
-#define cld_steps 75
-#define t_cld_step (max_ray_dist / float(cld_steps))
+	const int steps = 75;
+	const float t_step = max_ray_dist / float(steps);
 	float t = 0.;
 
-	for (int i = 0; i < cld_steps; i++) {
+	for (int i = 0; i < steps; i++) {
 		if (t > max_travel || cloud.alpha >= 1.) return;
-
+			
 		vec3 o = cloud.origin + t * eye.direction;
 		cloud.pos = mul(rot, o - planet.origin);
 
-		float h = (length(cloud.pos) - planet.radius) / max_height;
-		t += t_cld_step;
-		clouds_map(cloud, h, t_cld_step);
+		cloud.height = (length(cloud.pos) - planet.radius) / max_height;
+		t += t_step;
+		clouds_map(cloud, t_step);
 	}
 }
 
 void clouds_shadow_march(
 	_in(vec3) dir,
-	_inout(cloud_drop_t) cloud,
+	_inout(volume_sampler_t) cloud,
 	_in(mat3) rot
 ){
 	const int steps = 5;
@@ -141,9 +122,9 @@ void clouds_shadow_march(
 		vec3 o = cloud.origin + t * dir;
 		cloud.pos = mul(rot, o - planet.origin);
 
-		float h = (length(cloud.pos) - planet.radius) / max_height;
+		cloud.height = (length(cloud.pos) - planet.radius) / max_height;
 		t += t_step;
-		clouds_map(cloud, h, t_step);
+		clouds_map(cloud, t_step);
 	}
 }
 
@@ -306,7 +287,7 @@ vec3 render(
 	}
 
 #ifdef CLOUDS
-	cloud = start_cloud(hit.origin);
+	cloud = begin_volume(hit.origin, vol_coeff_absorb);
 	clouds_march(eye, cloud, max_cld_ray_dist, rot_cloud);
 #endif
 	
@@ -318,7 +299,7 @@ vec3 render(
 
 #ifdef CLOUDS // clouds ground shadows
 		pos = mul(transpose(rot), pos);
-		cloud = start_cloud(pos);
+		cloud = begin_volume(pos, vol_coeff_absorb);
 		vec3 local_up = normalize(pos);
 		clouds_shadow_march(local_up, cloud, rot_cloud);
 		shadow = mix(.7, 1., step(cloud.alpha, 0.33));

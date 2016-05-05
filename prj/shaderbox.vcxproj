@@ -109,6 +109,7 @@
     <ClInclude Include="..\src\sdf.h" />
     <ClInclude Include="..\src\util.h" />
     <ClInclude Include="..\src\util_optics.h" />
+    <ClInclude Include="..\src\volumetric.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\src\Makefile" />

@@ -8,6 +8,7 @@
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
+#include "volumetric.h"
 
 bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout(float) t1)
 {
@@ -31,38 +32,6 @@ _constant(vec3) betaM = vec3(21e-6, 21e-6, 21e-6); // Mie
 // thickness of the atmosphere if its density were uniform
 _constant(float) hR = 7994.0; // Rayleigh
 _constant(float) hM = 1200.0; // Mie
-
-float rayleigh_phase_func(float mu)
-{
-	return
-			3. * (1. + mu*mu)
-	/ //------------------------
-				(16. * PI);
-}
-
-// Henyey-Greenstein phase function factor [-1, 1]
-// represents the average cosine of the scattered directions
-// 0 is isotropic scattering
-// > 1 is forward scattering, < 1 is backwards
-_constant(float) g = 0.76;
-float henyey_greenstein_phase_func(float mu)
-{
-	return
-						(1. - g*g)
-	/ //---------------------------------------------
-		((4. + PI) * pow(1. + g*g - 2.*g*mu, 1.5));
-}
-
-// Schlick Phase Function factor
-// Pharr and  Humphreys [2004] equivalence to g above
-_constant(float) k = 1.55*g - 0.55 * (g*g*g);
-float schlick_phase_func(float mu)
-{
-	return
-					(1. - k*k)
-	/ //-------------------------------------------
-		(4. * PI * (1. + k*mu) * (1. + k*mu));
-}
 
 _constant(float) earth_radius = 6360e3; // (m)
 _constant(float) atmosphere_radius = 6420e3; // (m)
