@@ -86,12 +86,16 @@ float illuminate_volume(
 	const int steps = 5;
 	const float t_step = 1.;
 	float t = 0.;
+	float R = 0.;
 	
 	volume_sampler_t vol = begin_volume(
 		cloud.pos, ABSORPTION);
+	
+	float mu = dot (V, L);
+	float phase = henyey_greenstein_phase_func (mu);
 
 	for (int i = 0; i < steps; i++) {
-		vec3 p = vol.origin + t * SUN_DIR * .5;
+		vec3 p = vol.origin + t * L;
 		float dens = density_func(p, WIND_DIR, COVERAGE, FUZZINESS);
 
 		// change in transmittance (follows Beer-Lambert law)
@@ -99,12 +103,12 @@ float illuminate_volume(
 		// Update accumulated transmittance
 		vol.T *= T_i;
 		// integrate output radiance
-		vol.C += vol.T * vol.coeff_absorb * 1.;
+		R += vol.T * vol.coeff_absorb * phase;
 	
 		t += t_step;
 	}
 	
-	return vol.C;
+	return R;
 }
 
 vec4 render_clouds(
@@ -141,7 +145,9 @@ vec4 render_clouds(
 		float dens = density_func(cloud.pos, wind_dir, coverage, fuzziness);
 
 		cloud.height = float(i) / float(steps);
-		integrate_volume(cloud, dens, march_step);
+		integrate_volume(cloud,
+			eye.direction, sun_dir,
+			dens, march_step);
 
 		cloud.pos += dir_step;
 	}

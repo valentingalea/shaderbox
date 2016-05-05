@@ -126,10 +126,16 @@ volume_sampler_t begin_volume(
 	return v;
 }
 
-float illuminate_volume(_inout(volume_sampler_t) vol);
+float illuminate_volume(
+	_inout(volume_sampler_t) vol,
+	_in(vec3) V,
+	_in(vec3) L
+);
 
 void integrate_volume(
 	_inout(volume_sampler_t) vol,
+	_in(vec3) V,
+	_in(vec3) L,
 	_in(float) density,
 	_in(float) dt
 ){
@@ -138,7 +144,7 @@ void integrate_volume(
 	// Update accumulated transmittance
 	vol.T *= T_i;
 	// integrate output radiance (here essentially color)
-	vol.C += vol.T * illuminate_volume(vol) * density * dt;
+	vol.C += vol.T * illuminate_volume(vol, V, L) * density * dt;
 	// accumulate opacity
 	vol.alpha += (1. - T_i) * (1. - vol.alpha);
 }
