@@ -77,9 +77,34 @@ float density_func(
 }
 
 float illuminate_volume(
-	_inout(volume_sampler_t) cloud
+	_inout(volume_sampler_t) cloud,
+	_in(vec3) V,
+	_in(vec3) L
 ){
-	return exp(cloud.height) / 1.75;
+	//return exp(cloud.height) / 1.75;
+	
+	const int steps = 5;
+	const float t_step = 1.;
+	float t = 0.;
+	
+	volume_sampler_t vol = begin_volume(
+		cloud.pos, ABSORPTION);
+
+	for (int i = 0; i < steps; i++) {
+		vec3 p = vol.origin + t * SUN_DIR * .5;
+		float dens = density_func(p, WIND_DIR, COVERAGE, FUZZINESS);
+
+		// change in transmittance (follows Beer-Lambert law)
+		float T_i = exp(-vol.coeff_absorb * dens * t_step);
+		// Update accumulated transmittance
+		vol.T *= T_i;
+		// integrate output radiance
+		vol.C += vol.T * vol.coeff_absorb * 1.;
+	
+		t += t_step;
+	}
+	
+	return vol.C;
 }
 
 vec4 render_clouds(
