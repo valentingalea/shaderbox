@@ -65,7 +65,9 @@ DECL_TURB_FUNC(fbm_cloud, 4, .5)
 _mutable(volume_sampler_t) cloud;
 
 float illuminate_volume(
-	_inout(volume_sampler_t) cloud
+	_inout(volume_sampler_t) cloud,
+	_in(vec3) V,
+	_in(vec3) L
 ){
 	return exp(cloud.height) / .055;
 }
@@ -84,7 +86,9 @@ void clouds_map(
 
 	dens *= band(.1, .35, .5, cloud.height);
 
-	integrate_volume(cloud, dens, t_step);
+	integrate_volume(cloud,
+		cloud.pos, cloud.pos, // unused dummies 
+		dens, t_step);
 }
 
 void clouds_march(
