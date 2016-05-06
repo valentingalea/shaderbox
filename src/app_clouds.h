@@ -1,57 +1,31 @@
-/**** TWEAK *****************************************************************/
-#define COVERAGE		.50
-#define THICKNESS		15.
-#define ABSORPTION		1.030725
-#define FUZZINESS		0.035
-
-#define FBM_FREQ		2.76434
-#define NOISE_VALUE
-//#define NOISE_WORLEY
-
-#define WIND_DIR		vec3(0, 0, -u_time * .2)
-#define SUN_DIR			normalize(vec3(0, abs(sin(u_time * .3)), -1))
-
-#define STEPS			25
-/******************************************************************************/
-
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
 #include "volumetric.h"
 
-#ifdef NOISE_VALUE
+_constant(int) cld_march_steps = 25;
+_mutable(float) cld_coverage = .5;
+_mutable(float) cld_thick = 15.;
+_mutable(float) cld_absorb_coeff = 1.03;
+_mutable(vec3) cld_wind_dir = vec3(0, 0, -u_time * .2);
+_mutable(vec3) cld_sun_dir = normalize(vec3(0, abs(sin(u_time * .3)), -1));
+
+#if 1
 #include "noise_iq.h"
 #define noise(x) noise_iq(x)
-#endif
-#ifdef NOISE_WORLEY
+#else
 #include "noise_worley.h"
 #define noise(x) (1. - noise_w(x).r)
-//#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
 #endif
 
 #include "fbm.h"
 DECL_FBM_FUNC(fbm_clouds, 4, .5)
 
-#ifdef HLSLTOY
-Texture3D u_tex_noise : register(t1);
-SamplerState u_sampler0 : register(s0);
-#endif
-
-float noise_func(_in(vec3) x)
-{
-#if 0
-	return u_tex_noise.Sample(u_sampler0, x);
-#else
-	return fbm_clouds(x, FBM_FREQ);
-#endif
-}
-
 vec3 render_sky_color(
-	_in(vec3) eye_dir,
-	_in(vec3) sun_dir
+	_in(vec3) eye_dir
 ){
 	_constant(vec3) sun_color = vec3(1., .7, .55);
-	float sun_amount = max(dot(eye_dir, sun_dir), 0.);
+	float sun_amount = max(dot(eye_dir, cld_sun_dir), 0.);
 
 	vec3 sky = mix(vec3(.0, .1, .4), vec3(.3, .6, .8), 1.0 - eye_dir.y);
 	sky += sun_color * min(pow(sun_amount, 1500.0) * 5.0, 1.0);
@@ -61,17 +35,12 @@ vec3 render_sky_color(
 }
 
 float density_func(
-	_in(vec3) pos,
-	_in(vec3) offset,
-	_in(float) coverage,
-	_in(float) fuziness
+	_in(vec3) pos
 ){
-	vec3 p = pos * .0212242 + offset;
-	float dens = noise_func(p);
+	vec3 p = pos * .0212242 + cld_wind_dir;
+	float dens = fbm_clouds(p, 2.76434);
 	
-	//dens *= step(coverage, dens);
-	//dens -= coverage;
-	dens *= smoothstep (coverage, coverage + fuziness, dens);
+	dens *= smoothstep (cld_coverage, cld_coverage + .035, dens);
 
 	return dens;
 }
@@ -89,14 +58,14 @@ float illuminate_volume(
 	float R = 0.;
 	
 	volume_sampler_t vol = begin_volume(
-		cloud.pos, ABSORPTION);
+		cloud.pos, cloud.coeff_absorb);
 	
 	float mu = dot (V, L);
 	float phase = henyey_greenstein_phase_func (mu);
 
 	for (int i = 0; i < steps; i++) {
 		vec3 p = vol.origin + t * L;
-		float dens = density_func(p, WIND_DIR, COVERAGE, FUZZINESS);
+		float dens = density_func(p);
 
 		// change in transmittance (follows Beer-Lambert law)
 		float T_i = exp(-vol.coeff_absorb * dens * t_step);
@@ -112,13 +81,7 @@ float illuminate_volume(
 }
 
 vec4 render_clouds(
-	_in(ray_t) eye,
-	_in(vec3) sun_dir,
-	_in(vec3) wind_dir,
-	_in(float) coverage,
-	_in(float) thickness,
-	_in(float) absorbtion,
-	_in(float) fuzziness
+	_in(ray_t) eye
 ){
 #if 0 // atmosphere 'sphere' intersect
 	_constant(sphere_t) atmosphere = _begin(sphere_t)
@@ -133,20 +96,21 @@ vec4 render_clouds(
 	vec3 dir_step = eye.direction * march_step;
 	vec3 pos = hit.origin;
 #else // plane projection
-	const int steps = STEPS;
-	float march_step = thickness / float(steps);
+	const int steps = cld_march_steps;
+	float march_step = cld_thick / float(steps);
 	vec3 dir_step = eye.direction / eye.direction.y * march_step;
 	vec3 pos = eye.origin + eye.direction * 100.;
 #endif
 
-	volume_sampler_t cloud = begin_volume(pos, ABSORPTION);
+	volume_sampler_t cloud = begin_volume(pos, cld_absorb_coeff);
 
 	for (int i = 0; i < steps; i++) {
-		float dens = density_func(cloud.pos, wind_dir, coverage, fuzziness);
+		float dens = density_func(cloud.pos);
 
 		cloud.height = float(i) / float(steps);
-		integrate_volume(cloud,
-			eye.direction, sun_dir,
+		integrate_volume(
+			cloud,
+			eye.direction, cld_sun_dir,
 			dens, march_step);
 
 		cloud.pos += dir_step;
@@ -170,21 +134,16 @@ vec3 ue4_render_clouds(
 		vec3(0, 0, 0),
 		cam_dir
 	_end;
+	
 	u_time = time;
+	cld_coverage = coverage;
+	cld_thick = thickness;
+	cld_absorb_coeff = absorbtion;
+	cld_sun_dir = sun_dir;
+	cld_wind_dir = wind_dir;
 
-	vec3 sky = render_sky_color(
-		eye_ray.direction,
-		sun_dir
-	);
-	vec4 cld = render_clouds(
-		eye_ray,
-		sun_dir,
-		wind_dir,
-		1. - coverage,
-		thickness,
-		absorbtion,
-		fuzziness
-	);
+	vec3 sky = render_sky_color(eye_ray.direction);
+	vec4 cld = render_clouds(eye_ray);
 	return mix(sky, cld.rgb, cld.a);
 }
 #endif
@@ -220,19 +179,8 @@ vec3 render(
 		col = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), cb);
 	} else {
 #if 1
-		vec3 sky = render_sky_color(
-			eye_ray.direction,
-			SUN_DIR
-		);
-		vec4 cld = render_clouds(
-			eye_ray, 
-			SUN_DIR,
-			WIND_DIR,
-			1. - COVERAGE,
-			THICKNESS,
-			ABSORPTION,
-			FUZZINESS
-		);
+		vec3 sky = render_sky_color(eye_ray.direction);
+		vec4 cld = render_clouds(eye_ray);
 		col = mix(sky, cld.rgb, cld.a);
 #else
 		intersect_sphere(eye_ray, atmosphere, hit);
