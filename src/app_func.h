@@ -39,14 +39,20 @@ void mainImage(
 	vec3 col = vec3(0, 0, 0);
 	col += plot(0., t.y, vec3(1, 1, 1));
 	col += plot(t.x, 0., vec3(1, 1, 1));
-	
-// plot custom functions	
+
+// optional: animate
 	t.x += u_time * SCALE;
-	col += plot(sin(t.x), t.y, vec3(1, 0, 0));
+
+// plot custom functions	
+	//col += plot(sin(t.x), t.y, vec3(1, 0, 0));
 	//col += plot(cos(t.x), t.y, vec3(0, 1, 0));
 	//col += plot(abs(t.x), t.y, vec3(0, 0, 1));
-	col += plot(noise(vec3(t.x, 0, 0)), t.y, vec3(0, 1, 1));
-	col += plot(fbm(vec3(t.x, 0, 0) * 1., 2.), t.y, vec3(0, 1, 0));
+
+	vec3 p = vec3(t.x, 0, 0);
+	col += plot(noise(p), t.y, vec3(1, 1, 1));
+	col += plot(reference_fbm(p, 4, 2., 1.), t.y, vec3(0, 1, 0));
+	col += plot(fbm(p, 2.), t.y, vec3(1, 0, 1));
+	col += plot(fBm(p), t.y, vec3(0, 0, 1));
 
 // output
 	fragColor = vec4 (col, 1);
