@@ -5,6 +5,8 @@
 
 #include "noise_iq.h"
 #define noise(x) noise_iq(x)
+#define snoise(x) (noise(x) * 2. - 1.)
+#define rnoise(x) (1. - abs (snoise(x)))
 #include "fbm.h"
 
 // ----------------------------------------------------------------------------
@@ -20,8 +22,8 @@ _end;
 vec3 background(
 	_in(ray_t) eye
 ){
-#if 0
-	return vec3(.15, .3, .4)
+#if 1
+	return vec3(.15, .3, .4);
 #else
 	_constant(vec3) sun_color = vec3(1., .9, .55);
 	float sun_amount = dot(eye.direction, vec3(0, 0, 1));
@@ -57,7 +59,7 @@ void setup_camera(
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
-#define CLOUDS
+//#define CLOUDS
 
 DECL_TURB_FUNC(fbm_cloud, 4, .5)
 
@@ -138,9 +140,16 @@ void clouds_shadow_march(
 DECL_FBM_FUNC(fbm_terr, 3, .454)
 DECL_FBM_FUNC(fbm_terr_nrm, 9, .5)
 
+BEGIN_FBM_FUNC(fbm_test, 2.0738, .5007, .50783)
+	FBM_STEP(rnoise(pos))
+	FBM_STEP(rnoise(pos))
+	FBM_STEP(rnoise(pos))
+	FBM_STEP(rnoise(pos))
+END_FBM_FUN
+
 #define TERR_STEPS 120
 #define TERR_EPS .005
-#define TERR_FLAT_BIAS .34502535
+#define TERR_FLAT_BIAS .3502535
 #define TERR_FBM_FREQ 2.09870725
 #define TERR_FBM_LAC 2.023674
 
@@ -203,10 +212,16 @@ vec3 illuminate(
 ){
 	// current terrain height at position
 	float h = df.y;
+	//return vec3 (h);
 
-	vec3 normal = sdf_terrain_normal(pos);
 	vec3 w_normal = normalize(pos);
+//#define LIGHT
+#ifdef LIGHT
+	vec3 normal = sdf_terrain_normal(pos);
 	float N = dot(normal, w_normal);
+#else
+	float N = w_normal.y;
+#endif
 
 	// materials
 	#define c_water vec3(.015, .110, .455)
@@ -239,10 +254,13 @@ vec3 illuminate(
 		c_beach, rock,
 		smoothstep(l_shore, l_rock, h));
 
-	// lights
+#ifdef LIGHT
 	vec3 L = mul(local_xform, normalize(vec3(1, 1, 0)));
 	shoreline *= setup_lights(L, normal);
 	vec3 water = setup_lights(L, w_normal) * c_water;
+#else
+	vec3 water = c_water;
+#endif
 
 	return mix(
 		water, shoreline,
