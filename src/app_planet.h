@@ -59,9 +59,7 @@ void setup_camera(
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
-//#define CLOUDS
-
-DECL_TURB_FUNC(fbm_cloud, 4, .5)
+#define CLOUDS
 
 #define vol_coeff_absorb 33.93434
 _mutable(volume_sampler_t) cloud;
@@ -78,9 +76,9 @@ void clouds_map(
 	_inout(volume_sampler_t) cloud,
 	_in(float) t_step
 ){
-	float dens = fbm_cloud(
+	float dens = fBm(
 		cloud.pos * 2.2343,// + vec3(.35, 13.35, 2.67),
-		2.02760);
+		2.0276, .5, .5);
 
 	#define cld_coverage .3475675 // higher=less clouds
 	#define cld_fuzzy .0335 // higher=fuzzy, lower=blockier
