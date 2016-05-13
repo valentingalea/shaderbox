@@ -137,33 +137,40 @@ void clouds_shadow_march(
 // ----------------------------------------------------------------------------
 // Terrain
 // ----------------------------------------------------------------------------
-DECL_FBM_FUNC(fbm_terr, 3, .454)
-DECL_FBM_FUNC(fbm_terr_nrm, 9, .5)
-
-BEGIN_FBM_FUNC(fbm_test, 2.0738, .5007, .50783)
-	FBM_STEP(rnoise(pos))
-	FBM_STEP(rnoise(pos))
-	FBM_STEP(rnoise(pos))
-	FBM_STEP(rnoise(pos))
-END_FBM_FUN
-
 #define TERR_STEPS 120
 #define TERR_EPS .005
-#define TERR_FLAT_BIAS .3502535
-#define TERR_FBM_FREQ 2.09870725
-#define TERR_FBM_LAC 2.023674
+
+BEGIN_FBM_FUNC(fbm_terr)
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+END_FBM_FUN
+BEGIN_FBM_FUNC(fbm_terr_normals)
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+	FBM_STEP(noise(pos))
+END_FBM_FUN
+
+#define terr_func_a(f) float h = f(pos * 2.0987, 2.0244, .454, .454)
+#define terr_func_b float n = smoothstep(.35, 1., h)
 
 vec2 sdf_terrain_map(_in(vec3) pos)
 {
-	float h = fbm_terr(pos * TERR_FBM_FREQ, TERR_FBM_LAC);
-	float n = smoothstep(TERR_FLAT_BIAS, 1., h);
+	terr_func_a(fbm_terr);
+	terr_func_b;
 	return vec2(length(pos) - planet.radius - n * max_height, n / max_height);
 }
 
 vec2 sdf_terrain_map_detail(_in(vec3) pos)
 {
-	float h = fbm_terr_nrm(pos * TERR_FBM_FREQ, TERR_FBM_LAC);
-	float n = smoothstep(TERR_FLAT_BIAS, 1., h);
+	terr_func_a(fbm_terr_normals);
+	terr_func_b;
 	return vec2(length(pos) - planet.radius - n * max_height, n);
 }
 
@@ -215,7 +222,7 @@ vec3 illuminate(
 	//return vec3 (h);
 
 	vec3 w_normal = normalize(pos);
-//#define LIGHT
+#define LIGHT
 #ifdef LIGHT
 	vec3 normal = sdf_terrain_normal(pos);
 	float N = dot(normal, w_normal);
