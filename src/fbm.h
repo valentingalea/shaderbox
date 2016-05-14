@@ -44,14 +44,13 @@ float reference_multifractal(
 	return t;
 }
 
-#define BEGIN_FBM_FUNC(_name, _lacunarity, _init_gain, _gain) float _name(_in(vec3) _pos) { const float H = _gain; const float L = _lacunarity; vec3 pos = _pos; float gain = _init_gain; float t = 0.;
+#define BEGIN_FBM_FUNC(_name) float _name(_in(vec3) _pos, _in(float) _lacunarity, _in(float) _init_gain, _in(float) _gain) { vec3 pos = _pos; float gain = _init_gain; float t = 0.;
 #define END_FBM_FUN return t; }
-#define FBM_STEP(_basis) t += _basis * gain; gain *= H; pos *= L;
+#define FBM_STEP(_basis) t += _basis * gain; gain *= _gain; pos *= _lacunarity;
 
-BEGIN_FBM_FUNC(fBm, 2., 1., .5)
+BEGIN_FBM_FUNC(fBm)
 	FBM_STEP(noise(pos))
 	FBM_STEP(noise(pos))
 	FBM_STEP(noise(pos))
 	FBM_STEP(noise(pos))
 END_FBM_FUN
-
