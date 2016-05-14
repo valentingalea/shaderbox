@@ -19,7 +19,7 @@ _mutable(vec3) cld_sun_dir = normalize(vec3(0, abs(sin(u_time * .3)), -1));
 #endif
 
 #include "fbm.h"
-DECL_FBM_FUNC(fbm_clouds, 4, .5)
+DECL_FBM_FUNC(fbm_clouds, 4, noise)
 
 vec3 render_sky_color(
 	_in(vec3) eye_dir
@@ -38,7 +38,7 @@ float density_func(
 	_in(vec3) pos
 ){
 	vec3 p = pos * .0212242 + cld_wind_dir;
-	float dens = fbm_clouds(p, 2.76434);
+	float dens = fbm_clouds(p, 2.76434, .5, .5);
 	
 	dens *= smoothstep (cld_coverage, cld_coverage + .035, dens);
 

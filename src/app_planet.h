@@ -5,8 +5,7 @@
 
 #include "noise_iq.h"
 #define noise(x) noise_iq(x)
-#define snoise(x) (noise(x) * 2. - 1.)
-#define rnoise(x) (1. - abs (snoise(x)))
+
 #include "fbm.h"
 
 // ----------------------------------------------------------------------------
@@ -61,6 +60,9 @@ void setup_camera(
 // ----------------------------------------------------------------------------
 #define CLOUDS
 
+#define anoise(x) (abs(noise(x) * 2. - 1.))
+DECL_FBM_FUNC(fbm_clouds, 4, anoise)
+
 #define vol_coeff_absorb 33.93434
 _mutable(volume_sampler_t) cloud;
 
@@ -76,7 +78,7 @@ void clouds_map(
 	_inout(volume_sampler_t) cloud,
 	_in(float) t_step
 ){
-	float dens = fBm(
+	float dens = fbm_clouds(
 		cloud.pos * 2.2343,// + vec3(.35, 13.35, 2.67),
 		2.0276, .5, .5);
 
@@ -138,22 +140,8 @@ void clouds_shadow_march(
 #define TERR_STEPS 120
 #define TERR_EPS .005
 
-BEGIN_FBM_FUNC(fbm_terr)
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-END_FBM_FUN
-BEGIN_FBM_FUNC(fbm_terr_normals)
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-	FBM_STEP(noise(pos))
-END_FBM_FUN
+DECL_FBM_FUNC(fbm_terr, 3, noise)
+DECL_FBM_FUNC(fbm_terr_normals, 9, noise)
 
 #define terr_func_a(f) float h = f(pos * 2.0987, 2.0244, .454, .454)
 #define terr_func_b float n = smoothstep(.35, 1., h)
@@ -244,7 +232,7 @@ vec3 illuminate(
 	vec3 rock_strata = mix(
 		c_rock1, c_rock2,
 		smoothstep(l_rock, 1.,
-			cos(h * 45.47 * fbm(pos * 17.24, 4.37))));
+			cos(h * 45.47 * fbm(pos * 17.24, 4.37, .5, .5))));
 
 	vec3 green_rock = mix(
 		rock_strata, c_grass,
