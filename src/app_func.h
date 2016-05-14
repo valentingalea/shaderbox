@@ -50,9 +50,7 @@ void mainImage(
 
 	vec3 p = vec3(t.x, 0, 0);
 	col += plot(noise(p), t.y, vec3(1, 1, 1));
-	col += plot(reference_fbm(p, 4, 2., 1.), t.y, vec3(0, 1, 0));
-	col += plot(fbm(p, 2.), t.y, vec3(1, 0, 1));
-	col += plot(fBm(p), t.y, vec3(0, 0, 1));
+	col += plot(fbm(p, 2., .5, .5), t.y, vec3(0, 1, 0));
 
 // output
 	fragColor = vec4 (col, 1);
