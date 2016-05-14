@@ -55,3 +55,4 @@ void intersect_plane(
 	hit.origin = ray.origin + ray.direction * t;
 	hit.normal = faceforward(p.direction, ray.direction, p.direction);
 }
+

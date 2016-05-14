@@ -1,3 +1,7 @@
+// ----------------------------------------------------------------------------
+// Volumetric utilities
+// ----------------------------------------------------------------------------
+
 // Notes taken from
 // Production Volume Rendering by Magnus Wrenninge
 //
@@ -148,3 +152,4 @@ void integrate_volume(
 	// accumulate opacity
 	vol.alpha += (1. - T_i) * (1. - vol.alpha);
 }
+

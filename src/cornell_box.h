@@ -86,4 +86,3 @@ void setup_cornell_box()
 	lights[0].color = vec3(1., 1., 1.);
 }
 
-

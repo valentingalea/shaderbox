@@ -46,3 +46,4 @@ vec3 noise_w(
 
 	return vec3(sqrt(res), abs(id));
 }
+

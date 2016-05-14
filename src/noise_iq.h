@@ -27,3 +27,4 @@ float noise_iq(
 	return mix(rg.x, rg.y, f.z);
 #endif
 }
+

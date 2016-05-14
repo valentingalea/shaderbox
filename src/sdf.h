@@ -157,3 +157,4 @@ vec2 sd_bezier(
 
 	return vec2(0.85*(sqrt(dot(cp.xy, cp.xy) + p3.z*p3.z) - thickness), cp.z);
 }
+

@@ -90,3 +90,4 @@ vec3 illum_cook_torrance(
 	float specular = (geo_term * rough_term * fresnel_term) / (PI * NdotV * NdotL);
 	return max(0., NdotL) * (specular + mat.base_color);
 }
+
