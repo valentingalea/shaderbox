@@ -239,6 +239,7 @@ vec3 illuminate(
 
 	// limits
 	#define l_water .05
+	#define l_water_m .025
 	#define l_shore .17
 	#define l_grass .211
 	#define l_rock .351
@@ -265,16 +266,20 @@ vec3 illuminate(
 		c_beach, grass,
 		smoothstep(l_shore, l_grass, h));
 
+	vec3 water = mix(
+		c_water / 2., c_water,
+		smoothstep (l_water_m, l_water_m + .0125, h));
+
 #ifdef LIGHT
 	vec3 L = mul(local_xform, normalize(vec3(1, 1, 0)));
 	shoreline *= setup_lights(L, normal);
-	vec3 water = setup_lights(L, w_normal) * c_water;
+	vec3 ocean = setup_lights(L, w_normal) * water;
 #else
-	vec3 water = c_water;
+	vec3 ocean = water;
 #endif
-
+	
 	return mix(
-		water, shoreline,
+		ocean, shoreline,
 		smoothstep(l_water, l_shore, h));
 }
 
@@ -286,7 +291,7 @@ vec3 render(
 	_in(vec3) point_cam
 ){
 	mat3 rot_y = mat3_ident;// rotate_around_y(-45.);
-	mat3 rot = mul(rotate_around_x(u_time * 50.), rot_y);
+	mat3 rot = mul(rotate_around_x(u_time * 20.), rot_y);
 	mat3 rot_cloud = rotate_around_x(u_time * -16.);
 
 	sphere_t atmosphere = planet;
