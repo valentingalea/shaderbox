@@ -144,15 +144,16 @@ void clouds_shadow_march(
 DECL_FBM_FUNC(fbm_terr, 3, noise(p))
 DECL_FBM_FUNC(fbm_terr_r, 3, rnoise)
 
-DECL_FBM_FUNC(fbm_terr_normals, 9, noise(p))
+DECL_FBM_FUNC(fbm_terr_normals, 7, noise(p))
+DECL_FBM_FUNC(fbm_terr_r_normals, 7, rnoise)
 
 vec2 sdf_terrain_map(_in(vec3) pos)
 {
 	float h0 = fbm_terr(pos * 2.0987, 2.0244, .454, .454);
 	float n0 = smoothstep(.35, 1., h0);
 
-	float h1 = fbm_terr_r(pos * 1.0987, 2.0244, .454, .454);
-	float n1 = smoothstep(.547, 1., h1);
+	float h1 = fbm_terr_r(pos * 1.50987 + vec3(1.9489, 2.435, .5483), 2.0244, .454, .454);
+	float n1 = smoothstep(.6, 1., h1);
 	
 	float n = n0 + n1;
 	
@@ -161,7 +162,15 @@ vec2 sdf_terrain_map(_in(vec3) pos)
 
 vec2 sdf_terrain_map_detail(_in(vec3) pos)
 {
-	return vec2 (0);
+	float h0 = fbm_terr_normals(pos * 2.0987, 2.0244, .454, .454);
+	float n0 = smoothstep(.305, 1., h0);
+
+	float h1 = fbm_terr_r_normals(pos * 1.50987 + vec3(1.9489, 2.435, .5483), 2.0244, .454, .454);
+	float n1 = smoothstep(.6, 1., h1);
+
+	float n = n0 + n1;
+
+	return vec2(length(pos) - planet.radius - n * max_height, n / max_height);
 }
 
 vec3 sdf_terrain_normal(_in(vec3) p)
@@ -212,7 +221,7 @@ vec3 illuminate(
 	//return vec3 (h);
 
 	vec3 w_normal = normalize(pos);
-//#define LIGHT
+#define LIGHT
 #ifdef LIGHT
 	vec3 normal = sdf_terrain_normal(pos);
 	float N = dot(normal, w_normal);
@@ -230,28 +239,26 @@ vec3 illuminate(
 
 	// limits
 	#define l_water .05
-	#define l_shore .1
+	#define l_shore .17
 	#define l_grass .211
 	#define l_rock .351
-/*
+
 	vec3 rock_strata = mix(
 		c_rock1, c_rock2,
 		smoothstep(l_rock, 1.,
-			cos(h * 45.47 * fbm(pos * 17.24, 4.37, .5, .5))));
+			cos(h * 62.)));
 
 	vec3 green_rock = mix(
 		rock_strata, c_grass,
 		step(.95, N));
 
-	float s = smoothstep(.9, 1., h);
+	float s = smoothstep(.4, 1., h);
 	vec3 rock = mix(
-		green_rock, c_snow,
+		c_rock1, c_snow,
 		smoothstep(1. - .4*s, 1. - .1*s, N));
-*/
-	vec3 rock_strata = c_rock1;
 
 	vec3 grass = mix(
-		c_grass, rock_strata,
+		c_grass, rock,
 		smoothstep(l_grass, l_rock, h));
 		
 	vec3 shoreline = mix(
@@ -267,7 +274,7 @@ vec3 illuminate(
 #endif
 
 	return mix(
-		c_water, shoreline,
+		water, shoreline,
 		smoothstep(l_water, l_shore, h));
 }
 
@@ -278,8 +285,8 @@ vec3 render(
 	_in(ray_t) eye,
 	_in(vec3) point_cam
 ){
-	mat3 rot_y = rotate_around_y(-45.);
-	mat3 rot = mul(rotate_around_x(u_time * 12.), rot_y);
+	mat3 rot_y = mat3_ident;// rotate_around_y(-45.);
+	mat3 rot = mul(rotate_around_x(u_time * 50.), rot_y);
 	mat3 rot_cloud = rotate_around_x(u_time * -16.);
 
 	sphere_t atmosphere = planet;
