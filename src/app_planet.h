@@ -58,12 +58,12 @@ void setup_camera(
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
-//#define CLOUDS
+#define CLOUDS
 
 #define anoise (abs(noise(p) * 2. - 1.))
 DECL_FBM_FUNC(fbm_clouds, 4, anoise)
 
-#define vol_coeff_absorb 33.93434
+#define vol_coeff_absorb 30.034
 _mutable(volume_sampler_t) cloud;
 
 float illuminate_volume(
@@ -79,14 +79,14 @@ void clouds_map(
 	_in(float) t_step
 ){
 	float dens = fbm_clouds(
-		cloud.pos * 2.2343,// + vec3(.35, 13.35, 2.67),
+		cloud.pos * 3.2343 + vec3(.35, 13.35, 2.67),
 		2.0276, .5, .5);
 
-	#define cld_coverage .3475675 // higher=less clouds
+	#define cld_coverage .29475675 // higher=less clouds
 	#define cld_fuzzy .0335 // higher=fuzzy, lower=blockier
 	dens *= smoothstep(cld_coverage, cld_coverage + cld_fuzzy, dens);
 
-	dens *= band(.1, .35, .5, cloud.height);
+	dens *= band(.2, .35, .65, cloud.height);
 
 	integrate_volume(cloud,
 		cloud.pos, cloud.pos, // unused dummies 
@@ -163,7 +163,7 @@ vec2 sdf_terrain_map(_in(vec3) pos)
 vec2 sdf_terrain_map_detail(_in(vec3) pos)
 {
 	float h0 = fbm_terr_normals(pos * 2.0987, 2.0244, .454, .454);
-	float n0 = smoothstep(.305, 1., h0);
+	float n0 = smoothstep(.35, 1., h0);
 
 	float h1 = fbm_terr_r_normals(pos * 1.50987 + vec3(1.9489, 2.435, .5483), 2.0244, .454, .454);
 	float n1 = smoothstep(.6, 1., h1);
@@ -233,30 +233,19 @@ vec3 illuminate(
 	#define c_water vec3(.015, .110, .455)
 	#define c_grass vec3(.086, .132, .018)
 	#define c_beach vec3(.153, .172, .121)
-	#define c_rock1 vec3(.080, .050, .030)
-	#define c_rock2 vec3(.100, .090, .080)
+	#define c_rock  vec3(.080, .050, .030)
 	#define c_snow  vec3(.600, .600, .600)
 
 	// limits
 	#define l_water .05
-	#define l_water_m .025
 	#define l_shore .17
 	#define l_grass .211
 	#define l_rock .351
 
-	vec3 rock_strata = mix(
-		c_rock1, c_rock2,
-		smoothstep(l_rock, 1.,
-			cos(h * 62.)));
-
-	vec3 green_rock = mix(
-		rock_strata, c_grass,
-		step(.95, N));
-
 	float s = smoothstep(.4, 1., h);
 	vec3 rock = mix(
-		c_rock1, c_snow,
-		smoothstep(1. - .4*s, 1. - .1*s, N));
+		c_rock, c_snow,
+		smoothstep(1. - .3*s, 1. - .2*s, N));
 
 	vec3 grass = mix(
 		c_grass, rock,
@@ -268,7 +257,7 @@ vec3 illuminate(
 
 	vec3 water = mix(
 		c_water / 2., c_water,
-		smoothstep (l_water_m, l_water_m + .0125, h));
+		smoothstep(0., l_water, h));
 
 #ifdef LIGHT
 	vec3 L = mul(local_xform, normalize(vec3(1, 1, 0)));
@@ -290,9 +279,9 @@ vec3 render(
 	_in(ray_t) eye,
 	_in(vec3) point_cam
 ){
-	mat3 rot_y = mat3_ident;// rotate_around_y(-45.);
-	mat3 rot = mul(rotate_around_x(u_time * 20.), rot_y);
-	mat3 rot_cloud = rotate_around_x(u_time * -16.);
+	mat3 rot_y = rotate_around_y(27.);
+	mat3 rot = mul(rotate_around_x(u_time * -12.), rot_y);
+	mat3 rot_cloud = mul(rotate_around_x(u_time * 8.), rot_y);
 
 	sphere_t atmosphere = planet;
 	atmosphere.radius += max_height;
