@@ -58,9 +58,9 @@ void setup_camera(
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
-#define CLOUDS
+//#define CLOUDS
 
-#define anoise(x) (abs(noise(x) * 2. - 1.))
+#define anoise (abs(noise(p) * 2. - 1.))
 DECL_FBM_FUNC(fbm_clouds, 4, anoise)
 
 #define vol_coeff_absorb 33.93434
@@ -139,25 +139,29 @@ void clouds_shadow_march(
 // ----------------------------------------------------------------------------
 #define TERR_STEPS 120
 #define TERR_EPS .005
+#define rnoise (1. - abs(noise(p) * 2. - 1.))
 
-DECL_FBM_FUNC(fbm_terr, 3, noise)
-DECL_FBM_FUNC(fbm_terr_normals, 9, noise)
+DECL_FBM_FUNC(fbm_terr, 3, noise(p))
+DECL_FBM_FUNC(fbm_terr_r, 3, rnoise)
 
-#define terr_func_a(f) float h = f(pos * 2.0987, 2.0244, .454, .454)
-#define terr_func_b float n = smoothstep(.35, 1., h)
+DECL_FBM_FUNC(fbm_terr_normals, 9, noise(p))
 
 vec2 sdf_terrain_map(_in(vec3) pos)
 {
-	terr_func_a(fbm_terr);
-	terr_func_b;
+	float h0 = fbm_terr(pos * 2.0987, 2.0244, .454, .454);
+	float n0 = smoothstep(.35, 1., h0);
+
+	float h1 = fbm_terr_r(pos * 1.0987, 2.0244, .454, .454);
+	float n1 = smoothstep(.547, 1., h1);
+	
+	float n = n0 + n1;
+	
 	return vec2(length(pos) - planet.radius - n * max_height, n / max_height);
 }
 
 vec2 sdf_terrain_map_detail(_in(vec3) pos)
 {
-	terr_func_a(fbm_terr_normals);
-	terr_func_b;
-	return vec2(length(pos) - planet.radius - n * max_height, n);
+	return vec2 (0);
 }
 
 vec3 sdf_terrain_normal(_in(vec3) p)
@@ -208,7 +212,7 @@ vec3 illuminate(
 	//return vec3 (h);
 
 	vec3 w_normal = normalize(pos);
-#define LIGHT
+//#define LIGHT
 #ifdef LIGHT
 	vec3 normal = sdf_terrain_normal(pos);
 	float N = dot(normal, w_normal);
@@ -227,8 +231,9 @@ vec3 illuminate(
 	// limits
 	#define l_water .05
 	#define l_shore .1
-	#define l_rock .211
-
+	#define l_grass .211
+	#define l_rock .351
+/*
 	vec3 rock_strata = mix(
 		c_rock1, c_rock2,
 		smoothstep(l_rock, 1.,
@@ -242,10 +247,16 @@ vec3 illuminate(
 	vec3 rock = mix(
 		green_rock, c_snow,
 		smoothstep(1. - .4*s, 1. - .1*s, N));
+*/
+	vec3 rock_strata = c_rock1;
 
+	vec3 grass = mix(
+		c_grass, rock_strata,
+		smoothstep(l_grass, l_rock, h));
+		
 	vec3 shoreline = mix(
-		c_beach, rock,
-		smoothstep(l_shore, l_rock, h));
+		c_beach, grass,
+		smoothstep(l_shore, l_grass, h));
 
 #ifdef LIGHT
 	vec3 L = mul(local_xform, normalize(vec3(1, 1, 0)));
@@ -256,7 +267,7 @@ vec3 illuminate(
 #endif
 
 	return mix(
-		water, shoreline,
+		c_water, shoreline,
 		smoothstep(l_water, l_shore, h));
 }
 
