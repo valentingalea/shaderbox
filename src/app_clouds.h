@@ -3,12 +3,12 @@
 #include "intersect.h"
 #include "volumetric.h"
 
-_constant(int) cld_march_steps = 25;
-_mutable(float) cld_coverage = .5;
-_mutable(float) cld_thick = 25.;
-_mutable(float) cld_absorb_coeff = 1.03;
-_mutable(vec3) cld_wind_dir = vec3(0, 0, -u_time * .2);
-_mutable(vec3) cld_sun_dir = normalize(vec3(0, abs(sin(u_time * .3)), -1));
+#define cld_march_steps (25)
+#define cld_coverage (.5)
+#define cld_thick (25.)
+#define cld_absorb_coeff (1.03)
+#define cld_wind_dir vec3(0, 0, -u_time * .2)
+#define cld_sun_dir normalize(vec3(0, abs(sin(u_time * .3)), -1))
 
 #if 1
 #include "noise_iq.h"
