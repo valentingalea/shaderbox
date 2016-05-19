@@ -3,25 +3,22 @@
 #include "intersect.h"
 #include "volumetric.h"
 
-#define cld_march_steps (55)
-#define cld_coverage (.125)
-#define cld_thick (95.)
-#define cld_absorb_coeff (1.03)
+#define cld_march_steps (50.)
+#define cld_coverage (.3125)
+#define cld_thick (50.)
+#define cld_absorb_coeff (1.)
 #define cld_wind_dir vec3(0, 0, -u_time * .2)
 #define cld_sun_dir normalize(vec3(0, abs(sin(u_time * .3)), -1))
+_mutable(float) coverage_map;
 
-#if 0
 #include "noise_iq.h"
-#define noise(x) noise_iq(x)
-#else
-//#include "noise_worley.h"
-//#define noise(x) (1. - noise_w(x).r)
+#define gnoise(x) noise_iq(x)
+
 #include "../lib/ashima-noise/src/noise3d.glsl"
 #define noise(x) snoise(x)
-#endif
 
 #include "fbm.h"
-DECL_FBM_FUNC(fbm_clouds, 4, noise(p))
+DECL_FBM_FUNC(fbm_clouds, 5, abs(noise(p)))
 
 vec3 render_sky_color(
 	_in(vec3) eye_dir
@@ -37,12 +34,15 @@ vec3 render_sky_color(
 }
 
 float density_func(
-	_in(vec3) pos
+	_in(vec3) pos,
+	_in(float) h
 ){
 	vec3 p = pos * .00212242 + cld_wind_dir;
 	float dens = fbm_clouds(p, 2.6434, .5, .5);
 	
 	dens *= smoothstep (cld_coverage, cld_coverage + .035, dens);
+
+	//dens *= band(.2, .3, .5 + coverage_map * .5, h);
 
 	return dens;
 }
@@ -52,7 +52,7 @@ float illuminate_volume(
 	_in(vec3) V,
 	_in(vec3) L
 ){
-	return exp (cloud.height) / 1.75;
+	return 1.;//exp(cloud.height) / 1.75;
 }
 
 vec4 render_clouds(
@@ -68,11 +68,14 @@ vec4 render_clouds(
 		cld_absorb_coeff);
 	vec3 iter = projection * march_step;
 
-	for (int i = 0; i < steps; i++) {
-		float dens = density_func(cloud.pos);
+	//coverage_map = gnoise(projection);
+	//return vec4(coverage_map, coverage_map, coverage_map, 1);
 
+	for (int i = 0; i < steps; i++) {
 		cloud.height = (cloud.pos.y - cloud.origin.y)
 			/ cld_thick;
+		float dens = density_func(cloud.pos, cloud.height);
+
 		integrate_volume(
 			cloud,
 			eye.direction, cld_sun_dir,
