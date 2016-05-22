@@ -128,7 +128,17 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	RegisterClass(&wc);
 	SCOPE_EXIT(UnregisterClass(lpszClassName, hinst));
 
-	HWND hWnd = CreateWindowExA(0, lpszClassName, lpszAppName, WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, WIDTH, HEIGHT, 0, 0, hinst, 0);
+	DWORD dwStyle = WS_POPUPWINDOW | WS_CAPTION | WS_MINIMIZEBOX | WS_VISIBLE;
+	int sysWidth = ::GetSystemMetrics(SM_CXFULLSCREEN);
+	int sysHeight = ::GetSystemMetrics(SM_CYFULLSCREEN);
+	RECT desiredBox;
+	SetRect(&desiredBox, 0, 0, WIDTH, HEIGHT);
+	AdjustWindowRect(&desiredBox, dwStyle, FALSE);
+	int newWidth = desiredBox.right - desiredBox.left;
+	int newHeight = desiredBox.bottom - desiredBox.top;
+	HWND hWnd = CreateWindow(lpszClassName, lpszAppName, dwStyle,
+		sysWidth / 2 - newWidth / 2, sysHeight / 2 - newHeight / 2, newWidth, newHeight,
+		0, 0, hinst, 0);
 	SwapChainDesc.OutputWindow = hWnd;
 
 // setting up device
