@@ -60,13 +60,15 @@ vec4 render_clouds(
 ){
 	const int steps = cld_march_steps;
 	const float march_step = cld_thick / float(steps);
+
 	const vec3 projection = eye.direction / eye.direction.y;
+	const vec3 iter = projection * march_step;
+
 	const float cutoff = dot(eye.direction, vec3(0, 1, 0));
 
 	volume_sampler_t cloud = begin_volume(
 		eye.origin + projection * 100.,
 		cld_absorb_coeff);
-	vec3 iter = projection * march_step;
 
 	//coverage_map = gnoise(projection);
 	//return vec4(coverage_map, coverage_map, coverage_map, 1);
@@ -82,6 +84,8 @@ vec4 render_clouds(
 			dens, march_step);
 
 		cloud.pos += iter;
+
+		if (cloud.alpha > .999) break;
 	}
 
 	return vec4(cloud.C, cloud.alpha * smoothstep(.0, .2, cutoff));
