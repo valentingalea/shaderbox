@@ -3,9 +3,10 @@
 #include "intersect.h"
 #include "volumetric.h"
 
-#define cld_march_steps (50.)
-#define cld_coverage (.3125)
-#define cld_thick (50.)
+#define cld_march_steps  (50)
+#define cld_coverage     (.3125)
+#define cld_thick        (50.)
+#define cld_dist         (50.)
 #define cld_absorb_coeff (1.)
 #define cld_wind_dir vec3(0, 0, -u_time * .2)
 #define cld_sun_dir normalize(vec3(0, abs(sin(u_time * .3)), -1))
@@ -37,8 +38,8 @@ float density_func(
 	_in(vec3) pos,
 	_in(float) h
 ){
-	vec3 p = pos * .00212242 + cld_wind_dir;
-	float dens = fbm_clouds(p, 2.6434, .5, .5);
+	vec3 p = pos / (cld_dist * 10.) + cld_wind_dir;
+	float dens = fbm_clouds(p * 2.03, 2.64, .5, .5);
 	
 	dens *= smoothstep (cld_coverage, cld_coverage + .035, dens);
 
@@ -52,7 +53,7 @@ float illuminate_volume(
 	_in(vec3) V,
 	_in(vec3) L
 ){
-	return 1.;//exp(cloud.height) / 1.75;
+	return exp(cloud.height) / 1.75;
 }
 
 vec4 render_clouds(
@@ -67,7 +68,7 @@ vec4 render_clouds(
 	const float cutoff = dot(eye.direction, vec3(0, 1, 0));
 
 	volume_sampler_t cloud = begin_volume(
-		eye.origin + projection * 100.,
+		eye.origin + projection * cld_dist,
 		cld_absorb_coeff);
 
 	//coverage_map = gnoise(projection);
@@ -95,8 +96,8 @@ void setup_camera(
 	_inout(vec3) eye,
 	_inout(vec3) look_at
 ){
-	eye = vec3(0, 1., 0);
-	look_at = vec3(0, 1.6, -1);
+	eye = vec3(0, 0, 0);
+	look_at = vec3(0, .75, -1);
 }
 
 void setup_scene()
