@@ -4,7 +4,7 @@
 # $< the name of the related file that caused the action.
 # $* the prefix shared by target and dependent files.
 
-all: func
+all: clouds
 
 OUT = shaderbox
 SIZE = -DSCREEN_WIDTH=100 -DSCREEN_HEIGHT=100
