@@ -1,7 +1,14 @@
 #include "def.h"
 #include "util.h"
-#include "intersect.h"
 #include "volumetric.h"
+
+//#include "noise_iq.h"
+//#define noise(x) noise_iq(x)
+#include "../lib/ashima-noise/src/noise3d.glsl"
+#define noise(x) snoise(x)
+
+#include "fbm.h"
+DECL_FBM_FUNC(fbm_clouds, 5, abs(noise(p)))
 
 #define cld_march_steps  (50)
 #define cld_coverage     (.3125)
@@ -12,14 +19,17 @@
 #define cld_sun_dir normalize(vec3(0, abs(sin(u_time * .3)), -1))
 _mutable(float) coverage_map;
 
-#include "noise_iq.h"
-#define gnoise(x) noise_iq(x)
+void setup_camera(
+	_inout(vec3) eye,
+	_inout(vec3) look_at
+){
+	eye = vec3(0, 0, 0);
+	look_at = vec3(0, .75, -1);
+}
 
-#include "../lib/ashima-noise/src/noise3d.glsl"
-#define noise(x) snoise(x)
-
-#include "fbm.h"
-DECL_FBM_FUNC(fbm_clouds, 5, abs(noise(p)))
+void setup_scene()
+{
+}
 
 vec3 render_sky_color(
 	_in(vec3) eye_dir
@@ -53,7 +63,7 @@ float illuminate_volume(
 	_in(vec3) V,
 	_in(vec3) L
 ){
-	return exp(cloud.height) / 1.75;
+	return exp(cloud.height) / 2.2;
 }
 
 vec4 render_clouds(
@@ -90,18 +100,6 @@ vec4 render_clouds(
 	}
 
 	return vec4(cloud.C, cloud.alpha * smoothstep(.0, .2, cutoff));
-}
-
-void setup_camera(
-	_inout(vec3) eye,
-	_inout(vec3) look_at
-){
-	eye = vec3(0, 0, 0);
-	look_at = vec3(0, .75, -1);
-}
-
-void setup_scene()
-{
 }
 
 vec3 render(
