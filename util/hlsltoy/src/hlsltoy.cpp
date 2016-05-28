@@ -16,6 +16,7 @@ ScopeExit<F> MakeScopeExit(F f) {
 
 #define SafeRelease(T) if (T) { T->Release(); T = NULL; }
 
+#include <windowsx.h>
 #include <d3d11.h>
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
@@ -102,10 +103,28 @@ ID3D11ShaderResourceView* CreateNoiseTexture(ID3D11Device *pd3dDevice, LPCWSTR l
 	return pView;
 }
 
+POINT sMouseButtons = { 0, 0 };
+POINT sMousePos = { 0, 0 };
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	if (uMsg == WM_CLOSE)
+	switch (uMsg)
+	{
+	case WM_CLOSE:
 		PostQuitMessage(0);
+		break;
+	case WM_LBUTTONDOWN:
+		sMouseButtons.x = TRUE;
+		break;
+	case WM_LBUTTONUP:
+		sMouseButtons.x = FALSE;
+		break;
+	case WM_MOUSEMOVE:
+		sMousePos.x = GET_X_LPARAM(lParam);
+		sMousePos.y = GET_Y_LPARAM(lParam);
+		break;
+	}
+
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
@@ -295,6 +314,11 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		pBuff->time = timeElapsted / 1000.f;
 		pBuff->mouse.x = 0.;
 		pBuff->mouse.y = 0.;
+		if (sMouseButtons.x)
+		{
+			pBuff->mouse.x = float(sMousePos.x);
+			pBuff->mouse.y = float(sMousePos.y);
+		}
 		pImmediateContext->Unmap(pUniformBuff, 0);
 	} while (true);
 	
