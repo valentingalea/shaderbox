@@ -117,7 +117,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
 	if (!szArglist || nArgs < 2)
 	{
-		ShowError("Minimal DX11 Framework.\n\Usage:\nhlsltoy <shader file>");
+		ShowError("Minimal DX11 Framework.\n\Usage:\nhlsltoy <shader file> [noise dds file]");
 		return ERROR_INVALID_COMMAND_LINE;
 	}
 
@@ -165,8 +165,12 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateShaderResourceView(pTex, NULL/*whole res*/, &pTexV);
 	_ASSERT(SUCCEEDED(hr));
 
-	//ID3D11ShaderResourceView *pNoiseTexV = CreateNoiseTexture(pd3dDevice, LR"(..\bin\noise3d.dds)");
-	//SCOPE_EXIT(SafeRelease(pNoiseTexV));
+	ID3D11ShaderResourceView *pNoiseTexV = NULL;
+	if (nArgs >= 3)
+	{
+		pNoiseTexV = CreateNoiseTexture(pd3dDevice, szArglist[2]);
+	}
+	SCOPE_EXIT(SafeRelease(pNoiseTexV));
 
 	ID3D11SamplerState *pSampler = NULL;
 	SCOPE_EXIT(SafeRelease(pSampler));
@@ -255,7 +259,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	pImmediateContext->PSSetShader(pPS, NULL, 0);
 	pImmediateContext->PSSetConstantBuffers(0, 1, &pUniformBuff);
 	pImmediateContext->PSSetShaderResources(0, 1, &pTexV);
-	//pImmediateContext->PSSetShaderResources(1, 1, &pNoiseTexV);
+	pImmediateContext->PSSetShaderResources(1, 1, &pNoiseTexV);
 	pImmediateContext->PSSetSamplers(0, 1, &pSampler);
 
 // message pump and rendering
