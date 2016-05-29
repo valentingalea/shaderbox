@@ -13,18 +13,18 @@ typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4
 
 #include "../../../src/def.h"
 
-#include "../../../src/noise_iq.h"
-#define noise(x) noise_iq(x)
+//#include "../../../src/noise_iq.h"
+//#define noise(x) noise_iq(x)
 
 //#include "../../../src/noise_worley.h"
 //#define noise(x) (1. - noise_w(x).r)
 //#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
 
-//#include "../../../lib/ashima-noise/src/classicnoise3D.glsl"
-//#define noise(x) cnoise(x)
-//#define noise(x) abs(pnoise(x, vec3(1./128.)))
+#include "../../../lib/ashima-noise/src/classicnoise3D.glsl"
+#define noise(x) cnoise(x)
 
 #include "../../../src/fbm.h"
+DECL_FBM_FUNC(fbm_dds, 5, abs(pnoise(p, vec3(lacunarity))))
 
 #include <d3d11.h>
 #include "../../../lib/DirectXTex/DirectXTex/DDS.h"
@@ -82,8 +82,7 @@ int main(int argc, char* argv[])
 			for (int x = 0; x < size; x++) {
 				vec3 input = vec3(x, y, z) / FLOAT(size);
 				*(data.get() + size*size*z + size*y + x) = 
-					//noise(input);
-					fbm(input, 2.765f);
+					fbm_dds(input * 2.03, 2.64, .5, .5);
 			}
 		}
 	}

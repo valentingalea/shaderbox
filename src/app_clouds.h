@@ -43,9 +43,15 @@ float fbm_final(_in(vec3) pos)
 #define cld_wind_dir     vec3(0, 0, -u_time * .2)
 #define cld_sun_dir      normalize(vec3(0, abs(sin(u_time * .3)), -1))
 
+//#define SPHERE
+#ifdef SPHERE
 _constant(sphere_t) atmosphere = _begin(sphere_t)
 	vec3(0, -475, 0), 500., 0
 _end;
+#define cld_noise_factor (1. / atmosphere.radius)
+#else
+#define cld_noise_factor .001
+#endif
 
 void setup_camera(
 	_inout(vec3) eye,
@@ -76,10 +82,18 @@ float density_func(
 	_in(vec3) pos,
 	_in(float) h
 ){
-	vec3 p = pos / atmosphere.radius;// - cld_wind_dir;
-	float dens = fbm_final(p);
-	dens *= smoothstep (cld_coverage, cld_coverage + .035, dens);
-	return dens;
+	vec3 p = pos * cld_noise_factor + cld_wind_dir;
+	float base = fbm_final(p);
+
+// my old method
+//	return base * smoothstep (cld_coverage, cld_coverage + .035, base);
+
+// book equiv method
+//	return smoothstep(cld_coverage, 1., base);
+
+// GPU Pro 7
+	float base_with_coverage = remap(base, cld_coverage, 1., 0., 1.);
+	return clamp(base_with_coverage * cld_coverage, 0, 1);
 }
 
 float illuminate_volume(
@@ -87,7 +101,7 @@ float illuminate_volume(
 	_in(vec3) V,
 	_in(vec3) L
 ){
-	return exp(cloud.height) / 2.02;
+	return 1.; // exp(cloud.height) / 2.02;
 }
 
 void intersect_sphere(
@@ -113,18 +127,22 @@ void intersect_sphere(
 vec4 render_clouds(
 	_in(ray_t) eye
 ){
-	hit_t hit = no_hit;
-	intersect_sphere(eye, atmosphere, hit);
-
 	const int steps = cld_march_steps;
 	const float march_step = cld_thick / float(steps);
 
-	vec3 projection = eye.direction;
-	vec3 iter = projection * march_step;
+#ifdef SPHERE
+	hit_t hit = no_hit;
+	intersect_sphere(eye, atmosphere, hit);
 
-	volume_sampler_t cloud = begin_volume(
-		hit.origin,
-		cld_absorb_coeff);
+	vec3 projection = eye.direction;
+	vec3 origin = hit.origin;
+#else
+	vec3 projection = eye.direction / eye.direction.y;
+	vec3 origin = eye.origin + projection * 150.;
+#endif
+
+	vec3 iter = projection * march_step;
+	volume_sampler_t cloud = begin_volume(origin, cld_absorb_coeff);
 
 #ifdef HLSL
 	[fastopt] [loop]
@@ -163,5 +181,5 @@ vec3 render(
 	return abs(col);
 }
 
-#define FOV tan(radians(30.))
+#define FOV 1.//tan(radians(30.))
 #include "main.h"
