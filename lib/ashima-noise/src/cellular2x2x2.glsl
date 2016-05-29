@@ -1,34 +1,8 @@
-#version 120
-
 // Cellular noise ("Worley noise") in 3D in GLSL.
 // Copyright (c) Stefan Gustavson 2011-04-19. All rights reserved.
 // This code is released under the conditions of the MIT license.
 // See LICENSE file for details.
 // https://github.com/stegu/webgl-noise
-
-// Modulo 289 without a division (only multiplications)
-vec3 mod289(vec3 x) {
-  return x - floor(x * (1.0 / 289.0)) * 289.0;
-}
-
-vec4 mod289(vec4 x) {
-  return x - floor(x * (1.0 / 289.0)) * 289.0;
-}
-
-// Modulo 7 without a division
-vec4 mod7(vec4 x) {
-  return x - floor(x * (1.0 / 7.0)) * 7.0;
-}
-
-
-// Permutation polynomial: (34x^2 + x) mod 289
-vec3 permute(vec3 x) {
-  return mod289((34.0 * x + 1.0) * x);
-}
-
-vec4 permute(vec4 x) {
-  return mod289((34.0 * x + 1.0) * x);
-}
 
 // Cellular noise, returning F1 and F2 in a vec2.
 // Speeded up by using 2x2x2 search window instead of 3x3x3,
@@ -49,7 +23,7 @@ vec2 cellular2x2x2(vec3 P) {
 	vec4 p = permute(Pi.x + vec4(0.0, 1.0, 0.0, 1.0));
 	p = permute(p + Pi.y + vec4(0.0, 0.0, 1.0, 1.0));
 	vec4 p1 = permute(p + Pi.z); // z+0
-	vec4 p2 = permute(p + Pi.z + vec4(1.0)); // z+1
+	vec4 p2 = permute(p + Pi.z + vec4(1, 1, 1, 1)); // z+1
 	vec4 ox1 = fract(p1*K) - Ko;
 	vec4 oy1 = mod7(floor(p1*K))*K - Ko;
 	vec4 oz1 = floor(p1*K2)*Kz - Kzo; // p1 < 289 guaranteed
@@ -66,12 +40,13 @@ vec2 cellular2x2x2(vec3 P) {
 	vec4 d2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2; // z+1
 
 	// Sort out the two smallest distances (F1, F2)
-#if 0
+#if 1
 	// Cheat and sort out only F1
 	d1 = min(d1, d2);
 	d1.xy = min(d1.xy, d1.wz);
 	d1.x = min(d1.x, d1.y);
-	return vec2(sqrt(d1.x));
+	float s = sqrt(d1.x);
+	return vec2(s, s);
 #else
 	// Do it right and sort out both F1 and F2
 	vec4 d = min(d1,d2); // F1 is now in d

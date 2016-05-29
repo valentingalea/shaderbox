@@ -1,25 +1,8 @@
-#version 120
-
 // Cellular noise ("Worley noise") in 3D in GLSL.
 // Copyright (c) Stefan Gustavson 2011-04-19. All rights reserved.
 // This code is released under the conditions of the MIT license.
 // See LICENSE file for details.
 // https://github.com/stegu/webgl-noise
-
-// Modulo 289 without a division (only multiplications)
-vec3 mod289(vec3 x) {
-  return x - floor(x * (1.0 / 289.0)) * 289.0;
-}
-
-// Modulo 7 without a division
-vec3 mod7(vec3 x) {
-  return x - floor(x * (1.0 / 7.0)) * 7.0;
-}
-
-// Permutation polynomial: (34x^2 + x) mod 289
-vec3 permute(vec3 x) {
-  return mod289((34.0 * x + 1.0) * x);
-}
 
 // Cellular noise, returning F1 and F2 in a vec2.
 // 3x3x3 search region for good F2 everywhere, but a lot
@@ -144,14 +127,15 @@ vec2 cellular(vec3 P) {
 	vec3 d33 = dx33 * dx33 + dy33 * dy33 + dz33 * dz33;
 
 	// Sort out the two smallest distances (F1, F2)
-#if 0
+#if 1
 	// Cheat and sort out only F1
 	vec3 d1 = min(min(d11,d12), d13);
 	vec3 d2 = min(min(d21,d22), d23);
 	vec3 d3 = min(min(d31,d32), d33);
 	vec3 d = min(min(d1,d2), d3);
 	d.x = min(min(d.x,d.y),d.z);
-	return vec2(sqrt(d.x)); // F1 duplicated, no F2 computed
+	float n = sqrt(d.x);
+	return vec2(n, n); // F1 duplicated, no F2 computed
 #else
 	// Do it right and sort out both F1 and F2
 	vec3 d1a = min(d11, d12);
