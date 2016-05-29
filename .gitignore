@@ -256,23 +256,12 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
+
 *.db
 *.opendb
-/prj/anim-2016-03-30-22-48-41.gif
-/prj/anim-2016-03-30-22-46-47.gif
-/prj/anim-2016-03-30-22-30-42.gif
-/prj/anim-2015-12-07-23-06-03.gif
-/prj/anim-2015-12-07-23-04-31.gif
-/prj/anim-2015-12-07-23-03-31.gif
-/prj/anim-2015-12-07-23-01-53.gif
-/prj/anim-2015-12-07-22-56-13.gif
-/prj/anim-2015-11-07-19-48-38.gif
+
 /ue4/standalone/WindowsNoEditor
 /ue4/volumetric_clouds/DerivedDataCache
 /ue4/volumetric_clouds/Intermediate
-/ue4/volumetric_clouds/Saved/Autosaves
-/ue4/volumetric_clouds/Saved/Config
-/ue4/volumetric_clouds/Saved/Cooked/WindowsNoEditor
 /ue4/volumetric_clouds/Saved
-/util/ddsvolgen/prj/noise3d.dds
 *.shader
