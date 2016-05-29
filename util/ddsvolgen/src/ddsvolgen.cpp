@@ -1,37 +1,13 @@
-#include <swizzle/glsl/naive/vector.h>
-#include <swizzle/glsl/naive/matrix.h>
-#include <swizzle/glsl/texture_functions.h>
-#include <swizzle/glsl/vector_functions.h>
-typedef float real_t;
-typedef swizzle::glsl::naive::vector< int, 2 > ivec2;
-typedef swizzle::glsl::naive::vector< real_t, 2 > vec2;
-typedef swizzle::glsl::naive::vector< real_t, 3 > vec3;
-typedef swizzle::glsl::naive::vector< real_t, 4 > vec4;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 2, 2> mat2;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 3, 3> mat3;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4> mat4;
-
-#include "../../../src/def.h"
-
-//#include "../../../src/noise_iq.h"
-//#define noise(x) noise_iq(x)
-
-//#include "../../../src/noise_worley.h"
-//#define noise(x) (1. - noise_w(x).r)
-//#define noise(x) abs( noise_iq(x / 8.) - (1. - (noise_w(x * 2.).r)))
-
-#include "../../../lib/ashima-noise/src/classicnoise3D.glsl"
-#define noise(x) cnoise(x)
-
-#include "../../../src/fbm.h"
-DECL_FBM_FUNC(fbm_dds, 5, abs(pnoise(p, vec3(lacunarity))))
-
-#include <d3d11.h>
-#include "../../../lib/DirectXTex/DirectXTex/DDS.h"
+// ----------------------------------------------------------------------------
+// Windows / DirectX specific
+// ----------------------------------------------------------------------------
 #include <cstdio>
 #include <memory>
 #include <new>
+#include <thread>
 
+#include <d3d11.h>
+#include "../../../lib/DirectXTex/DirectXTex/DDS.h"
 using namespace DirectX;
 
 struct DDS
@@ -41,10 +17,51 @@ struct DDS
 	DDS_HEADER_DXT10 header10;
 };
 
+// some random windows header defines these
+#undef min
+#undef max
+
+// ----------------------------------------------------------------------------
+// CxxSwizzle support
+// ----------------------------------------------------------------------------
+#pragma warning(disable: 4244) // disable return implicit conversion warning
+#pragma warning(disable: 4305) // disable truncation warning
+
+#include <swizzle/glsl/naive/vector.h>
+#include <swizzle/glsl/naive/matrix.h>
+#include <swizzle/glsl/texture_functions.h>
+#include <swizzle/glsl/vector_functions.h>
+
+typedef float real_t;
+typedef swizzle::glsl::naive::vector< int, 2 > ivec2;
+typedef swizzle::glsl::naive::vector< real_t, 2 > vec2;
+typedef swizzle::glsl::naive::vector< real_t, 3 > vec3;
+typedef swizzle::glsl::naive::vector< real_t, 4 > vec4;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 2, 2> mat2;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 3, 3> mat3;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4> mat4;
+
+// ----------------------------------------------------------------------------
+// GLSL layer
+// ----------------------------------------------------------------------------
+#include "../../../src/def.h"
+
+#include "../../../lib/ashima-noise/src/common.glsl"
+#include "../../../lib/ashima-noise/src/classicnoise3d.glsl"
+#include "../../../lib/ashima-noise/src/noise3d.glsl"
+#include "../../../lib/ashima-noise/src/cellular3d.glsl"
+#define noise(x) (snoise(x))
+
+#include "../../../src/fbm.h"
+DECL_FBM_FUNC(fbm_dds, 5, abs(pnoise(p, vec3(lacunarity))))
+
+// ----------------------------------------------------------------------------
+// Main
+// ----------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-	auto size = 128;
-	auto channels = 1;
+	constexpr auto size = 128;
+	constexpr auto channels = 1;
 
 	DDS dds = { 0 };
 
@@ -74,18 +91,29 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	#pragma loop( hint_parallel(8) )
-	for (int z = 0; z < size; z++) {
-		#pragma loop( hint_parallel(8) )
-		for (int y = 0; y < size; y++) {
-			#pragma loop( hint_parallel(8) )
-			for (int x = 0; x < size; x++) {
-				vec3 input = vec3(x, y, z) / FLOAT(size);
-				*(data.get() + size*size*z + size*y + x) = 
-					fbm_dds(input * 2.03, 2.64, .5, .5);
+	auto worker = [&](int start, int count) {
+		for (int z = start; z < start + count; z++) {
+			for (int y = 0; y < size; y++) {
+				for (int x = 0; x < size; x++) {
+					vec3 input = vec3(x, y, z) / FLOAT(size);
+					*(data.get() + size*size*z + size*y + x) =
+						fbm_dds(input * 2.03, 2.64, .5, .5);
+				}
 			}
 		}
-	}
+		printf("...finished [%i..%i]\n", start, start + count);
+	};
+
+	printf("starting work...\n");
+	constexpr auto size_quota = size / 4;
+	std::thread w1{ worker, size_quota * 0, size_quota };
+	std::thread w2{ worker, size_quota * 1, size_quota };
+	std::thread w3{ worker, size_quota * 2, size_quota };
+	std::thread w4{ worker, size_quota * 3, size_quota };
+	w1.join();
+	w2.join();
+	w3.join();
+	w4.join();
 
 	auto file_closer = [](FILE* f) { fclose(f); };
 	std::unique_ptr<FILE, decltype(file_closer)> file = { fopen("noise3d.dds", "wb+"), file_closer };
