@@ -140,7 +140,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		return ERROR_INVALID_COMMAND_LINE;
 	}
 
-// win32 window
+	// win32 window
 	HRESULT hr = NULL;
 	HINSTANCE hinst = GetModuleHandle(NULL);
 	WNDCLASS wc = { CS_HREDRAW | CS_VREDRAW | CS_OWNDC, (WNDPROC)WndProc, 0, 0, hinst, LoadIcon(NULL, IDI_WINLOGO), LoadCursor(NULL, IDC_ARROW), 0, 0, lpszClassName };
@@ -160,23 +160,23 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		0, 0, hinst, 0);
 	SwapChainDesc.OutputWindow = hWnd;
 
-// setting up device
+	// setting up device
 	ID3D11Device* pd3dDevice = NULL;
 	ID3D11DeviceContext* pImmediateContext = NULL;
 	IDXGISwapChain* pSwapChain = NULL;
 	SCOPE_EXIT(SafeRelease(pSwapChain));
 	SCOPE_EXIT(SafeRelease(pImmediateContext));
 	SCOPE_EXIT(SafeRelease(pd3dDevice));
-	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 
+	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL,
 #ifdef _DEBUG
 		D3D11_CREATE_DEVICE_DEBUG,
 #else
 		D3D11_CREATE_DEVICE_SINGLETHREADED,
 #endif
-		0, 0, D3D11_SDK_VERSION, &SwapChainDesc, &pSwapChain, &pd3dDevice, NULL, &pImmediateContext);	
+		0, 0, D3D11_SDK_VERSION, &SwapChainDesc, &pSwapChain, &pd3dDevice, NULL, &pImmediateContext);
 	if (FAILED(hr)) return hr;
 
-// textures
+	// textures
 	ID3D11Texture2D* pTex = CreateTextureCheckboard(pd3dDevice, 128, 128, 16);
 	ID3D11ShaderResourceView *pTexV = NULL;
 	SCOPE_EXIT(SafeRelease(pTex));
@@ -193,12 +193,12 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 
 	ID3D11SamplerState *pSampler = NULL;
 	SCOPE_EXIT(SafeRelease(pSampler));
-	D3D11_SAMPLER_DESC sSamplerDesc = { D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP , D3D11_TEXTURE_ADDRESS_WRAP, 
+	D3D11_SAMPLER_DESC sSamplerDesc = { D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP , D3D11_TEXTURE_ADDRESS_WRAP,
 		0., 1, D3D11_COMPARISON_NEVER , {1, 1, 1, 1}, -FLT_MAX, FLT_MAX };
 	hr = pd3dDevice->CreateSamplerState(&sSamplerDesc, &pSampler);
 	_ASSERT(SUCCEEDED(hr));
 
-// backbuffer render target
+	// backbuffer render target
 	ID3D11Texture2D* pBackBuffer = NULL;
 	SCOPE_EXIT(SafeRelease(pBackBuffer));
 	hr = pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
@@ -211,23 +211,29 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 
 	pImmediateContext->OMSetRenderTargets(1, &pRenderTargetView, NULL);
 
-// viewport
+	// viewport
 	D3D11_VIEWPORT vp = { 0, 0, WIDTH, HEIGHT, 0., 1. };
 	pImmediateContext->RSSetViewports(1, &vp);
 
-// rasterizer params
+	// rasterizer params
 	D3D11_RASTERIZER_DESC rasterizerDesc = { D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE, 0, 0., 0., FALSE, FALSE, FALSE, FALSE };
 	ID3D11RasterizerState* pd3dRasterizerState = NULL;
 	SCOPE_EXIT(SafeRelease(pd3dRasterizerState));
 	hr = pd3dDevice->CreateRasterizerState(&rasterizerDesc, &pd3dRasterizerState);
 	_ASSERT(SUCCEEDED(hr));
 
-// common tracking vars
+	// common tracking vars
 	ID3D10Blob* pErrorBlob = NULL;
 	ID3D10Blob* pBlob = NULL;
 	SCOPE_EXIT(SafeRelease(pErrorBlob));
 	SCOPE_EXIT(SafeRelease(pBlob));
-	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_IEEE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_WARNINGS_ARE_ERRORS;
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_IEEE_STRICTNESS | D3DCOMPILE_WARNINGS_ARE_ERRORS |
+#ifdef _DEBUG
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION
+#else
+		D3DCOMPILE_OPTIMIZATION_LEVEL3
+#endif
+		;
 
 // vertex shader
 	ID3D11VertexShader* pVS = NULL;
@@ -236,7 +242,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	if (FAILED(hr))
 	{
 		ShowError("vertex compilation error", pErrorBlob);
-		return ERROR_BAD_COMMAND;
+		return ERROR_BAD_COMMAND;	
 	}
 	hr = pd3dDevice->CreateVertexShader((DWORD*)pBlob->GetBufferPointer(), pBlob->GetBufferSize(), NULL, &pVS);
 	_ASSERT(SUCCEEDED(hr));
@@ -247,7 +253,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	ID3D11PixelShader* pPS = NULL;
 	SCOPE_EXIT(SafeRelease(pPS));
 	D3D_SHADER_MACRO PSShaderMacros[] = { { "HLSL", "5.0" },{ "HLSLTOY", "1.0" }, { 0, 0 } };
-	hr = D3DCompileFromFile(szArglist[1], PSShaderMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0, &pBlob, &pErrorBlob);
+	hr = D3DCompileFromFile(szArglist[1], PSShaderMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", flags, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
 		ShowError("pixel compilation error", pErrorBlob);
