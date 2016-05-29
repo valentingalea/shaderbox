@@ -2,46 +2,49 @@
 #include "util.h"
 #include "volumetric.h"
 
-//#include "noise_iq.h"
-//#define noise(x) noise_iq(x)
+#include "../lib/ashima-noise/src/common.glsl"
+#include "../lib/ashima-noise/src/classicnoise3d.glsl"
 #include "../lib/ashima-noise/src/noise3d.glsl"
-#define noise(x) snoise(x)
+#include "../lib/ashima-noise/src/cellular3d.glsl"
+#define noise(x) (snoise(x))
 
 #include "fbm.h"
-DECL_FBM_FUNC(fbm_clouds, 5, abs(noise(p)))
+DECL_FBM_FUNC(fbm_simple_but_nice, 5, abs(snoise(p)))
+DECL_FBM_FUNC(fbm_low_freq_perlin, 4, cnoise(p))
+DECL_FBM_FUNC(fbm_low_freq_worley, 3, cellular(p).r)
 
-void intersect_sphere(
-	_in(ray_t) ray,
-	_in(sphere_t) sphere,
-	_inout(hit_t) hit
-) {
-	vec3 rc = sphere.origin - ray.origin;
-	float radius2 = sphere.radius * sphere.radius;
-	float tca = dot(rc, ray.direction);
-	float d2 = dot(rc, rc) - tca * tca;
-	float thc = sqrt(radius2 - d2);
-	float t0 = tca - thc;
-	float t1 = tca + thc;
+//#define TEX
+#ifdef TEX
+Texture3D u_tex_noise : register(t1);
+SamplerState u_sampler0 : register(s0);
+#endif
 
-	vec3 impact = ray.origin + ray.direction * t0;
-	hit.t = t0;
-	hit.material_id = sphere.material;
-	hit.origin = impact;
-	hit.normal = (impact - sphere.origin) / sphere.radius;
+float fbm_final(_in(vec3) pos)
+{
+#ifdef TEX
+	return u_tex_noise.SampleLevel(u_sampler0, pos, 0).r;
+#endif
+
+	//return fbm_simple_but_nice(pos * 2.03, 2.64, .5, .5);
+
+	float p = fbm_low_freq_perlin(pos * 4., 2., .5, .5);
+	float w = 1. - fbm_low_freq_worley(pos * 4., 4., .5, .5);
+	float n = remap(p, -w, 1., 0., 1.);
+	return n;
 }
 
 // ----------------------------------------------------------------------------
 // Clouds
 // ----------------------------------------------------------------------------
 #define cld_march_steps  (50)
-#define cld_coverage     (.3125)
-#define cld_thick        (50.)
+#define cld_coverage     (.3475)
+#define cld_thick        (100.)
 #define cld_absorb_coeff (1.)
 #define cld_wind_dir     vec3(0, 0, -u_time * .2)
 #define cld_sun_dir      normalize(vec3(0, abs(sin(u_time * .3)), -1))
 
 _constant(sphere_t) atmosphere = _begin(sphere_t)
-	vec3(0, -450, 0), 500., 0
+	vec3(0, -475, 0), 500., 0
 _end;
 
 void setup_camera(
@@ -66,16 +69,15 @@ vec3 render_sky_color(
 	sky += sun_color * min(pow(sun_amount, 1500.0) * 5.0, 1.0);
 	sky += sun_color * min(pow(sun_amount, 10.0) * .6, 1.0);
 
-	return sky;
+	return abs(sky);
 }
 
 float density_func(
 	_in(vec3) pos,
 	_in(float) h
 ){
-	vec3 p = pos / atmosphere.radius;
-	float dens = fbm_clouds(p * 2.03, 2.64, .5, .5);
-	
+	vec3 p = pos / atmosphere.radius;// - cld_wind_dir;
+	float dens = fbm_final(p);
 	dens *= smoothstep (cld_coverage, cld_coverage + .035, dens);
 	return dens;
 }
@@ -85,7 +87,27 @@ float illuminate_volume(
 	_in(vec3) V,
 	_in(vec3) L
 ){
-	return exp(cloud.height) / 2.2;
+	return exp(cloud.height) / 2.02;
+}
+
+void intersect_sphere(
+	_in(ray_t) ray,
+	_in(sphere_t) sphere,
+	_inout(hit_t) hit
+) {
+	vec3 rc = sphere.origin - ray.origin;
+	float radius2 = sphere.radius * sphere.radius;
+	float tca = dot(rc, ray.direction);
+	float d2 = dot(rc, rc) - tca * tca;
+	float thc = sqrt(radius2 - d2);
+	float t0 = tca - thc;
+	float t1 = tca + thc;
+
+	vec3 impact = ray.origin + ray.direction * t0;
+	hit.t = t0;
+	hit.material_id = sphere.material;
+	hit.origin = impact;
+	hit.normal = (impact - sphere.origin) / sphere.radius;
 }
 
 vec4 render_clouds(
@@ -104,6 +126,9 @@ vec4 render_clouds(
 		hit.origin,
 		cld_absorb_coeff);
 
+#ifdef HLSL
+	[fastopt] [loop]
+#endif
 	for (int i = 0; i < steps; i++) {
 		cloud.height = float(i) / float(steps);
 		float dens = density_func(cloud.pos, cloud.height);
@@ -127,13 +152,16 @@ vec3 render(
 	_in(vec3) point_cam
 ){
 	vec3 sky = render_sky_color(eye_ray.direction);
+#ifdef HLSL
+	[flatten]
+#endif
 	if (dot(eye_ray.direction, vec3(0, 1, 0)) < 0.05) return sky;
 
 	vec4 cld = render_clouds(eye_ray);
 	vec3 col = mix(sky, cld.rgb, cld.a);
 
-	return col;
+	return abs(col);
 }
 
-#define FOV 1. // 45 degrees
+#define FOV tan(radians(30.))
 #include "main.h"
