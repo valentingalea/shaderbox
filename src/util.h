@@ -124,3 +124,16 @@ void fast_orthonormal_basis(
 	r = vec3(b, 1. - n.y*n.y*a, -n.y);
 }
 
+float remap(
+	_in(float) original_value,
+	_in(float) original_min,
+	_in(float) original_max,
+	_in(float) new_min,
+	_in(float) new_max
+){
+	return new_min +
+		(((original_value - original_min) /
+		(original_max - original_min)) *
+			(new_max - new_min));
+}
+
