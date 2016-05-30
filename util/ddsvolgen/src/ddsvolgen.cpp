@@ -60,8 +60,8 @@ DECL_FBM_FUNC(fbm_dds, 5, abs(pnoise(p, vec3(lacunarity))))
 // ----------------------------------------------------------------------------
 int main(int argc, char* argv[])
 {
-	constexpr auto size = 128;
-	constexpr auto channels = 1;
+	constexpr size_t size = 128;
+	constexpr size_t channels = 1;
 
 	DDS dds = { 0 };
 
@@ -84,18 +84,18 @@ int main(int argc, char* argv[])
 	dds.header10.miscFlag = 0;
 	dds.header10.miscFlags2 = 0;
 
-	const auto total_size = size * size* size * (sizeof(FLOAT) * channels);
+	const size_t total_size = size * size* size * (sizeof(FLOAT) * channels);
 	std::unique_ptr<FLOAT[]> data;
 	data.reset(new (std::nothrow) FLOAT[total_size]);
 	if (!data) {
 		return 1;
 	}
 
-	auto worker = [&](int start, int count) {
-		for (int z = start; z < start + count; z++) {
-			for (int y = 0; y < size; y++) {
-				for (int x = 0; x < size; x++) {
-					vec3 input = vec3(x, y, z) / FLOAT(size);
+	auto worker = [&](size_t start, size_t count) {
+		for (size_t z = start; z < start + count; z++) {
+			for (size_t y = 0; y < size; y++) {
+				for (size_t x = 0; x < size; x++) {
+					vec3 input = (vec3(x, y, z) + .5f) / FLOAT(size);
 					*(data.get() + size*size*z + size*y + x) =
 						fbm_dds(input * 2.03, 2.64, .5, .5);
 				}
@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
 	};
 
 	printf("starting work...\n");
-	constexpr auto size_quota = size / 4;
+	constexpr size_t size_quota = size / 4;
 	std::thread w1{ worker, size_quota * 0, size_quota };
 	std::thread w2{ worker, size_quota * 1, size_quota };
 	std::thread w3{ worker, size_quota * 2, size_quota };
