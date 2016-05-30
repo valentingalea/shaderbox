@@ -21,20 +21,20 @@ _end;
 vec3 background(
 	_in(ray_t) eye
 ){
-#if 1
+#if 0
 	return vec3(.15, .3, .4);
 #else
 	_constant(vec3) sun_color = vec3(1., .9, .55);
-	float sun_amount = dot(eye.direction, vec3(0, 0, 1));
+	float sun_amount = clamp(dot(eye.direction, vec3(0, 0, 1)), 0., 1.);
 
 	vec3 sky = mix(
 		vec3(.0, .05, .2),
 		vec3(.15, .3, .4),
 		1.0 - eye.direction.y);
-	sky += sun_color * min(pow(sun_amount, 30.0) * 5.0, 1.0);
-	sky += sun_color * min(pow(sun_amount, 10.0) * .6, 1.0);
+	sky += sun_color * clamp(pow(sun_amount, 30.0) * 5.0, 0., 1.);
+	sky += sun_color * clamp(pow(sun_amount, 10.0) * .6, 0., 1.);
 
-	return sky;
+	return abs(sky);
 #endif
 }
 
@@ -288,6 +288,9 @@ vec3 render(
 
 	hit_t hit = no_hit;
 	intersect_sphere(eye, atmosphere, hit);
+#ifdef HLSL
+	[flatten]
+#endif
 	if (hit.material_id < 0) {
 		return background(eye);
 	}
@@ -332,9 +335,9 @@ vec3 render(
 		shadow = mix(.7, 1., step(cloud.alpha, 0.33));
 #endif
 
-		return mix(c_terr * shadow, c_cld, alpha);
+		return abs(mix(c_terr * shadow, c_cld, alpha));
 	} else {
-		return mix(background(eye), cloud.C, cloud.alpha);
+		return abs(mix(background(eye), cloud.C, cloud.alpha));
 	}
 }
 
