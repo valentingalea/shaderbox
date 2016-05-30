@@ -50,10 +50,11 @@ typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4
 #include "../../../lib/ashima-noise/src/classicnoise3d.glsl"
 #include "../../../lib/ashima-noise/src/noise3d.glsl"
 #include "../../../lib/ashima-noise/src/cellular3d.glsl"
-#define noise(x) (snoise(x))
+#include "../../../src/noise_worley.h"
 
 #include "../../../src/fbm.h"
-DECL_FBM_FUNC(fbm_dds, 5, abs(pnoise(p, vec3(lacunarity))))
+//DECL_FBM_FUNC_TILE(fbm_dds, 4, (1. - noise_w(p, L).r))
+DECL_FBM_FUNC_TILE(fbm_dds, 4, abs(pcnoise(p, L)))
 
 // ----------------------------------------------------------------------------
 // Main
@@ -97,7 +98,7 @@ int main(int argc, char* argv[])
 				for (size_t x = 0; x < size; x++) {
 					vec3 input = (vec3(x, y, z) + .5f) / FLOAT(size);
 					*(data.get() + size*size*z + size*y + x) =
-						fbm_dds(input * 2.03, 2.64, .5, .5);
+						fbm_dds(input * 2.f, 2.f, .5f, .5);
 				}
 			}
 		}
