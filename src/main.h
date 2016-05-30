@@ -36,8 +36,6 @@ void mainImage(
 	// assuming screen width is larger than height 
 	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);
 
-	vec3 color = vec3(0, 0, 0);
-
 	vec3 eye, look_at;
 	setup_camera(eye, look_at);
 
@@ -53,7 +51,7 @@ void mainImage(
 
 	ray_t ray = get_primary_ray(point_cam, eye, look_at);
 
-	color += render(ray, point_cam);
+	vec3 color = render(ray, point_cam);
 
 	fragColor = vec4(linear_to_srgb(color), 1);
 }
