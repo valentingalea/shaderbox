@@ -3,13 +3,16 @@
 #include "../lib/ashima-noise/src/common.glsl"
 #include "../lib/ashima-noise/src/classicnoise3d.glsl"
 #include "../lib/ashima-noise/src/noise3d.glsl"
-#include "../lib/ashima-noise/src/cellular3d.glsl"
-#define noise(x) (snoise(x))
+//#include "../lib/ashima-noise/src/cellular3d.glsl"
+//#include "noise_worley.h"
 
 #include "fbm.h"
-DECL_FBM_FUNC(fbm_perlin, 4, cnoise(p))
-DECL_FBM_FUNC(fbm_simplex, 4, snoise(p))
-DECL_FBM_FUNC(fbm_worley, 4, cellular(p).r)
+DECL_FBM_FUNC(fbm_perlin, 4, abs(cnoise(p)))
+DECL_FBM_FUNC(fbm_simplex, 4, abs(snoise(p)))
+//DECL_FBM_FUNC(fbm_worley, 4, cellular(p).r)
+
+//DECL_FBM_FUNC_TILE(fbm_worley_tile, 4, noise_w(p, L).r)
+DECL_FBM_FUNC_TILE(fbm_perlin_tile, 4, abs(pcnoise(p, L)))
 
 #define SCALE 1.
 #define D (.0125 * SCALE)
@@ -41,6 +44,13 @@ void mainImage(
 
 	vec3 col = vec3(0, 0, 0);
 
+#if 0 // 2D
+	vec3 pos = vec3(t, 0);
+	float n = fbm_perlin_tile(pos * 2., 2., .5, .5);
+
+	col += vec3(n, n, n);
+#else // 1D
+
 // optional: center around origin by going to [-1, +1] and scale
 	t = (t * 2. - 1.) * SCALE;
 	
@@ -59,8 +69,9 @@ void mainImage(
 	vec3 pos = vec3(t.x, 0, 0);
 	col += plot(fbm_perlin(pos, 2., .5, .5), t.y, vec3(1, 0, 0));
 	col += plot(fbm_simplex(pos, 2., .5, .5), t.y, vec3(0, 1, 0));
-	col += plot(fbm_worley(pos, 2., .5, .5), t.y, vec3(0, 0, 1));
+	//col += plot(fbm_worley(pos, 2., .5, .5), t.y, vec3(0, 0, 1));
 
+#endif
 // output
 	fragColor = vec4 (col, 1);
 }
