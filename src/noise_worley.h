@@ -18,8 +18,11 @@ vec3 hash_w(
 
 // returns closest, second closest, and cell id
 vec3 noise_w(
-	_in(vec3) x
+	_in(vec3) pos,
+	_in(float) domain_repeat
 ){
+	vec3 x = pos * domain_repeat;
+
 	vec3 p = floor(x);
 	vec3 f = fract(x);
 
@@ -30,7 +33,7 @@ vec3 noise_w(
 			for (int i = -1; i <= 1; i++)
 			{
 				vec3 b = vec3(float(i), float(j), float(k));
-				vec3 r = vec3(b) - f + hash_w(p + b);
+				vec3 r = vec3(b) - f + hash_w(mod(p + b, domain_repeat));
 				float d = dot(r, r);
 
 				if (d < res.x)
