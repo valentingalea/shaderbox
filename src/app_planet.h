@@ -1,6 +1,8 @@
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
+
+#define hg_g (.76)
 #include "volumetric.h"
 
 #include "noise_iq.h"

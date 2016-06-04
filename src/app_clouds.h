@@ -1,5 +1,7 @@
 #include "def.h"
 #include "util.h"
+
+#define hg_g (.76)
 #include "volumetric.h"
 
 #include "../lib/ashima-noise/src/common.glsl"

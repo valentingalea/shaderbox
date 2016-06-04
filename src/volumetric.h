@@ -18,31 +18,30 @@ float rayleigh_phase_func(float mu)
 	           (16. * PI);
 }
 
+// Henyey-Greenstein phase function factor [-1, 1]
+// represents the average cosine of the scattered directions
+// 0 is isotropic scattering
+// > 1 is forward scattering, < 1 is backwards
+//#define hg_g <external>
+
 float henyey_greenstein_phase_func(float mu)
 {
-	// Henyey-Greenstein phase function factor [-1, 1]
-	// represents the average cosine of the scattered directions
-	// 0 is isotropic scattering
-	// > 1 is forward scattering, < 1 is backwards
-	const float g = 0.76;
-
 	return
-	                     (1. - g*g)
+	                     (1. - hg_g*hg_g)
 	/ //---------------------------------------------
-	     ((4. + PI) * pow(1. + g*g - 2.*g*mu, 1.5));
+	     ((4. + PI) * pow(1. + hg_g*hg_g - 2.*hg_g*mu, 1.5));
 }
 
 float schlick_phase_func(float mu)
 {
 	// Schlick Phase Function factor
 	// Pharr and  Humphreys [2004] equivalence to g from Henyey-Greenstein
-	const float g = 0.76;
-	const float k = 1.55*g - 0.55 * (g*g*g);
+#define shk_g (1.55*hg_g - 0.55 * (hg_g*hg_g*hg_g))
 
 	return
-	                  (1. - k*k)
+	                  (1. - shk_g*shk_g)
 	/ //-------------------------------------------
-	     (4. * PI * (1. + k*mu) * (1. + k*mu));
+	     (4. * PI * (1. + shk_g*mu) * (1. + shk_g*mu));
 }
 
 struct volume_sampler_t {

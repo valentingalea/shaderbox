@@ -8,6 +8,8 @@
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
+
+#define hg_g (.76)
 #include "volumetric.h"
 
 bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout(float) t1)
@@ -16,12 +18,11 @@ bool isect_sphere(_in(ray_t) ray, _in(sphere_t) sphere, _inout(float) t0, _inout
 	float radius2 = sphere.radius * sphere.radius;
 	float tca = dot(rc, ray.direction);
 	float d2 = dot(rc, rc) - tca * tca;
-	if (d2 > radius2) return false;
 	float thc = sqrt(radius2 - d2);
 	t0 = tca - thc;
 	t1 = tca + thc;
 
-	return true;
+	return d2 < radius2;
 }
 
 // scattering coefficients at sea level (m)
@@ -78,6 +79,9 @@ vec3 get_incident_light(_in(ray_t) ray)
 {
 	// "pierce" the atmosphere with the viewing ray
 	float t0, t1;
+#ifdef HLSL
+	[flatten]
+#endif
 	if (!isect_sphere(
 		ray, atmosphere, t0, t1)) {
 		return vec3(0., 0., 0.);
@@ -152,7 +156,7 @@ vec3 get_incident_light(_in(ray_t) ray)
 	return
 		sun_power *
 		(sumR * phaseR * betaR +
-		sumM * phaseM * betaR);
+		sumM * phaseM * betaM);
 }
 
 #define FROM_SPACE 1
@@ -163,7 +167,7 @@ void setup_camera(
 ){
 #ifdef FROM_SPACE
 	eye = vec3(0, 0, 0);
-	look_at = vec3(0, 0, 0);
+	look_at = vec3(0, 1, 0);
 #else
 	eye = vec3(0, earth_radius + 1., 0);
 	look_at = vec3(0, earth_radius + 1.5, -1);
