@@ -1,7 +1,7 @@
 #include "def.h"
 #include "util.h"
 
-#define hg_g (.76)
+#define hg_g (.2)
 #include "volumetric.h"
 
 // ----------------------------------------------------------------------------
@@ -11,10 +11,10 @@
 #define sun_dir		normalize(vec3(0, abs(sin(u_time * .3)), -1))
 #define sun_color	vec3(1., .7, .55)
 
-//#define SPHERE
+#define SPHERE
 #ifdef SPHERE
 _constant(sphere_t) atmosphere = _begin(sphere_t)
-	vec3(0, -475, 0), 500., 0
+	vec3(0, -495, 0), 500., 0
 _end;
 
 void intersect_sphere(
@@ -79,7 +79,7 @@ DECL_FBM_FUNC(fbm_simple_but_nice, 5, abs(snoise(p)))
 DECL_FBM_FUNC(fbm_low_freq_perlin, 4, cnoise(p))
 DECL_FBM_FUNC(fbm_low_freq_worley, 3, cellular(p).r)
 
-//#define TEX
+#define TEX
 #ifdef TEX
 Texture3D u_tex_noise : register(t1);
 SamplerState u_sampler0 : register(s0);
@@ -89,31 +89,27 @@ float density_func(
 	_in(vec3) pos_in,
 	_in(float) height
 ){
-	vec3 pos = pos_in * cld_noise_factor + wind_dir;
+	vec3 pos = pos_in * cld_noise_factor;// +wind_dir;
 
-	float base = 0.;
-	{
+	float base =
 #ifdef TEX
-		base = u_tex_noise.SampleLevel(u_sampler0, pos, 0).r;
+	u_tex_noise.SampleLevel(u_sampler0, pos, 0).r;
+#else
+	fbm_simple_but_nice(pos * 2.03, 2.64, .5, .5);
+
+	//float p = fbm_low_freq_perlin(pos * 4., 2., .5, .5);
+	//float w = 1. - fbm_low_freq_worley(pos * 4., 4., .5, .5);
+	//base = remap(p, -w, 1., 0., 1.);
 #endif
 
-		base =  fbm_simple_but_nice(pos * 2.03, 2.64, .5, .5);
-
-		//float p = fbm_low_freq_perlin(pos * 4., 2., .5, .5);
-		//float w = 1. - fbm_low_freq_worley(pos * 4., 4., .5, .5);
-		//base = remap(p, -w, 1., 0., 1.);
-	}
-
-	{
-#define cld_coverage (.35)
-		// my old method
-			//return base * smoothstep (cld_coverage, cld_coverage + .035, base);
-		// book equiv method
-			//return smoothstep(cld_coverage, 1., base);
-		// GPU Pro 7
-			float base_with_coverage = remap(base, cld_coverage, 1., 0., 1.);
-			return clamp(base_with_coverage * cld_coverage, 0, 1);
-	}
+#define cld_coverage (.435)
+// my old method
+	return base * smoothstep (cld_coverage, cld_coverage + .135, base);
+// book equiv method
+	//return smoothstep(cld_coverage, 1., base);
+// GPU Pro 7
+	//float base_with_coverage = remap(base, cld_coverage, 1., 0., 1.);
+	//return clamp(base_with_coverage * cld_coverage, 0, 1);
 }
 
 // ----------------------------------------------------------------------------
@@ -124,7 +120,7 @@ float density_func(
 #define illum_march_steps	(6)
 
 #define sigma_absobtion		(0.)
-#define sigma_scattering	(1.)
+#define sigma_scattering	(.15)
 
 struct volumetric_sampler_t {
 	vec3 origin; // start of ray
@@ -155,13 +151,13 @@ float illuminate_volumetric(
 	_in(vec3) V,
 	_in(vec3) L
 ){
-#if 1
-	return exp(height) / 2.02;
+#if 0
+	float luminance = exp(height) / 2.;
 #else
 
-	const float dt = cld_thick / float(illum_march_steps);
+	const float dt = cld_thick / float(cld_march_steps);
 	volumetric_sampler_t vol = define_volume(origin);
-	vol.pos += L * (dt / 2.); // don't sample just where the main raymarcher is
+	vol.pos += L * dt; // don't sample just where the main raymarcher is
 
 #ifdef HLSL
 	[unroll(illum_march_steps)]
@@ -174,7 +170,13 @@ float illuminate_volumetric(
 		vol.pos += L * dt;
 	}
 
-	return vol.transmittance;
+	float luminance = vol.transmittance;
+#endif
+
+#if 0
+	return luminance;
+#else
+	return luminance * henyey_greenstein_phase_func(clamp(dot(L, V), 0., 1.));
 #endif
 }
 
@@ -185,17 +187,18 @@ void integrate_volumetric(
 	_in(float) density,
 	_in(float) dt
 ){
+	// change in transmittance (follows Beer-Lambert law)
+	float T_i = exp(-density * sigma_scattering * dt);
+	// Update accumulated transmittance
+	vol.transmittance *= T_i;
+
 	// integrate output radiance (here essentially color)
 	vol.radiance += 
 		(density * sigma_scattering) * 
 		illuminate_volumetric(vol.pos, vol.height, V, L) *
-		vol.transmittance *
+		vol.transmittance * 
+		8. *
 		dt;
-
-	// change in transmittance (follows Beer-Lambert law)
-	float T_i = exp(- density * sigma_scattering * dt);
-	// Update accumulated transmittance
-	vol.transmittance *= T_i;
 
 	// accumulate opacity
 	vol.alpha += (1. - T_i) * (1. - vol.alpha);
@@ -263,5 +266,5 @@ vec3 render(
 	return abs(col);
 }
 
-#define FOV 1.//tan(radians(30.))
+#define FOV tan(radians(30.))
 #include "main.h"
