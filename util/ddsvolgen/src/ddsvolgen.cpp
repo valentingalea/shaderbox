@@ -6,7 +6,7 @@
 #include <new>
 #include <thread>
 
-#include <d3d11.h>
+typedef unsigned long DWORD;
 #include "../../../lib/DirectXTex/DirectXTex/DDS.h"
 using namespace DirectX;
 
@@ -16,10 +16,6 @@ struct DDS
 	DDS_HEADER header;
 	DDS_HEADER_DXT10 header10;
 };
-
-// some random windows header defines these
-#undef min
-#undef max
 
 // ----------------------------------------------------------------------------
 // CxxSwizzle support
@@ -63,6 +59,7 @@ int main(int argc, char* argv[])
 {
 	constexpr size_t size = 128;
 	constexpr size_t channels = 1;
+	using FLOAT = float;
 
 	DDS dds = { 0 };
 
