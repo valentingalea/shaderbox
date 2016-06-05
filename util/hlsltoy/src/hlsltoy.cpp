@@ -130,17 +130,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
 {
+//
+// Command line
+//
 	LPWSTR *szArglist = NULL;
 	SCOPE_EXIT(if (szArglist) LocalFree(szArglist));
 	int nArgs = 0;
 	szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
 	if (!szArglist || nArgs < 2)
 	{
-		ShowError("Minimal DX11 Framework.\n\Usage:\nhlsltoy <shader file> [noise dds file]");
+		ShowError("Minimal DX11 Shader Framework.\n\Usage:\nhlsltoy <shader file> [noise dds file] [noise dds file]");
 		return ERROR_INVALID_COMMAND_LINE;
 	}
 
-	// win32 window
+//
+// Win32 window
+//
 	HRESULT hr = NULL;
 	HINSTANCE hinst = GetModuleHandle(NULL);
 	WNDCLASS wc = { CS_HREDRAW | CS_VREDRAW | CS_OWNDC, (WNDPROC)WndProc, 0, 0, hinst, LoadIcon(NULL, IDI_WINLOGO), LoadCursor(NULL, IDC_ARROW), 0, 0, lpszClassName };
@@ -160,7 +165,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		0, 0, hinst, 0);
 	SwapChainDesc.OutputWindow = hWnd;
 
-	// setting up device
+//
+// DX setting up device
+//
 	ID3D11Device* pd3dDevice = NULL;
 	ID3D11DeviceContext* pImmediateContext = NULL;
 	IDXGISwapChain* pSwapChain = NULL;
@@ -176,7 +183,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		0, 0, D3D11_SDK_VERSION, &SwapChainDesc, &pSwapChain, &pd3dDevice, NULL, &pImmediateContext);
 	if (FAILED(hr)) return hr;
 
-	// textures
+//
+// Checkboard texture
+//
 	ID3D11Texture2D* pTex = CreateTextureCheckboard(pd3dDevice, 128, 128, 16);
 	ID3D11ShaderResourceView *pTexV = NULL;
 	SCOPE_EXIT(SafeRelease(pTex));
@@ -184,6 +193,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateShaderResourceView(pTex, NULL/*whole res*/, &pTexV);
 	_ASSERT(SUCCEEDED(hr));
 
+//
+// Noise textures
+//
 	ID3D11ShaderResourceView *pNoiseTexV = NULL;
 	if (nArgs >= 3)
 	{
@@ -191,6 +203,16 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	}
 	SCOPE_EXIT(SafeRelease(pNoiseTexV));
 
+	ID3D11ShaderResourceView *pNoiseTexV_2 = NULL;
+	if (nArgs >= 4)
+	{
+		pNoiseTexV_2 = CreateNoiseTexture(pd3dDevice, szArglist[3]);
+	}
+	SCOPE_EXIT(SafeRelease(pNoiseTexV_2));
+
+//
+// Textures sampler
+//
 	ID3D11SamplerState *pSampler = NULL;
 	SCOPE_EXIT(SafeRelease(pSampler));
 	D3D11_SAMPLER_DESC sSamplerDesc = { D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP , D3D11_TEXTURE_ADDRESS_WRAP,
@@ -198,7 +220,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateSamplerState(&sSamplerDesc, &pSampler);
 	_ASSERT(SUCCEEDED(hr));
 
-	// backbuffer render target
+//
+// Backbuffer render target
+//
 	ID3D11Texture2D* pBackBuffer = NULL;
 	SCOPE_EXIT(SafeRelease(pBackBuffer));
 	hr = pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
@@ -211,18 +235,21 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 
 	pImmediateContext->OMSetRenderTargets(1, &pRenderTargetView, NULL);
 
-	// viewport
+//
+// Wiewport & Rasterizer
+//
 	D3D11_VIEWPORT vp = { 0, 0, WIDTH, HEIGHT, 0., 1. };
 	pImmediateContext->RSSetViewports(1, &vp);
 
-	// rasterizer params
 	D3D11_RASTERIZER_DESC rasterizerDesc = { D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE, 0, 0., 0., FALSE, FALSE, FALSE, FALSE };
 	ID3D11RasterizerState* pd3dRasterizerState = NULL;
 	SCOPE_EXIT(SafeRelease(pd3dRasterizerState));
 	hr = pd3dDevice->CreateRasterizerState(&rasterizerDesc, &pd3dRasterizerState);
 	_ASSERT(SUCCEEDED(hr));
 
-	// common tracking vars
+//
+// Common tracking vars & settings
+//
 	ID3D10Blob* pErrorBlob = NULL;
 	ID3D10Blob* pBlob = NULL;
 	SCOPE_EXIT(SafeRelease(pErrorBlob));
@@ -235,7 +262,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 #endif
 		;
 
-// vertex shader
+//
+// Vertex shader
+//
 	ID3D11VertexShader* pVS = NULL;
 	SCOPE_EXIT(SafeRelease(pVS));
 	hr = D3DCompile(szVertexShader, sizeof(szVertexShader), 0, 0, 0, "main", "vs_5_0", flags, 0, &pBlob, &pErrorBlob);
@@ -249,7 +278,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SafeRelease(pBlob);
 	SafeRelease(pErrorBlob);
 
-// pixel shader
+//
+// Pixel shader
+//
 	ID3D11PixelShader* pPS = NULL;
 	SCOPE_EXIT(SafeRelease(pPS));
 	D3D_SHADER_MACRO PSShaderMacros[] = { { "HLSL", "5.0" },{ "HLSLTOY", "1.0" }, { 0, 0 } };
@@ -264,7 +295,9 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SafeRelease(pBlob);
 	SafeRelease(pErrorBlob);
 
-// uniforms buffer
+//
+// Constants uniforms buffer
+//
 	__declspec(align(16)) struct PS_CONSTANT_BUFFER
 	{
 		DirectX::XMFLOAT2 resolution;
@@ -279,15 +312,20 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateBuffer(&uniformBuffDesc, &pData, &pUniformBuff);
 	_ASSERT(SUCCEEDED(hr));
 
-// bind stuff to stages
+//
+// Bind stuff to stages
+//
 	pImmediateContext->VSSetShader(pVS, NULL, 0);
 	pImmediateContext->PSSetShader(pPS, NULL, 0);
 	pImmediateContext->PSSetConstantBuffers(0, 1, &pUniformBuff);
 	pImmediateContext->PSSetShaderResources(0, 1, &pTexV);
 	pImmediateContext->PSSetShaderResources(1, 1, &pNoiseTexV);
+	pImmediateContext->PSSetShaderResources(2, 1, &pNoiseTexV_2);
 	pImmediateContext->PSSetSamplers(0, 1, &pSampler);
 
-// message pump and rendering
+//
+// Message pump and rendering
+//
 	auto timerStart = std::chrono::high_resolution_clock::now();
 	MSG msg = {};
 	do
@@ -308,8 +346,8 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 
 		pSwapChain->Present(0, 0);
 
-		// update the uniforms - use DISCARD to avoid CPU/GPU fighting for the resource
-		// but this means we need to re-send everything
+	// update the uniforms - use DISCARD to avoid CPU/GPU fighting for the resource
+	// but this means we need to re-send everything
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
 		hr = pImmediateContext->Map(pUniformBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		_ASSERT(SUCCEEDED(hr));
