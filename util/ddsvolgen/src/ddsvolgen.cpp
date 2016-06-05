@@ -41,6 +41,7 @@ typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4
 // GLSL layer
 // ----------------------------------------------------------------------------
 #include "../../../src/def.h"
+#include "../../../src/util.h"
 
 #include "../../../lib/ashima-noise/src/common.glsl"
 #include "../../../lib/ashima-noise/src/classicnoise3d.glsl"
@@ -49,8 +50,16 @@ typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4
 #include "../../../src/noise_worley.h"
 
 #include "../../../src/fbm.h"
-//DECL_FBM_FUNC_TILE(fbm_dds, 4, (1. - noise_w(p, L).r))
-DECL_FBM_FUNC_TILE(fbm_dds, 4, abs(pcnoise(p, L)))
+
+DECL_FBM_FUNC_TILE(fbm_worley_tile, 4, (1. - (noise_w(p, L).r + .25)))
+DECL_FBM_FUNC_TILE(fbm_perlin_tile, 4, abs(pcnoise(p, L)))
+
+float fbm_dds(vec3 &pos)
+{
+	float p = fbm_perlin_tile(pos, 2., 1., .5);
+	float w = 1. - fbm_worley_tile(pos, 4., 1., .5);
+	return remap(p, -w, 1., 0., 1.);
+}
 
 // ----------------------------------------------------------------------------
 // Main
@@ -93,9 +102,8 @@ int main(int argc, char* argv[])
 		for (size_t z = start; z < start + count; z++) {
 			for (size_t y = 0; y < size; y++) {
 				for (size_t x = 0; x < size; x++) {
-					vec3 input = (vec3(x, y, z) + .5f) / FLOAT(size);
-					*(data.get() + size*size*z + size*y + x) =
-						fbm_dds(input * 2.f, 2.f, .5f, .5);
+					vec3 pos = (vec3(x, y, z) + .5f) / FLOAT(size);
+					*(data.get() + size*size*z + size*y + x) = fbm_dds(pos);
 				}
 			}
 		}
