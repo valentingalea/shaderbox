@@ -113,8 +113,16 @@ int main(int argc, char* argv[])
 	w3.join();
 	w4.join();
 
+	time_t rawtime;
+	time(&rawtime);
+	tm timeinfo;
+	localtime_s(&timeinfo, &rawtime);
+	constexpr int SZ = 128;
+	char dds_file[SZ];
+	strftime(dds_file, SZ, "noise3d-%Y-%m-%d-%H-%M-%S.dds\0", &timeinfo);
+
 	auto file_closer = [](FILE* f) { fclose(f); };
-	std::unique_ptr<FILE, decltype(file_closer)> file = { fopen("noise3d.dds", "wb+"), file_closer };
+	std::unique_ptr<FILE, decltype(file_closer)> file = { fopen(dds_file, "wb+"), file_closer };
 	if (!file) {
 		return 2;
 	}
