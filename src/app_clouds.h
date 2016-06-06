@@ -8,7 +8,7 @@
 // Scene
 // ----------------------------------------------------------------------------
 #define wind_dir	vec3(0, 0, -u_time * .2)
-#define sun_dir		normalize(vec3(0, abs(sin(u_time * .3)), -1))
+#define sun_dir		normalize(vec3(0, .5, -1))
 #define sun_color	vec3(1., .7, .55)
 
 #define SPHERE
@@ -86,7 +86,6 @@ SamplerState u_sampler0 : register(s0);
 DECL_FBM_FUNC(fbm_simplex, 5, abs(snoise(p)))
 DECL_FBM_FUNC_TILE(fbm_worley_tile, 4, (1. - (noise_w(p, L).r + .25)))
 
-
 float density_func(
 	_in(vec3) pos_in,
 	_in(float) height
@@ -105,6 +104,7 @@ float density_func(
 #endif
 
 #define cld_coverage (.735)
+#if 1
 // my old method
 	return smoothstep(cld_coverage, cld_coverage + .0135, base);
 // book equiv method
@@ -112,12 +112,20 @@ float density_func(
 // GPU Pro 7
 	//float base_with_coverage = remap(base, cld_coverage, 1., 0., 1.);
 	//return clamp(base_with_coverage * cld_coverage, 0, 1);
+#else
+	float ww = 1. -
+		//fbm_worley_tile(pos, 7., 1., .5);
+		u_tex_noise_2.SampleLevel(u_sampler0, pos, 0).r;
+	float n = remap(base, ww * .4, 1., 0., 1.);
+	n *= smoothstep(cld_coverage, cld_coverage + .0135, n);
+	return n;
+#endif
 }
 
 // ----------------------------------------------------------------------------
 // Volumetrics
 // ----------------------------------------------------------------------------
-#define cld_march_steps		(50)
+#define cld_march_steps		(100)
 #define cld_thick			(100.)
 #define illum_march_steps	(6)
 
@@ -189,6 +197,10 @@ void integrate_volumetric(
 	_in(float) density,
 	_in(float) dt
 ){
+	if (density < .005) {
+		return;
+	}
+
 	// change in transmittance (follows Beer-Lambert law)
 	float T_i = exp(-density * sigma_scattering * dt);
 	// Update accumulated transmittance
@@ -256,6 +268,7 @@ vec3 render(
 	_in(ray_t) eye_ray,
 	_in(vec3) point_cam
 ){
+
 	vec3 sky = render_sky_color(eye_ray.direction);
 #ifdef HLSL
 	[flatten]
