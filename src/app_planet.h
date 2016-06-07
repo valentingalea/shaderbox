@@ -76,6 +76,29 @@ float illuminate_volume(
 	return exp(cloud.height) / .055;
 }
 
+void integrate_volume(
+	_inout(volume_sampler_t) vol,
+	_in(vec3) V,
+	_in(vec3) L,
+	_in(float) density,
+	_in(float) dt
+){
+	// change in transmittance (follows Beer-Lambert law)
+	float T_i = exp(-vol_coeff_absorb * density * dt);
+	// Update accumulated transmittance
+	vol.transmittance *= T_i;
+
+	// integrate output radiance (here essentially color)
+	vol.radiance += 
+		density * 
+		illuminate_volume(vol, V, L) *
+		vol.transmittance *
+		dt;
+
+	// accumulate opacity
+	vol.alpha += (1. - T_i) * (1. - vol.alpha);
+}
+
 void clouds_map(
 	_inout(volume_sampler_t) cloud,
 	_in(float) t_step
@@ -319,19 +342,19 @@ vec3 render(
 	}
 
 #ifdef CLOUDS
-	cloud = begin_volume(hit.origin, vol_coeff_absorb);
+	cloud = construct_volume(hit.origin);
 	clouds_march(eye, cloud, max_cld_ray_dist, rot_cloud);
 #endif
 	
 	if (df.x < TERR_EPS) {
 		vec3 c_terr = illuminate(pos, eye.direction, rot, df);
-		vec3 c_cld = cloud.C;
+		vec3 c_cld = cloud.radiance;
 		float alpha = cloud.alpha;
 		float shadow = 1.;
 
 #ifdef CLOUDS // clouds ground shadows
 		pos = mul(transpose(rot), pos);
-		cloud = begin_volume(pos, vol_coeff_absorb);
+		cloud = construct_volume(pos);
 		vec3 local_up = normalize(pos);
 		clouds_shadow_march(local_up, cloud, rot_cloud);
 		shadow = mix(.7, 1., step(cloud.alpha, 0.33));
@@ -339,7 +362,7 @@ vec3 render(
 
 		return abs(mix(c_terr * shadow, c_cld, alpha));
 	} else {
-		return abs(mix(background(eye), cloud.C, cloud.alpha));
+		return abs(mix(background(eye), cloud.radiance, cloud.alpha));
 	}
 }
 

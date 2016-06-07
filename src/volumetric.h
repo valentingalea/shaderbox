@@ -45,49 +45,25 @@ float schlick_phase_func(float mu)
 }
 
 struct volume_sampler_t {
-	vec3 origin; // start of ray
-	vec3 pos; // current pos of acccumulation ray
-	float height;
-
-	float coeff_absorb;
-	float T; // transmitance
-
-	vec3 C; // color
+	vec3 origin;			// start of ray
+	vec3 pos;				// current pos of acccumulation ray
+	float height;			// [0..1] within the volume
+	float transmittance;	// (internal) energy loss by absorption & out-scattering
+	vec3 radiance;			// mainly used as output color
 	float alpha;
 };
 
-volume_sampler_t begin_volume(
-	_in(vec3) origin,
-	_in(float) coeff_absorb
+volume_sampler_t construct_volume(
+	_in(vec3) origin
 ){
 	volume_sampler_t v = _begin(volume_sampler_t)
-		origin, origin, 0.,
-		coeff_absorb, 1.,
-		vec3(0., 0., 0.), 0.
+		origin,
+		origin,
+		0.,
+		1.,
+		vec3(0, 0, 0),
+		0.
 	_end;
 	return v;
-}
-
-float illuminate_volume(
-	_inout(volume_sampler_t) vol,
-	_in(vec3) V,
-	_in(vec3) L
-);
-
-void integrate_volume(
-	_inout(volume_sampler_t) vol,
-	_in(vec3) V,
-	_in(vec3) L,
-	_in(float) density,
-	_in(float) dt
-){
-	// change in transmittance (follows Beer-Lambert law)
-	float T_i = exp(-vol.coeff_absorb * density * dt);
-	// Update accumulated transmittance
-	vol.T *= T_i;
-	// integrate output radiance (here essentially color)
-	vol.C += vol.T * illuminate_volume(vol, V, L) * density * dt;
-	// accumulate opacity
-	vol.alpha += (1. - T_i) * (1. - vol.alpha);
 }
 

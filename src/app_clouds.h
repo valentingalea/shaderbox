@@ -132,30 +132,7 @@ float density_func(
 #define sigma_absobtion		(0.)
 #define sigma_scattering	(.15)
 
-struct volumetric_sampler_t {
-	vec3 origin; // start of ray
-	vec3 pos; // current pos of acccumulation ray
-	float height;
-	float transmittance;
-	vec3 radiance;
-	float alpha;
-};
-
-volumetric_sampler_t define_volume(
-	_in(vec3) origin
-){
-	volumetric_sampler_t v = _begin(volumetric_sampler_t)
-		origin,
-		origin,
-		0.,
-		1.,
-		vec3(0, 0, 0),
-		0.
-	_end;
-	return v;
-}
-
-float illuminate_volumetric(
+float illuminate_volume(
 	_in(vec3) origin,
 	_in(float) height,
 	_in(vec3) V,
@@ -166,7 +143,7 @@ float illuminate_volumetric(
 #else
 
 	const float dt = cld_thick / float(cld_march_steps);
-	volumetric_sampler_t vol = define_volume(origin);
+	volume_sampler_t vol = construct_volume(origin);
 	vol.pos += L * dt; // don't sample just where the main raymarcher is
 
 #ifdef HLSL
@@ -190,8 +167,8 @@ float illuminate_volumetric(
 #endif
 }
 
-void integrate_volumetric(
-	_inout(volumetric_sampler_t) vol,
+void integrate_volume(
+	_inout(volume_sampler_t) vol,
 	_in(vec3) V,
 	_in(vec3) L,
 	_in(float) density,
@@ -209,7 +186,7 @@ void integrate_volumetric(
 	// integrate output radiance (here essentially color)
 	vol.radiance += 
 		(density * sigma_scattering) * 
-		illuminate_volumetric(vol.pos, vol.height, V, L) *
+		illuminate_volume(vol.pos, vol.height, V, L) *
 		vol.transmittance * 
 		8. *
 		dt;
@@ -238,7 +215,7 @@ vec4 render_clouds(
 #endif
 
 	vec3 iter = projection * march_step;
-	volumetric_sampler_t cloud = define_volume(origin);
+	volume_sampler_t cloud = construct_volume(origin);
 
 #ifdef HLSL
 	[fastopt] [loop]
@@ -248,7 +225,7 @@ vec4 render_clouds(
 		
 		float density = density_func(cloud.pos, cloud.height);
 
-		integrate_volumetric(
+		integrate_volume(
 			cloud,
 			eye.direction,
 			sun_dir,
