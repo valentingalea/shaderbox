@@ -32,6 +32,26 @@ void intersect_sphere(
 	hit.normal = (impact - sphere.origin) / sphere.radius;
 }
 
+void intersect_sphere_from_inside(
+	_in(ray_t) ray,
+	_in(sphere_t) sphere,
+	_inout(hit_t) hit
+){
+	vec3 rc = sphere.origin - ray.origin;
+	float radius2 = sphere.radius * sphere.radius;
+	float tca = dot(rc, ray.direction);
+	float d2 = dot(rc, rc) - tca * tca;
+	float thc = sqrt(radius2 - d2);
+	float t0 = tca - thc;
+	float t1 = tca + thc;
+
+	vec3 impact = ray.origin + ray.direction * t0;
+	hit.t = t0;
+	hit.material_id = sphere.material;
+	hit.origin = impact;
+	hit.normal = (impact - sphere.origin) / sphere.radius;
+}
+
 // Plane is defined by normal N and distance to origin P0 (which is on the plane itself)
 // a plane eq is: (P - P0) dot N = 0
 // which means that any line on the plane is perpendicular to the plane normal

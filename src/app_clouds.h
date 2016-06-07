@@ -1,5 +1,6 @@
 #include "def.h"
 #include "util.h"
+#include "intersect.h"
 
 #define hg_g (.2)
 #include "volumetric.h"
@@ -16,27 +17,6 @@
 _constant(sphere_t) atmosphere = _begin(sphere_t)
 	vec3(0, -495, 0), 500., 0
 _end;
-
-void intersect_sphere(
-	_in(ray_t) ray,
-	_in(sphere_t) sphere,
-	_inout(hit_t) hit
-){
-	vec3 rc = sphere.origin - ray.origin;
-	float radius2 = sphere.radius * sphere.radius;
-	float tca = dot(rc, ray.direction);
-	float d2 = dot(rc, rc) - tca * tca;
-	float thc = sqrt(radius2 - d2);
-	float t0 = tca - thc;
-	float t1 = tca + thc;
-
-	vec3 impact = ray.origin + ray.direction * t0;
-	hit.t = t0;
-	hit.material_id = sphere.material;
-	hit.origin = impact;
-	hit.normal = (impact - sphere.origin) / sphere.radius;
-}
-
 #define cld_noise_factor (1. / atmosphere.radius)
 #else
 #define cld_noise_factor .001
@@ -141,7 +121,6 @@ float illuminate_volume(
 #if 0
 	float luminance = exp(height) / 2.;
 #else
-
 	const float dt = cld_thick / float(cld_march_steps);
 	volume_sampler_t vol = construct_volume(origin);
 	vol.pos += L * dt; // don't sample just where the main raymarcher is
@@ -153,7 +132,6 @@ float illuminate_volume(
 		float density = density_func(vol.pos, 0.);
 
 		vol.transmittance *= exp(- density * sigma_scattering * dt);
-
 		vol.pos += L * dt;
 	}
 
@@ -174,9 +152,7 @@ void integrate_volume(
 	_in(float) density,
 	_in(float) dt
 ){
-	if (density < .005) {
-		return;
-	}
+	if (density < .005) return;
 
 	// change in transmittance (follows Beer-Lambert law)
 	float T_i = exp(-density * sigma_scattering * dt);
@@ -205,7 +181,7 @@ vec4 render_clouds(
 
 #ifdef SPHERE
 	hit_t hit = no_hit;
-	intersect_sphere(eye, atmosphere, hit);
+	intersect_sphere_from_inside(eye, atmosphere, hit);
 
 	vec3 projection = eye.direction;
 	vec3 origin = hit.origin;
@@ -245,7 +221,6 @@ vec3 render(
 	_in(ray_t) eye_ray,
 	_in(vec3) point_cam
 ){
-
 	vec3 sky = render_sky_color(eye_ray.direction);
 #ifdef HLSL
 	[flatten]
