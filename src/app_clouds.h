@@ -8,14 +8,14 @@
 // ----------------------------------------------------------------------------
 // Scene
 // ----------------------------------------------------------------------------
-#define wind_dir	vec3(0, 0, -u_time * .2)
+#define wind_dir	vec3(0, 0, u_time * .2)
 #define sun_dir		normalize(vec3(0, .5, -1))
 #define sun_color	vec3(1., .7, .55)
 
-#define SPHERE
+//#define SPHERE
 #ifdef SPHERE
 _constant(sphere_t) atmosphere = _begin(sphere_t)
-	vec3(0, -495, 0), 500., 0
+	vec3(0, -499, 0), 500., 0
 _end;
 #define cld_noise_factor (1. / atmosphere.radius)
 #else
@@ -27,7 +27,7 @@ void setup_camera(
 	_inout(vec3) look_at
 ){
 	eye = vec3(0, -.5, 0);
-	look_at = mul(rotate_around_y(u_mouse.x), vec3(0, 0, -1));
+	look_at = mul(rotate_around_y(60.), vec3(0, 0, -1));
 }
 
 void setup_scene()
@@ -70,11 +70,11 @@ float density_func(
 	_in(vec3) pos_in,
 	_in(float) height
 ){
-	vec3 pos = pos_in * cld_noise_factor;// -wind_dir;
+	vec3 pos = pos_in * cld_noise_factor -wind_dir;
 
 	float base =
 #ifdef TEX
-	u_tex_noise.SampleLevel(u_sampler0, pos, 0).r;
+	u_tex_noise.SampleLevel(u_sampler0, pos * .7015460, 0).r;
 #else
 	fbm_simplex(pos * 2.03, 2.64, .5, .5);
 
@@ -83,8 +83,8 @@ float density_func(
 	//base = remap(p, -w, 1., 0., 1.);
 #endif
 
-#define cld_coverage (.735)
-#if 1
+#define cld_coverage (.535)
+#if 0
 // my old method
 	return smoothstep(cld_coverage, cld_coverage + .0135, base);
 // book equiv method
@@ -93,10 +93,11 @@ float density_func(
 	//float base_with_coverage = remap(base, cld_coverage, 1., 0., 1.);
 	//return clamp(base_with_coverage * cld_coverage, 0, 1);
 #else
-	float ww = 1. -
+	float w =
 		//fbm_worley_tile(pos, 7., 1., .5);
-		u_tex_noise_2.SampleLevel(u_sampler0, pos, 0).r;
-	float n = remap(base, ww * .4, 1., 0., 1.);
+		u_tex_noise_2.SampleLevel(u_sampler0, pos * 1.73547, 0).r;
+	float ww = mix(w, 1. - w, height);// exp(height) / 3.23);
+	float n = remap(base, ww * .7, 1., 0., 1.);
 	n *= smoothstep(cld_coverage, cld_coverage + .0135, n);
 	return n;
 #endif
@@ -106,7 +107,7 @@ float density_func(
 // Volumetrics
 // ----------------------------------------------------------------------------
 #define cld_march_steps		(100)
-#define cld_thick			(100.)
+#define cld_thick			(125.)
 #define illum_march_steps	(6)
 
 #define sigma_absobtion		(0.)
@@ -129,7 +130,8 @@ float illuminate_volume(
 	[unroll(illum_march_steps)]
 #endif
 	for (int i = 0; i < illum_march_steps; i++) {
-		float density = density_func(vol.pos, 0.);
+		vol.height = float(i) / float(illum_march_steps);
+		float density = density_func(vol.pos, vol.height);
 
 		vol.transmittance *= exp(- density * sigma_scattering * dt);
 		vol.pos += L * dt;
