@@ -111,6 +111,10 @@ int main(int argc, char* argv[])
 	};
 
 	printf("starting work...\n");
+	using tclock_t = std::chrono::steady_clock;
+	using tpoint_t = tclock_t::time_point;
+	tpoint_t t_start = tclock_t::now();
+
 	constexpr size_t size_quota = size / 4;
 	std::thread w1{ worker, size_quota * 0, size_quota };
 	std::thread w2{ worker, size_quota * 1, size_quota };
@@ -121,6 +125,12 @@ int main(int argc, char* argv[])
 	w3.join();
 	w4.join();
 
+	tpoint_t t_end = tclock_t::now();
+	using tdiff_t = std::chrono::duration<float, std::chrono::seconds::period>;
+	auto elapsted = tdiff_t(t_end - t_start).count();
+	printf("total running time: %f\n", elapsted);
+
+#if 1
 	time_t rawtime;
 	time(&rawtime);
 	tm timeinfo;
@@ -136,6 +146,7 @@ int main(int argc, char* argv[])
 	}
 	fwrite(&dds, sizeof(dds), 1, file.get());
 	fwrite(data.get(), sizeof(FLOAT) * channels, size * size * size, file.get());
+#endif
 
 	return 0;
 }
