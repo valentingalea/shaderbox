@@ -23,7 +23,12 @@ ScopeExit<F> MakeScopeExit(F f) {
 #include <CRTDBG.H>
 #include <cstdio>
 #include <chrono>
-#include "../../../lib/DirectXTex/DirectXTex/DirectXTex.h" 
+#include "../../../lib/DirectXTex/DirectXTex/DirectXTex.h"
+
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#include <imgui.h>
+#include <examples\directx11_example\imgui_impl_dx11.h>
+IMGUI_API LRESULT   ImGui_ImplDX11_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void ShowError(LPCSTR szErrMsg, ID3D10Blob* pExtraErrorMsg = NULL)
 {
@@ -108,6 +113,8 @@ POINT sMousePos = { 0, 0 };
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	ImGui_ImplDX11_WndProcHandler(hWnd, uMsg, wParam, lParam);
+
 	switch (uMsg)
 	{
 	case WM_CLOSE:
@@ -324,6 +331,12 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	pImmediateContext->PSSetSamplers(0, 1, &pSampler);
 
 //
+// imgui
+//
+	ImGui_ImplDX11_Init(hWnd, pd3dDevice, pImmediateContext);
+	SCOPE_EXIT(ImGui_ImplDX11_Shutdown());
+
+//
 // Message pump and rendering
 //
 	auto timerStart = std::chrono::high_resolution_clock::now();
@@ -341,9 +354,15 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		auto timerNow = std::chrono::high_resolution_clock::now();
 		auto timeElapsted = std::chrono::duration_cast<std::chrono::milliseconds>(timerNow - timerStart).count();
 
+		ImGui_ImplDX11_NewFrame();
+		{
+			ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		}
+
 		pImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		pImmediateContext->Draw(3, 0);
 
+		ImGui::Render();
 		pSwapChain->Present(0, 0);
 
 	// update the uniforms - use DISCARD to avoid CPU/GPU fighting for the resource
@@ -365,6 +384,6 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		}
 		pImmediateContext->Unmap(pUniformBuff, 0);
 	} while (true);
-	
+
 	return ERROR_SUCCESS;
 }

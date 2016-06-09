@@ -76,6 +76,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>..\..\..\lib\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -100,6 +101,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>..\..\..\lib\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -124,7 +126,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\lib\imgui\examples\directx11_example\imgui_impl_dx11.cpp" />
+    <ClCompile Include="..\..\..\lib\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\..\lib\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\src\hlsltoy.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\lib\imgui\examples\directx11_example\imgui_impl_dx11.h" />
+    <ClInclude Include="..\..\..\lib\imgui\imconfig.h" />
+    <ClInclude Include="..\..\..\lib\imgui\imgui.h" />
+    <ClInclude Include="..\..\..\lib\imgui\imgui_internal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
