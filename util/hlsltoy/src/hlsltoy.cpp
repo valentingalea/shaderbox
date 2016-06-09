@@ -301,10 +301,10 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	__declspec(align(16)) struct PS_CONSTANT_BUFFER
 	{
 		DirectX::XMFLOAT2 resolution;
-		float time;
 		DirectX::XMFLOAT2 mouse;
+		float time;
 	};
-	PS_CONSTANT_BUFFER PSConstBuff = { {float(WIDTH), float(HEIGHT)}, 0, {0, 0} };
+	PS_CONSTANT_BUFFER PSConstBuff = { {float(WIDTH), float(HEIGHT)}, {0, 0}, 0 };
 	D3D11_BUFFER_DESC uniformBuffDesc = { sizeof(PS_CONSTANT_BUFFER), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
 	ID3D11Buffer* pUniformBuff = NULL;
 	SCOPE_EXIT(SafeRelease(pUniformBuff));

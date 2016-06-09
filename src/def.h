@@ -44,8 +44,8 @@ precision mediump float;
 #ifdef HLSLTOY
 cbuffer uniforms : register(b0) {
 	float2 u_res;
-	float u_time;
 	float2 u_mouse;
+	float u_time;
 };
 void mainImage(_out(float4) fragColor, _in(float2) fragCoord);
 float4 main(float4 uv : SV_Position) : SV_Target{ float4 col; mainImage(col, uv.xy); return col; }

@@ -43,7 +43,8 @@ void setup_camera(
 	_inout(vec3) look_at
 ){
 	eye = vec3(0, -.5, 0);
-	look_at = mul(rotate_around_y(60.), vec3(0, 0, -1));
+	float angle = u_mouse.x * .5;
+	look_at = mul(rotate_around_y(angle), vec3(0, 0, -1));
 }
 
 void setup_scene()
