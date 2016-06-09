@@ -6,14 +6,30 @@
 #include "volumetric.h"
 
 // ----------------------------------------------------------------------------
+// Uniforms/constants
+// ----------------------------------------------------------------------------
+#define FOV					tan(radians(30.))
+
+#define wind_dir			vec3(0, 0, u_time * .2);
+#define sun_dir				normalize(vec3(0, .5, -1))
+#define sun_color			vec3(1., .7, .55)
+#define sun_power			(8.)
+
+#define cld_march_steps		(100)
+#define cld_thick			(125.)
+#define illum_march_steps	(6)
+
+#define sigma_absobtion		(0.)
+#define sigma_scattering	(.15)
+#define cld_coverage		(.535)
+
+//#define SKY_SPHERE
+#define USE_NOISE_TEX
+
+// ----------------------------------------------------------------------------
 // Scene
 // ----------------------------------------------------------------------------
-#define wind_dir	vec3(0, 0, u_time * .2)
-#define sun_dir		normalize(vec3(0, .5, -1))
-#define sun_color	vec3(1., .7, .55)
-
-//#define SPHERE
-#ifdef SPHERE
+#ifdef SKY_SPHERE
 _constant(sphere_t) atmosphere = _begin(sphere_t)
 	vec3(0, -499, 0), 500., 0
 _end;
@@ -49,22 +65,15 @@ vec3 render_sky_color(
 // ----------------------------------------------------------------------------
 // Density
 // ----------------------------------------------------------------------------
-#define TEX
-#ifdef TEX
+#ifdef USE_NOISE_TEX
 Texture3D u_tex_noise : register(t1);
 Texture3D u_tex_noise_2 : register(t2);
 SamplerState u_sampler0 : register(s0);
-#endif
-
-#include "../lib/ashima-noise/src/common.glsl"
-//#include "../lib/ashima-noise/src/classicnoise3d.glsl"
-#include "../lib/ashima-noise/src/noise3d.glsl"
-//#include "../lib/ashima-noise/src/cellular3d.glsl"
-#include "noise_worley.h"
-
+#else
+#include "noise_iq.h"
 #include "fbm.h"
-DECL_FBM_FUNC(fbm_simplex, 5, abs(snoise(p)))
-DECL_FBM_FUNC_TILE(fbm_worley_tile, 4, (1. - (noise_w(p, L).r + .25)))
+DECL_FBM_FUNC(fbm, 4, noise_iq(p))
+#endif
 
 float density_func(
 	_in(vec3) pos_in,
@@ -72,47 +81,28 @@ float density_func(
 ){
 	vec3 pos = pos_in * cld_noise_factor -wind_dir;
 
-	float base =
-#ifdef TEX
+	float shape =
+#ifdef USE_NOISE_TEX
 	u_tex_noise.SampleLevel(u_sampler0, pos * .7015460, 0).r;
 #else
-	fbm_simplex(pos * 2.03, 2.64, .5, .5);
-
-	//float p = fbm_low_freq_perlin(pos * 4., 2., .5, .5);
-	//float w = 1. - fbm_low_freq_worley(pos * 4., 4., .5, .5);
-	//base = remap(p, -w, 1., 0., 1.);
+	fbm(pos * 2.03, 2.64, .5, .5);
 #endif
 
-#define cld_coverage (.535)
-#if 0
-// my old method
-	return smoothstep(cld_coverage, cld_coverage + .0135, base);
-// book equiv method
-	//return smoothstep(cld_coverage, 1., base);
-// GPU Pro 7
-	//float base_with_coverage = remap(base, cld_coverage, 1., 0., 1.);
-	//return clamp(base_with_coverage * cld_coverage, 0, 1);
-#else
+#ifdef USE_NOISE_TEX
 	float w =
 		//fbm_worley_tile(pos, 7., 1., .5);
 		u_tex_noise_2.SampleLevel(u_sampler0, pos * 1.73547, 0).r;
 	float ww = mix(w, 1. - w, height);// exp(height) / 3.23);
-	float n = remap(base, ww * .7, 1., 0., 1.);
-	n *= smoothstep(cld_coverage, cld_coverage + .0135, n);
-	return n;
+	shape = remap(shape, ww * .7, 1., 0., 1.);
 #endif
+
+	return shape * smoothstep(cld_coverage, cld_coverage + .0135, shape);
+	//return smoothstep(cld_coverage, 1., shape);
 }
 
 // ----------------------------------------------------------------------------
 // Volumetrics
 // ----------------------------------------------------------------------------
-#define cld_march_steps		(100)
-#define cld_thick			(125.)
-#define illum_march_steps	(6)
-
-#define sigma_absobtion		(0.)
-#define sigma_scattering	(.15)
-
 float illuminate_volume(
 	_in(vec3) origin,
 	_in(float) height,
@@ -143,7 +133,7 @@ float illuminate_volume(
 #if 0
 	return luminance;
 #else
-	return luminance * henyey_greenstein_phase_func(clamp(dot(L, V), 0., 1.));
+	return luminance * sun_power * henyey_greenstein_phase_func(clamp(dot(L, V), 0., 1.));
 #endif
 }
 
@@ -166,7 +156,6 @@ void integrate_volume(
 		(density * sigma_scattering) * 
 		illuminate_volume(vol.pos, vol.height, V, L) *
 		vol.transmittance * 
-		8. *
 		dt;
 
 	// accumulate opacity
@@ -181,7 +170,7 @@ vec4 render_clouds(
 ){
 	const float march_step = cld_thick / float(cld_march_steps);
 
-#ifdef SPHERE
+#ifdef SKY_SPHERE
 	hit_t hit = no_hit;
 	intersect_sphere_from_inside(eye, atmosphere, hit);
 
@@ -235,5 +224,4 @@ vec3 render(
 	return abs(col);
 }
 
-#define FOV tan(radians(30.))
 #include "main.h"
