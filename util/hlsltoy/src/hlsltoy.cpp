@@ -115,22 +115,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	ImGui_ImplDX11_WndProcHandler(hWnd, uMsg, wParam, lParam);
 
-	switch (uMsg)
-	{
-	case WM_CLOSE:
-		PostQuitMessage(0);
-		return TRUE;
-	case WM_LBUTTONDOWN:
-		sMouseButtons.x = TRUE;
-		break;
-	case WM_LBUTTONUP:
-		sMouseButtons.x = FALSE;
-		break;
-	case WM_MOUSEMOVE:
-		sMousePos.x = GET_X_LPARAM(lParam);
-		sMousePos.y = GET_Y_LPARAM(lParam);
-		break;
-	}
+	if (!ImGui::IsMouseHoveringAnyWindow())
+		switch (uMsg)
+		{
+		case WM_CLOSE:
+			PostQuitMessage(0);
+			return TRUE;
+		case WM_LBUTTONDOWN:
+			sMouseButtons.x = TRUE;
+			break;
+		case WM_LBUTTONUP:
+			sMouseButtons.x = FALSE;
+			break;
+		case WM_MOUSEMOVE:
+			sMousePos.x = GET_X_LPARAM(lParam);
+			sMousePos.y = GET_Y_LPARAM(lParam);
+			break;
+		}
 
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
@@ -369,6 +370,24 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		ImGui_ImplDX11_NewFrame();
 		{
 			ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+#ifdef APP_CLOUDS
+			ImGui::Spacing();
+			ImGui::InputFloat3("Wind Direction", reinterpret_cast<float *>(&clouds_settings_buff.wind_dir));
+
+			ImGui::Spacing();
+			ImGui::InputFloat3("Sun Direction", reinterpret_cast<float *>(&clouds_settings_buff.sun_dir));
+			ImGui::InputFloat3("Sun Colour", reinterpret_cast<float *>(&clouds_settings_buff.sun_color));
+			ImGui::SliderFloat("Sun Power", &clouds_settings_buff.sun_power, 0, 12);
+
+			ImGui::Spacing();
+			ImGui::SliderInt("Ray March Steps", &clouds_settings_buff.cld_march_steps, 10, 150);
+			ImGui::SliderInt("Light March Steps", &clouds_settings_buff.illum_march_steps, 1, 15);
+
+			ImGui::Spacing();
+			ImGui::InputFloat("Scaterring Coeff", &clouds_settings_buff.sigma_scattering, .05, .1);
+			ImGui::SliderFloat("Coverage", &clouds_settings_buff.cld_coverage, 0., 1.);
+			ImGui::SliderFloat("Thickness", &clouds_settings_buff.cld_thick, 10., 200.);
+#endif
 		}
 
 		pImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -388,6 +407,14 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		// must be careful not to read from data, only write
 		memcpy(mappedResource.pData, &PSConstBuff, sizeof(PSConstBuff));
 		pImmediateContext->Unmap(pUniformBuff, 0);
+
+#ifdef APP_CLOUDS
+		hr = pImmediateContext->Map(clouds_settings_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		_ASSERT(SUCCEEDED(hr));
+		// must be careful not to read from data, only write
+		memcpy(mappedResource.pData, &clouds_settings_buff, sizeof(clouds_settings_buff));
+		pImmediateContext->Unmap(clouds_settings_ptr, 0);
+#endif
 	} while (true);
 
 	return ERROR_SUCCESS;
