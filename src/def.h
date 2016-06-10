@@ -42,37 +42,11 @@ precision mediump float;
 #endif
 
 #ifdef HLSLTOY
-cbuffer uniforms : register(b0) {
-	float2 u_res;
-	float2 u_mouse;
-	float u_time;
-};
 void mainImage(_out(float4) fragColor, _in(float2) fragCoord);
 float4 main(float4 uv : SV_Position) : SV_Target{ float4 col; mainImage(col, uv.xy); return col; }
 #endif
 
-#if defined(__cplusplus) || defined(SHADERTOY)
-#define u_res iResolution
-#define u_time iGlobalTime
-#define u_mouse iMouse
-#endif
-
-#ifdef GLSLSANDBOX
-uniform float time;
-uniform vec2 mouse;
-uniform vec2 resolution;
-#define u_res resolution
-#define u_time time
-#define u_mouse mouse
-void mainImage(_out(vec4) fragColor, _in(vec2) fragCoord);
-void main() { mainImage(gl_FragColor, gl_FragCoord.xy); }
-#endif
-
-#ifdef UE4
-_constant(vec2) u_res = vec2(0, 0);
-_constant(vec2) u_mouse = vec2(0, 0);
-_mutable(float) u_time = 0;
-#endif
+#include "uniform_buffer.h"
 
 #define PI 3.14159265359
 

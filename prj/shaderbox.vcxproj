@@ -110,6 +110,7 @@
     <ClInclude Include="..\src\noise_iq.h" />
     <ClInclude Include="..\src\noise_worley.h" />
     <ClInclude Include="..\src\sdf.h" />
+    <ClInclude Include="..\src\uniform_buffer.h" />
     <ClInclude Include="..\src\util.h" />
     <ClInclude Include="..\src\util_optics.h" />
     <ClInclude Include="..\src\volumetric.h" />

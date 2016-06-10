@@ -1,27 +1,10 @@
+#define APP_CLOUDS
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
 
 #define hg_g (.2)
 #include "volumetric.h"
-
-// ----------------------------------------------------------------------------
-// Uniforms/constants
-// ----------------------------------------------------------------------------
-#define FOV					tan(radians(30.))
-
-#define wind_dir			vec3(0, 0, u_time * .2);
-#define sun_dir				normalize(vec3(0, .5, -1))
-#define sun_color			vec3(1., .7, .55)
-#define sun_power			(8.)
-
-#define cld_march_steps		(100)
-#define cld_thick			(125.)
-#define illum_march_steps	(6)
-
-#define sigma_absobtion		(0.)
-#define sigma_scattering	(.15)
-#define cld_coverage		(.535)
 
 //#define SKY_SPHERE
 #define USE_NOISE_TEX
@@ -80,7 +63,7 @@ float density_func(
 	_in(vec3) pos_in,
 	_in(float) height
 ){
-	vec3 pos = pos_in * cld_noise_factor -wind_dir;
+	vec3 pos = pos_in * cld_noise_factor - wind_dir * u_time;
 
 	float shape =
 #ifdef USE_NOISE_TEX
@@ -118,7 +101,7 @@ float illuminate_volume(
 	vol.pos += L * dt; // don't sample just where the main raymarcher is
 
 #ifdef HLSL
-	[unroll(illum_march_steps)]
+	[fastopt] [loop]
 #endif
 	for (int i = 0; i < illum_march_steps; i++) {
 		vol.height = float(i) / float(illum_march_steps);
@@ -225,4 +208,5 @@ vec3 render(
 	return abs(col);
 }
 
+#define FOV tan(radians(30.))
 #include "main.h"

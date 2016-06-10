@@ -119,7 +119,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CLOSE:
 		PostQuitMessage(0);
-		break;
+		return TRUE;
 	case WM_LBUTTONDOWN:
 		sMouseButtons.x = TRUE;
 		break;
@@ -303,20 +303,31 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SafeRelease(pErrorBlob);
 
 //
-// Constants uniforms buffer
+// Uniforms buffers
 //
-	__declspec(align(16)) struct PS_CONSTANT_BUFFER
-	{
-		DirectX::XMFLOAT2 resolution;
-		DirectX::XMFLOAT2 mouse;
-		float time;
-	};
-	PS_CONSTANT_BUFFER PSConstBuff = { {float(WIDTH), float(HEIGHT)}, {0, 0}, 0 };
-	D3D11_BUFFER_DESC uniformBuffDesc = { sizeof(PS_CONSTANT_BUFFER), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
+#define HLSLTOY
+#define APP_CLOUDS
+
+#define vec2 DirectX::XMFLOAT2
+#define vec3 DirectX::XMFLOAT3A
+#define vec4 DirectX::XMFLOAT4
+#include "../../src/uniform_buffer.h"
+	main_uniform_buffer_t PSConstBuff;
+	PSConstBuff.u_res.x = WIDTH;
+	PSConstBuff.u_res.y = HEIGHT;
+	D3D11_BUFFER_DESC uniformBuffDesc = { sizeof(PSConstBuff), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
 	ID3D11Buffer* pUniformBuff = NULL;
 	SCOPE_EXIT(SafeRelease(pUniformBuff));
 	D3D11_SUBRESOURCE_DATA pData = { &PSConstBuff, 0, 0 };
 	hr = pd3dDevice->CreateBuffer(&uniformBuffDesc, &pData, &pUniformBuff);
+	_ASSERT(SUCCEEDED(hr));
+
+	clouds_uniform_buffer_t clouds_settings_buff;
+	D3D11_BUFFER_DESC clouds_settings_buff_descript = { sizeof(clouds_settings_buff), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
+	ID3D11Buffer* clouds_settings_ptr = NULL;
+	SCOPE_EXIT(SafeRelease(clouds_settings_ptr));
+	D3D11_SUBRESOURCE_DATA clouds_settings_sub_res = { &clouds_settings_buff, 0, 0 };
+	hr = pd3dDevice->CreateBuffer(&clouds_settings_buff_descript, &clouds_settings_sub_res, &clouds_settings_ptr);
 	_ASSERT(SUCCEEDED(hr));
 
 //
@@ -325,6 +336,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	pImmediateContext->VSSetShader(pVS, NULL, 0);
 	pImmediateContext->PSSetShader(pPS, NULL, 0);
 	pImmediateContext->PSSetConstantBuffers(0, 1, &pUniformBuff);
+	pImmediateContext->PSSetConstantBuffers(1, 1, &clouds_settings_ptr);
 	pImmediateContext->PSSetShaderResources(0, 1, &pTexV);
 	pImmediateContext->PSSetShaderResources(1, 1, &pNoiseTexV);
 	pImmediateContext->PSSetShaderResources(2, 1, &pNoiseTexV_2);
@@ -367,21 +379,14 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 
 	// update the uniforms - use DISCARD to avoid CPU/GPU fighting for the resource
 	// but this means we need to re-send everything
+		PSConstBuff.u_mouse.x = sMouseButtons.x ? float(sMousePos.x) : 0.f;
+		PSConstBuff.u_mouse.y = sMouseButtons.x ? float(sMousePos.y) : 0.f;
+		PSConstBuff.u_time = timeElapsted / 1000.f;
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
 		hr = pImmediateContext->Map(pUniformBuff, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		_ASSERT(SUCCEEDED(hr));
 		// must be careful not to read from data, only write
-		volatile PS_CONSTANT_BUFFER *pBuff = (PS_CONSTANT_BUFFER *)mappedResource.pData;
-		pBuff->resolution.x = WIDTH;
-		pBuff->resolution.y = HEIGHT;
-		pBuff->time = timeElapsted / 1000.f;
-		pBuff->mouse.x = 0.;
-		pBuff->mouse.y = 0.;
-		if (sMouseButtons.x)
-		{
-			pBuff->mouse.x = float(sMousePos.x);
-			pBuff->mouse.y = float(sMousePos.y);
-		}
+		memcpy(mappedResource.pData, &PSConstBuff, sizeof(PSConstBuff));
 		pImmediateContext->Unmap(pUniformBuff, 0);
 	} while (true);
 
