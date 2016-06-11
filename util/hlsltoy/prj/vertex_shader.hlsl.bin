@@ -1,0 +1,6 @@
+// from http://altdevblog.com/2011/08/08/an-interesting-vertex-shader-trick/
+float4 main(uint id : SV_VertexID) : SV_Position
+{
+	float2 tex = float2((id << 1) & 2, id & 2);
+	return float4(tex * float2(2, -2) + float2(-1, 1), 0, 1);
+};

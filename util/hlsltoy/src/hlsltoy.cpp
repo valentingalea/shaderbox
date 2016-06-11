@@ -47,12 +47,19 @@ LPCTSTR lpszAppName = "hlsltoy";
 constexpr int WIDTH = 1280;
 constexpr int HEIGHT = 720;
 
-// from http://altdevblog.com/2011/08/08/an-interesting-vertex-shader-trick/
-CHAR szVertexShader[] =
-"float4 main(uint id : SV_VertexID) : SV_Position {"
-	"float2 tex = float2((id << 1) & 2, id & 2);"
-	"return float4(tex * float2(2, -2) + float2(-1, 1), 0, 1);"
-"}";
+#include "../prj/resource.h"
+BOOL GetInternalResource(INT resId, LPVOID *outPtr, DWORD &outSize)
+{
+	HRSRC res = FindResource(NULL, MAKEINTRESOURCE(resId), RT_RCDATA);
+	if (!res) return FALSE;
+	HGLOBAL res_handle = LoadResource(NULL, res);
+	if (!res_handle) return FALSE;
+	
+	outSize = SizeofResource(NULL, res);
+	*outPtr = LockResource(res_handle);
+
+	return TRUE;
+}
 
 // from https://msdn.microsoft.com/en-us/library/windows/desktop/ff476521%28v=vs.85%29.aspx
 ID3D11Texture2D* CreateTextureCheckboard(ID3D11Device *pd3dDevice, UINT w, UINT h, UINT checkFreq)
@@ -344,7 +351,10 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 //
 	ID3D11VertexShader* pVS = NULL;
 	SCOPE_EXIT(SafeRelease(pVS));
-	hr = D3DCompile(szVertexShader, sizeof(szVertexShader), 0, 0, 0, "main", "vs_5_0", flags, 0, &pBlob, &pErrorBlob);
+	LPVOID pVSbinres = NULL;
+	DWORD nVSbinres_size = 0;
+	GetInternalResource(IDR_RCDATA_VS, &pVSbinres, nVSbinres_size);
+	hr = D3DCompile(pVSbinres, nVSbinres_size, 0, 0, 0, "main", "vs_5_0", flags, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
 		ShowError("vertex compilation error", pErrorBlob);
