@@ -393,6 +393,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateBuffer(&uniformBuffDesc, &pData, &pUniformBuff);
 	CHECK(hr, "CreateBuffer for main vars failed");
 
+#ifdef APP_CLOUDS
 	clouds_uniform_buffer_t clouds_settings_buff;
 	D3D11_BUFFER_DESC clouds_settings_buff_descript = { sizeof(clouds_settings_buff), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
 	ID3D11Buffer* clouds_settings_ptr = NULL;
@@ -401,13 +402,15 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateBuffer(&clouds_settings_buff_descript, &clouds_settings_sub_res, &clouds_settings_ptr);
 	CHECK(hr, "CreateBuffer for the clouds app failed");
 
+	pImmediateContext->PSSetConstantBuffers(1, 1, &clouds_settings_ptr);
+#endif
+
 //
 // Bind stuff to stages
 //
 	pImmediateContext->VSSetShader(pVS, NULL, 0);
 	pImmediateContext->PSSetShader(pPS, NULL, 0);
 	pImmediateContext->PSSetConstantBuffers(0, 1, &pUniformBuff);
-	pImmediateContext->PSSetConstantBuffers(1, 1, &clouds_settings_ptr);
 	pImmediateContext->PSSetShaderResources(0, 1, &pTexV);
 	pImmediateContext->PSSetShaderResources(1, 1, &pNoiseTexV);
 	pImmediateContext->PSSetShaderResources(2, 1, &pNoiseTexV_2);
