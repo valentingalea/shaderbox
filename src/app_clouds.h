@@ -80,7 +80,8 @@ float density_func(
 	shape = remap(shape, ww * .7, 1., 0., 1.);
 #endif
 
-	return shape * smoothstep(cld_coverage, cld_coverage + .0135, shape);
+	const float cov = 1. - cld_coverage;
+	return shape * smoothstep(cov, cov + .0135, shape);
 	//return smoothstep(cld_coverage, 1., shape);
 }
 
