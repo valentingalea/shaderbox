@@ -40,5 +40,18 @@
     <ClInclude Include="..\..\..\lib\imgui\examples\directx11_example\imgui_impl_dx11.h">
       <Filter>imgui</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="hlsltoy.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

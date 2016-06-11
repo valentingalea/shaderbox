@@ -136,6 +136,13 @@
     <ClInclude Include="..\..\..\lib\imgui\imconfig.h" />
     <ClInclude Include="..\..\..\lib\imgui\imgui.h" />
     <ClInclude Include="..\..\..\lib\imgui\imgui_internal.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="hlsltoy.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
