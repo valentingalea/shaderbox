@@ -47,15 +47,6 @@ LPCTSTR lpszAppName = "hlsltoy";
 constexpr int WIDTH = 1280;
 constexpr int HEIGHT = 720;
 
-DXGI_SWAP_CHAIN_DESC SwapChainDesc =
-{
-	{ WIDTH, HEIGHT, { 0, 0 }, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED, DXGI_MODE_SCALING_UNSPECIFIED, },  // w, h, refreshrate, format, scanline ordering, scaling
-	{ 1, 0 }, // number of multisamples per pixel, quality level
-	DXGI_USAGE_RENDER_TARGET_OUTPUT, 1, // buffer usage, buffer count
-	0, // output window (must be supplied later)
-	1, DXGI_SWAP_EFFECT_DISCARD, 0 // windowed, swap effect, flags
-};
-
 // from http://altdevblog.com/2011/08/08/an-interesting-vertex-shader-trick/
 CHAR szVertexShader[] =
 "float4 main(uint id : SV_VertexID) : SV_Position {"
@@ -178,11 +169,19 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	HWND hWnd = CreateWindow(lpszClassName, lpszAppName, dwStyle,
 		sysWidth / 2 - newWidth / 2, sysHeight / 2 - newHeight / 2, newWidth, newHeight,
 		0, 0, hinst, 0);
-	SwapChainDesc.OutputWindow = hWnd;
 
 //
 // DX setting up device
 //
+	DXGI_SWAP_CHAIN_DESC SwapChainDesc =
+	{
+		{ WIDTH, HEIGHT, { 0, 0 }, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED, DXGI_MODE_SCALING_UNSPECIFIED, },  // w, h, refreshrate, format, scanline ordering, scaling
+		{ 1, 0 }, // number of multisamples per pixel, quality level
+		DXGI_USAGE_RENDER_TARGET_OUTPUT, 1, // buffer usage, buffer count
+		hWnd, // output window
+		1, DXGI_SWAP_EFFECT_DISCARD, 0 // windowed, swap effect, flags
+	};
+
 	ID3D11Device* pd3dDevice = NULL;
 	ID3D11DeviceContext* pImmediateContext = NULL;
 	IDXGISwapChain* pSwapChain = NULL;
