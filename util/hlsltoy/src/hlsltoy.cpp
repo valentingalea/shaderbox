@@ -113,14 +113,18 @@ POINT sMousePos = { 0, 0 };
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	if (uMsg == WM_CLOSE)
+	{
+		PostQuitMessage(0);
+		return TRUE;
+	}
+
 	ImGui_ImplDX11_WndProcHandler(hWnd, uMsg, wParam, lParam);
 
 	if (!ImGui::IsMouseHoveringAnyWindow())
+	{
 		switch (uMsg)
 		{
-		case WM_CLOSE:
-			PostQuitMessage(0);
-			return TRUE;
 		case WM_LBUTTONDOWN:
 			sMouseButtons.x = TRUE;
 			break;
@@ -132,6 +136,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			sMousePos.y = GET_Y_LPARAM(lParam);
 			break;
 		}
+	}
 
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
