@@ -40,6 +40,8 @@ void ShowError(LPCSTR szErrMsg, ID3D10Blob* pExtraErrorMsg = NULL)
 	MessageBox(0, message, "Error", MB_ICONERROR);
 }
 
+#define CHECK(hr, msg) if (FAILED(hr)) { _ASSERT(SUCCEEDED(hr)); ShowError(msg); return ERROR_APP_INIT_FAILURE; }
+
 LPCTSTR lpszClassName = "tinyDX11";
 LPCTSTR lpszAppName = "hlsltoy";
 constexpr int WIDTH = 1280;
@@ -194,7 +196,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		D3D11_CREATE_DEVICE_SINGLETHREADED,
 #endif
 		0, 0, D3D11_SDK_VERSION, &SwapChainDesc, &pSwapChain, &pd3dDevice, NULL, &pImmediateContext);
-	if (FAILED(hr)) return hr;
+	CHECK(hr, "CreateDeviceAndSwapChain failure");
 
 //
 // Checkboard texture
@@ -204,7 +206,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SCOPE_EXIT(SafeRelease(pTex));
 	SCOPE_EXIT(SafeRelease(pTexV));
 	hr = pd3dDevice->CreateShaderResourceView(pTex, NULL/*whole res*/, &pTexV);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "create checkboard texture");
 
 //
 // Noise textures
@@ -231,7 +233,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	D3D11_SAMPLER_DESC sSamplerDesc = { D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP , D3D11_TEXTURE_ADDRESS_WRAP,
 		0., 1, D3D11_COMPARISON_NEVER , {1, 1, 1, 1}, -FLT_MAX, FLT_MAX };
 	hr = pd3dDevice->CreateSamplerState(&sSamplerDesc, &pSampler);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateSamplerState failed");
 
 //
 // Backbuffer render target
@@ -244,7 +246,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	ID3D11RenderTargetView* pRenderTargetView = NULL;
 	SCOPE_EXIT(SafeRelease(pRenderTargetView));
 	hr = pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &pRenderTargetView);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateRenderTargetView for backbuffer failed");
 
 //
 // Depth-Stencil
@@ -269,7 +271,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	descDepth.CPUAccessFlags = 0;
 	descDepth.MiscFlags = 0;
 	hr = pd3dDevice->CreateTexture2D(&descDepth, NULL, &pDepthStencil);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateTexture2D for depth failed");
 
 	D3D11_DEPTH_STENCIL_DESC dsDesc;
 	// Depth test parameters
@@ -294,7 +296,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	ID3D11DepthStencilState *pDSState = NULL;
 	SCOPE_EXIT(SafeRelease(pDSState));
 	hr = pd3dDevice->CreateDepthStencilState(&dsDesc, &pDSState);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateDepthStencilState failed");
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
 	descDSV.Format = DXGI_FORMAT_D32_FLOAT;
@@ -303,7 +305,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	descDSV.Texture2D.MipSlice = 0;
 	// Create the depth stencil view
 	hr = pd3dDevice->CreateDepthStencilView(pDepthStencil, &descDSV, &pDSV);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateDepthStencilView failed");
 
 	pImmediateContext->OMSetDepthStencilState(pDSState, 1); // Bind depth stencil state
 #endif
@@ -321,7 +323,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	ID3D11RasterizerState* pd3dRasterizerState = NULL;
 	SCOPE_EXIT(SafeRelease(pd3dRasterizerState));
 	hr = pd3dDevice->CreateRasterizerState(&rasterizerDesc, &pd3dRasterizerState);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateRasterizerState failed");
 
 //
 // Common tracking vars & settings
@@ -350,7 +352,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		return ERROR_BAD_COMMAND;	
 	}
 	hr = pd3dDevice->CreateVertexShader((DWORD*)pBlob->GetBufferPointer(), pBlob->GetBufferSize(), NULL, &pVS);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateVertexShader failed");
 	SafeRelease(pBlob);
 	SafeRelease(pErrorBlob);
 
@@ -367,7 +369,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		return ERROR_BAD_COMMAND;
 	}
 	hr = pd3dDevice->CreatePixelShader((DWORD*)pBlob->GetBufferPointer(), pBlob->GetBufferSize(), NULL, &pPS);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreatePixelShader failed");
 	SafeRelease(pBlob);
 	SafeRelease(pErrorBlob);
 
@@ -389,7 +391,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SCOPE_EXIT(SafeRelease(pUniformBuff));
 	D3D11_SUBRESOURCE_DATA pData = { &PSConstBuff, 0, 0 };
 	hr = pd3dDevice->CreateBuffer(&uniformBuffDesc, &pData, &pUniformBuff);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateBuffer for main vars failed");
 
 	clouds_uniform_buffer_t clouds_settings_buff;
 	D3D11_BUFFER_DESC clouds_settings_buff_descript = { sizeof(clouds_settings_buff), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
@@ -397,7 +399,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SCOPE_EXIT(SafeRelease(clouds_settings_ptr));
 	D3D11_SUBRESOURCE_DATA clouds_settings_sub_res = { &clouds_settings_buff, 0, 0 };
 	hr = pd3dDevice->CreateBuffer(&clouds_settings_buff_descript, &clouds_settings_sub_res, &clouds_settings_ptr);
-	_ASSERT(SUCCEEDED(hr));
+	CHECK(hr, "CreateBuffer for the clouds app failed");
 
 //
 // Bind stuff to stages
