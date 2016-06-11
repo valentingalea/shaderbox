@@ -246,7 +246,70 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &pRenderTargetView);
 	_ASSERT(SUCCEEDED(hr));
 
-	pImmediateContext->OMSetRenderTargets(1, &pRenderTargetView, NULL);
+//
+// Depth-Stencil
+//
+	ID3D11DepthStencilView* pDSV = NULL;
+	SCOPE_EXIT(SafeRelease(pDSV));
+#if 0
+	ID3D11Texture2D* pDepthStencil = NULL;
+	SCOPE_EXIT(SafeRelease(pDepthStencil));
+	D3D11_TEXTURE2D_DESC descDepth;
+	D3D11_TEXTURE2D_DESC backBufferSurfaceDesc;
+	pBackBuffer->GetDesc(&backBufferSurfaceDesc);
+	descDepth.Width = backBufferSurfaceDesc.Width;
+	descDepth.Height = backBufferSurfaceDesc.Height;
+	descDepth.MipLevels = 1;
+	descDepth.ArraySize = 1;
+	descDepth.Format = DXGI_FORMAT_R32_TYPELESS;
+	descDepth.SampleDesc.Count = 1;
+	descDepth.SampleDesc.Quality = 0;
+	descDepth.Usage = D3D11_USAGE_DEFAULT;
+	descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	descDepth.CPUAccessFlags = 0;
+	descDepth.MiscFlags = 0;
+	hr = pd3dDevice->CreateTexture2D(&descDepth, NULL, &pDepthStencil);
+	_ASSERT(SUCCEEDED(hr));
+
+	D3D11_DEPTH_STENCIL_DESC dsDesc;
+	// Depth test parameters
+	dsDesc.DepthEnable = FALSE;
+	dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	// Stencil test parameters
+	dsDesc.StencilEnable = FALSE;
+	dsDesc.StencilReadMask = 0xFF;
+	dsDesc.StencilWriteMask = 0xFF;
+	// Stencil operations if pixel is front-facing
+	dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	// Stencil operations if pixel is back-facing
+	dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	// Create depth stencil state
+	ID3D11DepthStencilState *pDSState = NULL;
+	SCOPE_EXIT(SafeRelease(pDSState));
+	hr = pd3dDevice->CreateDepthStencilState(&dsDesc, &pDSState);
+	_ASSERT(SUCCEEDED(hr));
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+	descDSV.Format = DXGI_FORMAT_D32_FLOAT;
+	descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	descDSV.Flags = 0; // read-write
+	descDSV.Texture2D.MipSlice = 0;
+	// Create the depth stencil view
+	hr = pd3dDevice->CreateDepthStencilView(pDepthStencil, &descDSV, &pDSV);
+	_ASSERT(SUCCEEDED(hr));
+
+	pImmediateContext->OMSetDepthStencilState(pDSState, 1); // Bind depth stencil state
+#endif
+
+	// bind backbuffer and optionally depth-stencil
+	pImmediateContext->OMSetRenderTargets(1, &pRenderTargetView, pDSV);
 
 //
 // Wiewport & Rasterizer
