@@ -453,7 +453,6 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		{
 			ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 #ifdef APP_CLOUDS
-			ImGui::Spacing();
 			ImGui::InputFloat3("Wind Direction", reinterpret_cast<float *>(&clouds_settings_buff.wind_dir));
 
 			ImGui::Spacing();
@@ -466,13 +465,14 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 			ImGui::InputFloat("Sky Height", &clouds_settings_buff.atm_ground_y, 50., 100.);
 
 			ImGui::Spacing();
-			ImGui::SliderInt("Ray March Steps", &clouds_settings_buff.cld_march_steps, 10, 150);
-			ImGui::SliderInt("Light March Steps", &clouds_settings_buff.illum_march_steps, 1, 15);
-
-			ImGui::Spacing();
 			ImGui::InputFloat("Scaterring Coeff", &clouds_settings_buff.sigma_scattering, .05, .1);
 			ImGui::SliderFloat("Coverage", &clouds_settings_buff.cld_coverage, 0., 1.);
 			ImGui::SliderFloat("Thickness", &clouds_settings_buff.cld_thick, 10., 200.);
+
+			ImGui::Spacing();
+			ImGui::SliderInt("Ray March Steps", &clouds_settings_buff.cld_march_steps, 10, 150);
+			ImGui::SliderInt("Light March Steps", &clouds_settings_buff.illum_march_steps, 1, 15);
+			ImGui::Text("dt %f", clouds_settings_buff.cld_thick / clouds_settings_buff.cld_march_steps);
 #endif
 		}
 
