@@ -63,11 +63,11 @@ float density_func(
 	_in(vec3) pos_in,
 	_in(float) height
 ){
-	vec3 pos = pos_in * cld_noise_factor;// -wind_dir * u_time;
+	vec3 pos = pos_in * cld_noise_factor;
 
 	float shape =
 #ifdef USE_NOISE_TEX
-	u_tex_noise.SampleLevel(u_sampler0, pos * .7015460, 0).r;
+	u_tex_noise.SampleLevel(u_sampler0, pos, 0).r;
 #else
 	fbm(pos * 2.03, 2.64, .5, .5);
 #endif
@@ -75,7 +75,7 @@ float density_func(
 #ifdef USE_NOISE_TEX
 	float w =
 		//fbm_worley_tile(pos, 7., 1., .5);
-		u_tex_noise_2.SampleLevel(u_sampler0, pos * 1.73547, 0).r;
+		u_tex_noise_2.SampleLevel(u_sampler0, pos, 0).r;
 	float ww = mix(w, 1. - w, height);// exp(height) / 3.23);
 	shape = remap(shape, ww * .7, 1., 0., 1.);
 #endif
@@ -153,21 +153,23 @@ void integrate_volume(
 vec4 render_clouds(
 	_in(ray_t) eye
 ){
-	const float march_step = cld_thick / float(cld_march_steps);
-
 #ifdef SKY_SPHERE
 	hit_t hit = no_hit;
 	intersect_sphere_from_inside(eye, atmosphere, hit);
 
 	vec3 projection = eye.direction;
 	vec3 origin = hit.origin;
+	mat3 rot = rotate_around_x(u_time * 8.);
 #else
 	vec3 projection = eye.direction / eye.direction.y;
 	vec3 origin = eye.origin + projection * 150.;
+	origin += wind_dir * u_time * (1. / cld_noise_factor);
 #endif
 
-	vec3 iter = projection * march_step;
 	volume_sampler_t cloud = construct_volume(origin);
+
+	float t = 0.;
+	const float dt = cld_thick / float(cld_march_steps);
 
 #ifdef HLSL
 	[fastopt] [loop]
@@ -175,6 +177,14 @@ vec4 render_clouds(
 	for (int i = 0; i < cld_march_steps; i++) {
 		cloud.height = float(i) / float(cld_march_steps);
 		
+#ifdef SKY_SPHERE
+		vec3 o = cloud.origin + t * projection;
+		cloud.pos = o;// mul(rot, o - atmosphere.origin);
+#else
+		cloud.pos = cloud.origin + t * projection;
+#endif
+		t += dt;
+
 		float density = density_func(cloud.pos, cloud.height);
 
 		integrate_volume(
@@ -182,9 +192,7 @@ vec4 render_clouds(
 			eye.direction,
 			sun_dir,
 			density,
-			march_step);
-
-		cloud.pos += iter;
+			dt);
 
 		if (cloud.alpha > .999) break;
 	}
