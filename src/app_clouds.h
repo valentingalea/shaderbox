@@ -16,7 +16,7 @@
 _constant(sphere_t) atmosphere = _begin(sphere_t)
 	vec3(0, atm_ground_y, 0), atm_radius, 0
 _end;
-#define cld_noise_factor (1. / atmosphere.radius)
+#define cld_noise_factor ((1. / atmosphere.radius) * 10.)
 #else
 #define cld_noise_factor .001
 #endif
@@ -50,6 +50,7 @@ vec3 render_sky_color(
 // Density
 // ----------------------------------------------------------------------------
 #ifdef USE_NOISE_TEX
+Texture2D u_tex : register(t0);
 Texture3D u_tex_noise : register(t1);
 Texture3D u_tex_noise_2 : register(t2);
 SamplerState u_sampler0 : register(s0);
@@ -159,15 +160,20 @@ vec4 render_clouds(
 
 	vec3 projection = eye.direction;
 	vec3 origin = hit.origin;
-	mat3 rot = rotate_around_x(u_time * 8.);
+	mat3 rot = rotate_around_x(u_time);
+	origin = mul(rot, origin - atmosphere.origin);
 #else
 	vec3 projection = eye.direction / eye.direction.y;
 	vec3 origin = eye.origin + projection * 150.;
 	origin += wind_dir * u_time * (1. / cld_noise_factor);
 #endif
 
-	volume_sampler_t cloud = construct_volume(origin);
+#if 0
+	vec3 tex = u_tex.Sample(u_sampler0, origin.xz * cld_noise_factor).rgb;
+	return abs(vec4(tex, 1.));
+#endif
 
+	volume_sampler_t cloud = construct_volume(origin);
 	float t = 0.;
 	const float dt = cld_thick / float(cld_march_steps);
 
@@ -177,12 +183,7 @@ vec4 render_clouds(
 	for (int i = 0; i < cld_march_steps; i++) {
 		cloud.height = float(i) / float(cld_march_steps);
 		
-#ifdef SKY_SPHERE
-		vec3 o = cloud.origin + t * projection;
-		cloud.pos = o;// mul(rot, o - atmosphere.origin);
-#else
 		cloud.pos = cloud.origin + t * projection;
-#endif
 		t += dt;
 
 		float density = density_func(cloud.pos, cloud.height);
@@ -217,5 +218,5 @@ vec3 render(
 	return abs(col);
 }
 
-#define FOV tan(radians(30.))
+#define FOV 1.//tan(radians(30.))
 #include "main.h"
