@@ -49,6 +49,9 @@ _begin_ubuffer(clouds_uniform_buffer_t, b1)
 	_uniform(float,	sigma_scattering,	(.15))				_pack(c3.w);
 	_uniform(float,	cld_coverage,		(.535))				_pack(c4.x);
 	_uniform(float,	cld_thick,			(125.))				_pack(c4.y);
+
+	_uniform(float, atm_radius,			(500.))				_pack(c4.z);
+	_uniform(float, atm_ground_y,		(-499.))			_pack(c4.w);
 _end_ubuffer;
 #endif
 

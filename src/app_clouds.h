@@ -6,7 +6,7 @@
 #define hg_g (.2)
 #include "volumetric.h"
 
-//#define SKY_SPHERE
+#define SKY_SPHERE
 #define USE_NOISE_TEX
 
 // ----------------------------------------------------------------------------
@@ -14,7 +14,7 @@
 // ----------------------------------------------------------------------------
 #ifdef SKY_SPHERE
 _constant(sphere_t) atmosphere = _begin(sphere_t)
-	vec3(0, -499, 0), 500., 0
+	vec3(0, atm_ground_y, 0), atm_radius, 0
 _end;
 #define cld_noise_factor (1. / atmosphere.radius)
 #else
@@ -63,7 +63,7 @@ float density_func(
 	_in(vec3) pos_in,
 	_in(float) height
 ){
-	vec3 pos = pos_in * cld_noise_factor - wind_dir * u_time;
+	vec3 pos = pos_in * cld_noise_factor;// -wind_dir * u_time;
 
 	float shape =
 #ifdef USE_NOISE_TEX

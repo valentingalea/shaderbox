@@ -462,6 +462,10 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 			ImGui::SliderFloat("Sun Power", &clouds_settings_buff.sun_power, 0, 12);
 
 			ImGui::Spacing();
+			ImGui::InputFloat("Sky Radius", &clouds_settings_buff.atm_radius, 100., 1000.);
+			ImGui::InputFloat("Sky Height", &clouds_settings_buff.atm_ground_y, 50., 100.);
+
+			ImGui::Spacing();
 			ImGui::SliderInt("Ray March Steps", &clouds_settings_buff.cld_march_steps, 10, 150);
 			ImGui::SliderInt("Light March Steps", &clouds_settings_buff.illum_march_steps, 1, 15);
 
