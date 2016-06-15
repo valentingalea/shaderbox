@@ -67,7 +67,7 @@ float fbm_dds(vec3 &pos)
 int main(int argc, char* argv[])
 {
 	constexpr size_t size = 128;
-	constexpr size_t channels = 1;
+	constexpr size_t channels = 4;
 	using FLOAT = float;
 
 	DDS dds = { 0 };
@@ -85,7 +85,8 @@ int main(int argc, char* argv[])
 	dds.header.dwCaps = DDS_SURFACE_FLAGS_TEXTURE | DDS_SURFACE_FLAGS_CUBEMAP;
 	dds.header.dwCaps2 = DDS_FLAGS_VOLUME;
 
-	dds.header10.dxgiFormat = DXGI_FORMAT_R32_FLOAT;
+	DXGI_FORMAT fmt[] = { DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_R32G32_FLOAT, DXGI_FORMAT_R32G32B32_UINT, DXGI_FORMAT_R32G32B32A32_FLOAT };
+	dds.header10.dxgiFormat = fmt[channels - 1];
 	dds.header10.resourceDimension = DDS_DIMENSION_TEXTURE3D;
 	dds.header10.arraySize = 1;
 	dds.header10.miscFlag = 0;
@@ -101,9 +102,14 @@ int main(int argc, char* argv[])
 	auto worker = [&](size_t start, size_t count) {
 		for (size_t z = start; z < start + count; z++) {
 			for (size_t y = 0; y < size; y++) {
+				auto ptr = data.get() + size*size*channels*z + size*channels*y;
+
 				for (size_t x = 0; x < size; x++) {
 					vec3 pos = (vec3(x, y, z) + .5f) / FLOAT(size);
-					*(data.get() + size*size*z + size*y + x) = fbm_dds(pos);
+					*ptr++ = fbm_dds(pos);
+					*ptr++ = 0.f;
+					*ptr++ = 0.f;
+					*ptr++ = 0.f;
 				}
 			}
 		}
