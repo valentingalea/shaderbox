@@ -21,15 +21,15 @@ void mainImage(
 	//  d. apply the look-at algoritm which will
 	//     produce the 3 camera axis:
 	//
-	//      R   ^ +Y                  ^ +Y             E eye/ray origin
+	//      R   ^ -Y                  ^ -Y             E eye/ray origin
 	//       .  |\                    |     . R        R primary ray
 	//         .| \                   |   .            @ fov angle
 	//   -Z     | .\   +Z             | .
-	//    ------0---E--->   +X -------0-------> -X
+	//    ------0---E--->   -X -------0-------> +X
 	//          | @/                  |
 	//          | /                   |
-	//          |/                    | -Y
-	//           -Y
+	//          |/                    | +Y
+	//           +Y
 	//
 	// NOTE: everything is expressed in this space, NOT world
 
