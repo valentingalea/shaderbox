@@ -13,7 +13,7 @@ struct light_t {
 
 _mutable(light_t) lights[8];
 
-_constant(vec3) ambient_light = vec3(.01, .01, .01);
+_mutable(vec3) ambient_light = vec3(.01, .01, .01);
 
 vec3 get_light_direction(
 	_in(light_t) light,
@@ -49,7 +49,7 @@ vec3 illum_blinn_phong(
 ){
 	vec3 diffuse = max(0., dot(L, hit.normal)) * mat.base_color;
 
-	float spec_factor = 50.;
+	const float spec_factor = 50.;
 #if 0 // Blinn specular
 	vec3 H = normalize(L + V);
 	vec3 specular = pow(max(0., dot(H, hit.normal)), spec_factor); // * light.color * specular color
@@ -90,4 +90,3 @@ vec3 illum_cook_torrance(
 	float specular = (geo_term * rough_term * fresnel_term) / (PI * NdotV * NdotL);
 	return max(0., NdotL) * (specular + mat.base_color);
 }
-
