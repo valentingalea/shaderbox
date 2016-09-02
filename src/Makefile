@@ -4,10 +4,10 @@
 # $< the name of the related file that caused the action.
 # $* the prefix shared by target and dependent files.
 
-all: clouds
+all: vinyl
 
 OUT = shaderbox
-SIZE = -DSCREEN_WIDTH=100 -DSCREEN_HEIGHT=100
+SIZE = -DSCREEN_WIDTH=500 -DSCREEN_HEIGHT=500
 	
 raytracer: raytracer.o
 	$(CXX) $(CXXFLAGS) -o $(OUT) raytracer.o $(LFLAGS) $(LIBS)
@@ -26,7 +26,7 @@ sdf_ao.o : app.cpp app_sdf_ao.h main.h def.h util.h sdf.h
 
 clouds: clouds.o
 	$(CXX) $(CXXFLAGS) -o $(OUT) clouds.o $(LFLAGS) $(LIBS)
-clouds.o : app.cpp app_clouds.h def.h noise_iq.h fbm.h
+clouds.o : app.cpp app_clouds.h def.h fbm.h util.h volumetric.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_CLOUDS $(SIZE) -c -o clouds.o $<
 
 atmosphere: atmosphere.o
@@ -48,6 +48,12 @@ func: func.o
 	$(CXX) $(CXXFLAGS) -o $(OUT) func.o $(LFLAGS) $(LIBS)
 func.o : app.cpp app_func.h def.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_FUNC $(SIZE) -c -o func.o $<
+
+vinyl: vinyl.o
+	$(CXX) $(CXXFLAGS) -o $(OUT) vinyl.o $(LFLAGS) $(LIBS)
+vinyl.o : app.cpp app_vinyl.h main.h def.h util.h sdf.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DAPP_VINYL $(SIZE) -c -o vinyl.o $<
+
 
 clean:
 	rm *.o
