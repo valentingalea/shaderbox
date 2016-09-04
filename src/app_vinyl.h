@@ -18,7 +18,8 @@ vec3 background(_in(ray_t) ray)
 #define mat_dead_wax 2
 #define mat_label 3
 #define mat_center_hole 4
-#define mat_count (5)
+#define mat_logo 5
+#define mat_count (6)
 
 void setup_mat(
 	_inout(material_t) mat,
@@ -39,6 +40,9 @@ void setup_scene()
 	setup_mat(materials[mat_debug], vec3(1, 1, 1), 0, 0);
 	setup_mat(materials[mat_groove], vec3(.1, .1, .1), 0, .7);
 	setup_mat(materials[mat_dead_wax], vec3(.2, .2, .2), 0, .6);
+	setup_mat(materials[mat_label], vec3(.5, .1, .1), 0, .5);
+	setup_mat(materials[mat_center_hole], vec3(0, 0, 0), 0, .9);
+	setup_mat(materials[mat_logo], vec3(0, 0, .7), 0, .9);
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -59,20 +63,33 @@ vec2 sdf(_in(vec3) pos)
 	// due to the above
 	
 	vec3 p = mul(pos, rotate_around_x(90));
+	p = mul(p, rotate_around_y(u_time * 33.));
 	const float thick = .1;
-	const float D = .01;
+	const float D = .51;
 	const float R = 6.;
 	
 	vec2 groove = vec2(
-		sd_y_cylinder(p, R, thick),
+		sd_y_cylinder(p, 6., thick),
 		mat_groove);
 	vec2 dead_wax = vec2(
-		sd_y_cylinder(p, R/3., thick + D),
-		mat_dead_wax);	
+		sd_y_cylinder(p, 2.5, thick + D),
+		mat_dead_wax);
+	vec2 label = vec2(
+		sd_y_cylinder(p, 2., thick + D * 2.),
+		mat_label);
+	vec2 logo = vec2(
+		sd_box(p, vec3(1, thick + D, 1)),
+		mat_logo);
+	vec2 center_hole = vec2(
+		sd_y_cylinder(p, .25, thick + D * 3.),
+		mat_center_hole);
 		
-	vec2 disk = op_add(groove, dead_wax);
-	
-	return disk;
+	vec2 d1 = op_add(groove, dead_wax);
+	vec2 l1 = op_add(label, logo);
+	vec2 d2 = op_add(d1, l1);
+	vec2 d3 = op_add(d2, center_hole);
+		
+	return d3;
 }
 
 vec3 sdf_normal(_in(vec3) p)
