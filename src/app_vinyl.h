@@ -17,9 +17,8 @@ vec3 background(_in(ray_t) ray)
 #define mat_groove 1
 #define mat_dead_wax 2
 #define mat_label 3
-#define mat_center_hole 4
-#define mat_logo 5
-#define mat_count (6)
+#define mat_logo 4
+#define mat_count (5)
 
 void setup_mat(
 	_inout(material_t) mat,
@@ -38,11 +37,10 @@ void setup_mat(
 void setup_scene()
 {
 	setup_mat(materials[mat_debug], vec3(1, 1, 1), 0, 0);
-	setup_mat(materials[mat_groove], vec3(.1, .1, .1), 0, .7);
-	setup_mat(materials[mat_dead_wax], vec3(.2, .2, .2), 0, .6);
+	setup_mat(materials[mat_groove], vec3(.1, .1, .1), 0, .13);
+	setup_mat(materials[mat_dead_wax], vec3(.2, .2, .2), 0, .2);
 	setup_mat(materials[mat_label], vec3(.5, .1, .1), 0, .5);
-	setup_mat(materials[mat_center_hole], vec3(0, 0, 0), 0, .9);
-	setup_mat(materials[mat_logo], vec3(0, 0, .7), 0, .9);
+	setup_mat(materials[mat_logo], vec3(0, 0, .7), 0, .5);
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -80,16 +78,17 @@ vec2 sdf(_in(vec3) pos)
 	vec2 logo = vec2(
 		sd_box(p, vec3(1, thick + D, 1)),
 		mat_logo);
-	vec2 center_hole = vec2(
-		sd_y_cylinder(p, .25, thick + D * 3.),
-		mat_center_hole);
+	float center_hole =
+		sd_y_cylinder(p, .25, thick + D * 3.);
 		
 	vec2 d1 = op_add(groove, dead_wax);
-	vec2 l1 = op_add(label, logo);
-	vec2 d2 = op_add(d1, l1);
-	vec2 d3 = op_add(d2, center_hole);
+	vec2 d2 = op_add(label, logo);
+	vec2 d3 = op_add(d1, d2);
+	vec2 d4 = vec2(
+		op_sub(d3.x, center_hole),
+		d3.y);
 		
-	return d3;
+	return d4;
 }
 
 vec3 sdf_normal(_in(vec3) p)
@@ -123,7 +122,7 @@ vec3 sdf_ao(_in(hit_t) hit)
 	return vec3 (c, c, c);
 }
 
-_constant(vec3) sun_dir = normalize (vec3 (1, 0, 1));
+_constant(vec3) sun_dir = normalize (vec3 (1, 0, 2));
 
 vec3 illuminate(
 	_in(vec3) eye,
@@ -139,7 +138,7 @@ vec3 illuminate(
 	vec3 accum = vec3(0, 0, 0);
 	material_t mat = get_material(hit.material_id);
 
-#if 1
+#if 0
 		accum += illum_blinn_phong(V, L, hit, mat);
 #else
 		accum += illum_cook_torrance(V, L, hit, mat);
