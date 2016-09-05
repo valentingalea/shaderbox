@@ -60,26 +60,24 @@ vec2 sdf(_in(vec3) pos)
 	// NOTE: all measurements are in halfs
 	// due to the above
 	
-	vec3 p = mul(pos, rotate_around_x(90));
-	p = mul(p, rotate_around_y(u_time * 33.));
+	vec3 p = mul(pos, rotate_around_x(90.));
+	p = mul(p, rotate_around_z(u_time * 33.));
 	const float thick = .1;
-	const float D = .51;
-	const float R = 6.;
 	
 	vec2 groove = vec2(
 		sd_y_cylinder(p, 6., thick),
 		mat_groove);
 	vec2 dead_wax = vec2(
-		sd_y_cylinder(p, 2.5, thick + D),
+		sd_y_cylinder(p, 2.5, thick),
 		mat_dead_wax);
 	vec2 label = vec2(
-		sd_y_cylinder(p, 2., thick + D * 2.),
+		sd_y_cylinder(p, 2., thick),
 		mat_label);
 	vec2 logo = vec2(
-		sd_box(p, vec3(1, thick + D, 1)),
+		sd_box(p, vec3(1., thick, 1.)),
 		mat_logo);
 	float center_hole =
-		sd_y_cylinder(p, .25, thick + D * 3.);
+		sd_y_cylinder(p, .25, thick * 4.);
 		
 	vec2 d1 = op_add(groove, dead_wax);
 	vec2 d2 = op_add(label, logo);
