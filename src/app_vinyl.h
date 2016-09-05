@@ -61,7 +61,7 @@ vec2 sdf(_in(vec3) pos)
 	// due to the above
 	
 	vec3 p = mul(pos, rotate_around_x(90.));
-	p = mul(p, rotate_around_z(u_time * 33.));
+	p = mul(p, rotate_around_y(u_time * 33.));
 	const float thick = .1;
 	
 	vec2 groove = vec2(
@@ -74,7 +74,9 @@ vec2 sdf(_in(vec3) pos)
 		sd_y_cylinder(p, 2., thick),
 		mat_label);
 	vec2 logo = vec2(
-		sd_box(p, vec3(1., thick, 1.)),
+		op_add(
+			sd_box(p - vec3(0, 0, .9), vec3(1., thick, .5)),
+			sd_box(p + vec3(0, 0, .8), vec3(1., thick, .25))),
 		mat_logo);
 	float center_hole =
 		sd_y_cylinder(p, .25, thick * 4.);
