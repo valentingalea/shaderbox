@@ -36,11 +36,16 @@ void setup_mat(
 
 void setup_scene()
 {
-	setup_mat(materials[mat_debug], vec3(1, 1, 1), 0, 0);
-	setup_mat(materials[mat_groove], vec3(.1, .1, .1), 0, .13);
-	setup_mat(materials[mat_dead_wax], vec3(.2, .2, .2), 0, .2);
-	setup_mat(materials[mat_label], vec3(.5, .1, .1), 0, .5);
-	setup_mat(materials[mat_logo], vec3(0, 0, .7), 0, .5);
+	setup_mat(materials[mat_debug],
+		vec3(1, 1, 1), .0, .0);
+	setup_mat(materials[mat_groove],
+		vec3(.01, .01, .01), .0, .013);
+	setup_mat(materials[mat_dead_wax],
+		vec3(.05, .05, .05), .0, .005);
+	setup_mat(materials[mat_label],
+		vec3(.5, .5, .0), .0, .5);
+	setup_mat(materials[mat_logo],
+		vec3(0, 0, .7), .0, .5);
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -61,7 +66,7 @@ vec2 sdf(_in(vec3) pos)
 	// due to the above
 	
 	vec3 p = mul(pos, rotate_around_x(90.));
-	p = mul(p, rotate_around_y(u_time * 33.));
+	p = mul(p, rotate_around_y(u_time * 200.));
 	const float thick = .1;
 	
 	vec2 groove = vec2(
