@@ -98,6 +98,8 @@ vec2 sdf(_in(vec3) pos)
 
 vec3 sdf_normal(_in(vec3) p)
 {
+	return vec3(0,0,1);
+	
 	float dt = 0.001;
 	vec3 x = vec3(dt, 0, 0);
 	vec3 y = vec3(0, dt, 0);
@@ -138,18 +140,47 @@ vec3 illuminate(
 	return vec3(hit.normal);
 #endif
 
+	material_t mat = get_material(hit.material_id);
+	
+	vec3 B = normalize(hit.origin);
+	vec3 T = cross(B, hit.normal);
+	
 	vec3 V = normalize(eye - hit.origin); // view direction
 	vec3 L = sun_dir;
-	vec3 accum = vec3(0, 0, 0);
-	material_t mat = get_material(hit.material_id);
+	vec3 H = normalize(V + L);
+	const float dotLN = dot(L, hit.normal);
 
-#if 0
-		accum += illum_blinn_phong(V, L, hit, mat);
+	const float ro_diff = .1;
+	const float ro_spec = .33;	
+	const float a_x = .05;
+	const float a_y = .16;
+	
+	vec3 diffuse = mat.base_color *
+		(ro_diff / PI) *
+		max(0., dotLN);
+
+	float spec_a = ro_spec /
+		sqrt(dotLN * dot(V, hit.normal));
+		
+	float spec_b = 1. /
+		(4. * PI * a_x * a_y);
+	
+	float ht = dot(H, T) / a_x;
+	float hb = dot(H, B) / a_y;
+	float spec_c = -2. *
+		(ht * ht + hb * hb) /
+		(1. + dot(H, hit.normal));
+	
+	vec3 specular = vec3(1, 1, 1) *
+		spec_a * spec_b * exp(spec_c);
+		
+	return diffuse + specular;
+		
+#if 1
+	return illum_blinn_phong(V, L, hit, mat);
 #else
-		accum += illum_cook_torrance(V, L, hit, mat);
+	return illum_cook_torrance(V, L, hit, mat);
 #endif
-
-	return accum;
 }
 
 vec3 render(
