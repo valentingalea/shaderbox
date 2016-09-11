@@ -50,8 +50,13 @@ void setup_scene()
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
+#if 0
 	eye = vec3(0, 0, 7);
 	look_at = vec3(0, 0, 0);
+#else
+	eye = vec3(0, 6, 7);
+	look_at = vec3(0, -3, 0);
+#endif
 }
 
 vec2 sdf(_in(vec3) pos)
@@ -65,7 +70,12 @@ vec2 sdf(_in(vec3) pos)
 	// NOTE: all measurements are in halfs
 	// due to the above
 	
-	vec3 p = mul(pos, rotate_around_x(90.));
+	vec3 p = 
+#if 0
+		mul(pos, rotate_around_x(90.));
+#else
+		pos;
+#endif
 	p = mul(p, rotate_around_y(u_time * 200.));
 	const float thick = .1;
 	
@@ -98,8 +108,8 @@ vec2 sdf(_in(vec3) pos)
 
 vec3 sdf_normal(_in(vec3) p)
 {
-#if 0
-	return vec3(0,0,1);
+#if 1
+	return vec3(0, 1, 0);
 #endif
 	
 	float dt = 0.001;
@@ -121,7 +131,7 @@ vec3 illuminate(
 	return vec3(hit.normal);
 #endif
 
-	const vec3 L = normalize(vec3(1, 0, 2));
+	const vec3 L = normalize(vec3(2, 4, -3));
 	const vec3 V = normalize(eye - hit.origin); // view direction
 
 	material_t mat = get_material(hit.material_id);
@@ -134,10 +144,10 @@ vec3 illuminate(
 		vec3 H = normalize(V + L);
 		float dotLN = dot(L, hit.normal);
 		
-		const float ro_diff = .1;
-		const float ro_spec = .33;
+		const float ro_diff = .01;
+		const float ro_spec = .25;
 		const float a_x = .05;
-		const float a_y = .16;
+		const float a_y = .45;
 		
 		vec3 diffuse = mat.base_color *
 			(ro_diff / PI) *
@@ -172,7 +182,7 @@ vec3 render(
 	_in(ray_t) ray,
 	_in(vec3) point_cam
 ){
-	const int steps = 70;
+	const int steps = 20;
 	const float end = 20.;
 
 	float t = 0.;
