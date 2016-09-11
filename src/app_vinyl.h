@@ -98,7 +98,9 @@ vec2 sdf(_in(vec3) pos)
 
 vec3 sdf_normal(_in(vec3) p)
 {
+#if 0
 	return vec3(0,0,1);
+#endif
 	
 	float dt = 0.001;
 	vec3 x = vec3(dt, 0, 0);
@@ -111,76 +113,59 @@ vec3 sdf_normal(_in(vec3) p)
 	));
 }
 
-vec3 sdf_ao(_in(hit_t) hit)
-{
-	const float dt = .5;
-	const int steps = 5;
-	float d = 0.;
-	float occlusion = 0.;
-	
-	for (float i = 1.; i <= float(steps); i += 1.) {
-		vec3 p = hit.origin + dt * i * hit.normal;
-		d = sdf (p).x;
-		
-		occlusion += 1. / pow(2., i) * (dt * i - d);
-	}
-	
-	float c = 1. - clamp(occlusion, 0., 1.);
-	return vec3 (c, c, c);
-}
-
-_constant(vec3) sun_dir = normalize (vec3 (1, 0, 2));
-
 vec3 illuminate(
 	_in(vec3) eye,
-	_in(hit_t) hit,
-	_in(float) ao
-) {
+	_in(hit_t) hit
+){
 #if 0
 	return vec3(hit.normal);
 #endif
 
+	const vec3 L = normalize(vec3(1, 0, 2));
+	const vec3 V = normalize(eye - hit.origin); // view direction
+
 	material_t mat = get_material(hit.material_id);
-	
-	vec3 B = normalize(hit.origin);
-	vec3 T = cross(B, hit.normal);
-	
-	vec3 V = normalize(eye - hit.origin); // view direction
-	vec3 L = sun_dir;
-	vec3 H = normalize(V + L);
-	const float dotLN = dot(L, hit.normal);
 
-	const float ro_diff = .1;
-	const float ro_spec = .33;	
-	const float a_x = .05;
-	const float a_y = .16;
-	
-	vec3 diffuse = mat.base_color *
-		(ro_diff / PI) *
-		max(0., dotLN);
+	if (hit.material_id == mat_groove ||
+	hit.material_id == mat_dead_wax) {
+		vec3 B = normalize(hit.origin);
+		vec3 T = cross(B, hit.normal);
+		
+		vec3 H = normalize(V + L);
+		float dotLN = dot(L, hit.normal);
+		
+		const float ro_diff = .1;
+		const float ro_spec = .33;
+		const float a_x = .05;
+		const float a_y = .16;
+		
+		vec3 diffuse = mat.base_color *
+			(ro_diff / PI) *
+			max(0., dotLN);
+			
+		float spec_a = ro_spec /
+			sqrt(dotLN * dot(V, hit.normal));
+			
+		float spec_b = 1. /
+			(4. * PI * a_x * a_y);
 
-	float spec_a = ro_spec /
-		sqrt(dotLN * dot(V, hit.normal));
-		
-	float spec_b = 1. /
-		(4. * PI * a_x * a_y);
-	
-	float ht = dot(H, T) / a_x;
-	float hb = dot(H, B) / a_y;
-	float spec_c = -2. *
-		(ht * ht + hb * hb) /
-		(1. + dot(H, hit.normal));
-	
-	vec3 specular = vec3(1, 1, 1) *
-		spec_a * spec_b * exp(spec_c);
-		
-	return diffuse + specular;
-		
+		float ht = dot(H, T) / a_x;
+		float hb = dot(H, B) / a_y;
+		float spec_c = -2. *
+			(ht * ht + hb * hb) /
+			(1. + dot(H, hit.normal));
+
+		vec3 specular = vec3(1, 1, 1) *
+			spec_a * spec_b * exp(spec_c);
+			
+		return diffuse + specular;
+	} else {
 #if 1
-	return illum_blinn_phong(V, L, hit, mat);
+		return illum_blinn_phong(V, L, hit, mat);
 #else
-	return illum_cook_torrance(V, L, hit, mat);
+		return illum_cook_torrance(V, L, hit, mat);
 #endif
+	}
 }
 
 vec3 render(
@@ -202,11 +187,9 @@ vec3 render(
 				int(d.y), // material id
 				sdf_normal(p),
 				p // point of impact				
-			_end;
-
-			float ao = 1.;//sdf_ao (h).x;          
+			_end;    
 			
-			return illuminate(ray.origin, h, ao);
+			return illuminate(ray.origin, h);
 		}
 
 		t += d.x;
