@@ -144,10 +144,10 @@ vec3 illuminate(
 		vec3 H = normalize(V + L);
 		float dotLN = dot(L, hit.normal);
 		
-		const float ro_diff = .01;
-		const float ro_spec = .25;
-		const float a_x = .05;
-		const float a_y = .45;
+		const float ro_diff = 1.;
+		const float ro_spec = .125;
+		const float a_x = .025;
+		const float a_y = .5;
 		
 		vec3 diffuse = mat.base_color *
 			(ro_diff / PI) *
