@@ -59,6 +59,22 @@ void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 #endif
 }
 
+float sdf_logo(_in(vec3) pos, _in(float) thick)
+{
+	vec3 b = vec3(.25, thick, 1.2);
+	vec3 d = vec3(.7, 0, 0);
+	
+	vec3 p = mul(pos, rotate_around_y(30));
+	float v1 = sd_box(p - d, b);
+	
+	p = mul(pos, rotate_around_y(-30));
+	float v2 = sd_box(p + d, b);
+	
+	float x = sd_box(pos, vec3(1.5, thick, 1.35));
+	float v = op_add(v1, v2);
+	return op_intersect(v, x);
+}
+
 vec2 sdf(_in(vec3) pos)
 {
 	// NOTE: everything is centered around origin
@@ -89,9 +105,7 @@ vec2 sdf(_in(vec3) pos)
 		sd_y_cylinder(p, 2., thick),
 		mat_label);
 	vec2 logo = vec2(
-		op_add(
-			sd_box(p - vec3(0, 0, .9), vec3(1., thick, .5)),
-			sd_box(p + vec3(0, 0, .8), vec3(1., thick, .25))),
+		sdf_logo(p, thick - .05),
 		mat_logo);
 	float center_hole =
 		sd_y_cylinder(p, .25, thick * 4.);
