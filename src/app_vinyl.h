@@ -108,10 +108,6 @@ vec2 sdf(_in(vec3) pos)
 
 vec3 sdf_normal(_in(vec3) p)
 {
-#if 1
-	return vec3(0, 1, 0);
-#endif
-	
 	float dt = 0.001;
 	vec3 x = vec3(dt, 0, 0);
 	vec3 y = vec3(0, dt, 0);
@@ -138,11 +134,12 @@ vec3 illuminate(
 
 	if (hit.material_id == mat_groove ||
 	hit.material_id == mat_dead_wax) {
+		vec3 N = vec3(0, 1, 0);
 		vec3 B = normalize(hit.origin);
-		vec3 T = cross(B, hit.normal);
+		vec3 T = cross(B, N);
 		
 		vec3 H = normalize(V + L);
-		float dotLN = dot(L, hit.normal);
+		float dotLN = dot(L, N);
 		
 		const float ro_diff = 1.;
 		const float ro_spec = .125;
@@ -154,7 +151,7 @@ vec3 illuminate(
 			max(0., dotLN);
 			
 		float spec_a = ro_spec /
-			sqrt(dotLN * dot(V, hit.normal));
+			sqrt(dotLN * dot(V, N));
 			
 		float spec_b = 1. /
 			(4. * PI * a_x * a_y);
@@ -163,7 +160,7 @@ vec3 illuminate(
 		float hb = dot(H, B) / a_y;
 		float spec_c = -2. *
 			(ht * ht + hb * hb) /
-			(1. + dot(H, hit.normal));
+			(1. + dot(H, N));
 
 		vec3 specular = vec3(1, 1, 1) *
 			spec_a * spec_b * exp(spec_c);
