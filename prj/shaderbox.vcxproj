@@ -99,6 +99,7 @@
     <ClInclude Include="..\src\app_planet.h" />
     <ClInclude Include="..\src\app_raytracer.h" />
     <ClInclude Include="..\src\app_sdf_ao.h" />
+    <ClInclude Include="..\src\app_vinyl.h" />
     <ClInclude Include="..\src\cornell_box.h" />
     <ClInclude Include="..\src\def.h" />
     <ClInclude Include="..\src\fbm.h" />

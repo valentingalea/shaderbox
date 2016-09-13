@@ -5,13 +5,18 @@
 #include "util_optics.h"
 #include "light.h"
 
+//#include "noise_iq.h"
+//#include "fbm.h"
+//#define noise_func (abs(noise_iq(p) * 2. - 1.))
+//DECL_FBM_FUNC(fbm, 4, noise_func)
+
 // ----------------------------------------------------------------------------
 // Vinyl disk animation
 // ----------------------------------------------------------------------------
 
 vec3 background(_in(ray_t) ray)
 {
-	return vec3(.7, .7, .7);
+	return vec3(.6, .6, .6);
 }
 
 #define mat_groove 1
@@ -64,10 +69,10 @@ float sdf_logo(_in(vec3) pos, _in(float) thick)
 	vec3 b = vec3(.25, thick, 1.2);
 	vec3 d = vec3(.7, 0, 0);
 	
-	vec3 p = mul(pos, rotate_around_y(30));
+	vec3 p = mul(pos, rotate_around_y(30.));
 	float v1 = sd_box(p - d, b);
 	
-	p = mul(pos, rotate_around_y(-30));
+	p = mul(pos, rotate_around_y(-30.));
 	float v2 = sd_box(p + d, b);
 	
 	float x = sd_box(pos, vec3(1.5, thick, 1.35));
@@ -85,14 +90,15 @@ vec2 sdf(_in(vec3) pos)
 
 	// NOTE: all measurements are in halfs
 	// due to the above
-	
-	vec3 p = 
+
+	vec3 p =
 #if 0
 		mul(pos, rotate_around_x(90.));
 #else
 		pos;
 #endif
 	p = mul(p, rotate_around_y(u_time * 200.));
+
 	const float thick = .1;
 	
 	vec2 groove = vec2(
@@ -145,7 +151,7 @@ float pulse(_in(float) x)
 
 vec3 illuminate(
 	_in(vec3) eye,
-	_in(hit_t) hit
+	_inout(hit_t) hit
 ){
 #if 0
 	return vec3(hit.normal);
@@ -158,12 +164,15 @@ vec3 illuminate(
 
 	if (hit.material_id == mat_groove ||
 	hit.material_id == mat_dead_wax) {
-
-		vec3 B = normalize(hit.origin);
+		float r = length(hit.origin);
+		vec3 B = hit.origin / r;
 		vec3 N = vec3(0, 1, 0);
 		if (hit.material_id == mat_groove) {
-			float s = pulse(length(hit.origin) * 12.);
-			N.y *= s;
+			float s = pulse(r * 12.);
+			N.y *= clamp(s, -1., 1.);
+			//if (s > 0.) {
+			//	N.y = fbm(hit.origin * 2.02, 2.08, .5, .5);
+			//}
 		}
 		vec3 T = cross(B, N);
 		
@@ -196,6 +205,7 @@ vec3 illuminate(
 			
 		return diffuse + specular;
 	} else {
+		hit.normal = sdf_normal(hit.origin);
 #if 1
 		return illum_blinn_phong(V, L, hit, mat);
 #else
@@ -221,7 +231,7 @@ vec3 render(
 			hit_t h = _begin(hit_t)
 				t, // ray length at impact
 				int(d.y), // material id
-				sdf_normal(p),
+				vec3(0, 1, 0), // normal
 				p // point of impact				
 			_end;    
 			
