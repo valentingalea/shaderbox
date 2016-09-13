@@ -133,6 +133,16 @@ vec3 sdf_normal(_in(vec3) p)
 	));
 }
 
+float saw(_in(float) x)
+{
+	return x - floor(x);
+}
+
+float pulse(_in(float) x)
+{
+	return saw(x + .5) - saw(x);
+}
+
 vec3 illuminate(
 	_in(vec3) eye,
 	_in(hit_t) hit
@@ -148,15 +158,20 @@ vec3 illuminate(
 
 	if (hit.material_id == mat_groove ||
 	hit.material_id == mat_dead_wax) {
-		vec3 N = vec3(0, 1, 0);
+
 		vec3 B = normalize(hit.origin);
+		vec3 N = vec3(0, 1, 0);
+		if (hit.material_id == mat_groove) {
+			float s = pulse(length(hit.origin) * 12.);
+			N.y *= s;
+		}
 		vec3 T = cross(B, N);
 		
 		vec3 H = normalize(V + L);
 		float dotLN = dot(L, N);
 		
 		const float ro_diff = 1.;
-		const float ro_spec = .125;
+		const float ro_spec = .0625;
 		const float a_x = .025;
 		const float a_y = .5;
 		
