@@ -7,7 +7,7 @@
 all: vinyl
 
 OUT = shaderbox
-SIZE = -DSCREEN_WIDTH=500 -DSCREEN_HEIGHT=500
+SIZE = -DSCREEN_WIDTH=300 -DSCREEN_HEIGHT=300
 	
 raytracer: raytracer.o
 	$(CXX) $(CXXFLAGS) -o $(OUT) raytracer.o $(LFLAGS) $(LIBS)
