@@ -147,8 +147,8 @@ vec3 illuminate(
 	return vec3(hit.normal);
 #endif
 
-	const vec3 L = normalize(vec3(2, 4, -3));
-	const vec3 V = normalize(eye - hit.origin); // view direction
+	const vec3 L = normalize(mul(vec3(2, 4, -3), platter_rot));
+	const vec3 V = normalize(mul(eye, platter_rot) - hit.origin); // view direction
 
 	material_t mat = get_material(hit.material_id);
 
@@ -158,9 +158,9 @@ vec3 illuminate(
 		vec3 B = hit.origin / r;
 		vec3 N = vec3(0, 1, 0);
 		if (hit.material_id == mat_groove) {
-			float rr = r + .075 * fbm(hit.origin * 4.07, 2.08, .5, .5);
-			float s = pulse(rr * 6.);
-			float ss = pulse(rr * 12.);
+			float rr = r +.0575 * fbm(hit.origin * 4.07, 2.08, .5, .5);
+			float s = pulse(rr * 24.);
+			float ss = pulse(rr * 48.);
 			//N.y *= clamp(s, -1., 1.);
 			if (s > 0.) {
 				N = normalize(N + B);
@@ -217,7 +217,7 @@ vec3 render(
 ){
 	const int steps = 20;
 	const float end = 20.;
-	platter_rot = rotate_around_y(u_time * 20.);
+	platter_rot = rotate_around_y(u_time * 200.);
 
 	float t = 0.;
 	for (int i = 0; i < steps; i++) {
