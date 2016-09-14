@@ -5,10 +5,10 @@
 #include "util_optics.h"
 #include "light.h"
 
-//#include "noise_iq.h"
-//#include "fbm.h"
-//#define noise_func (abs(noise_iq(p) * 2. - 1.))
-//DECL_FBM_FUNC(fbm, 4, noise_func)
+#include "noise_iq.h"
+#include "fbm.h"
+#define noise_func ((noise_iq(p) * 2. - 1.))
+DECL_FBM_FUNC(fbm, 4, noise_func)
 
 // ----------------------------------------------------------------------------
 // Vinyl disk animation
@@ -55,14 +55,16 @@ void setup_scene()
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
-#if 0
-	eye = vec3(0, 0, 7);
-	look_at = vec3(0, 0, 0);
-#else
+#if 1
 	eye = vec3(0, 6, 7);
 	look_at = vec3(0, -3, 0);
+#else
+	eye = vec3(4, 3, 3);
+	look_at = vec3(4, 0, 0);
 #endif
 }
+
+_mutable(mat3) platter_rot;
 
 float sdf_logo(_in(vec3) pos, _in(float) thick)
 {
@@ -82,24 +84,8 @@ float sdf_logo(_in(vec3) pos, _in(float) thick)
 
 vec2 sdf(_in(vec3) pos)
 {
-	// NOTE: everything is centered around origin
-	// change coord frame by offseting
-	// with inverse then doing
-	// the opposite before next
-	// effectively doing push/pop
-
-	// NOTE: all measurements are in halfs
-	// due to the above
-
-	vec3 p =
-#if 0
-		mul(pos, rotate_around_x(90.));
-#else
-		pos;
-#endif
-	p = mul(p, rotate_around_y(u_time * 200.));
-
 	const float thick = .1;
+	vec3 p = mul(pos, platter_rot);
 	
 	vec2 groove = vec2(
 		sd_y_cylinder(p, 6., thick),
@@ -122,7 +108,11 @@ vec2 sdf(_in(vec3) pos)
 	vec2 d4 = vec2(
 		op_sub(d3.x, center_hole),
 		d3.y);
-		
+#if 0		
+	vec2 debug = vec2(
+		sd_sphere(p + vec3(4, 0, 0), 1),
+		mat_dead_wax);
+#endif
 	return d4;
 }
 
@@ -168,12 +158,19 @@ vec3 illuminate(
 		vec3 B = hit.origin / r;
 		vec3 N = vec3(0, 1, 0);
 		if (hit.material_id == mat_groove) {
-			float s = pulse(r * 12.);
-			N.y *= clamp(s, -1., 1.);
-			//if (s > 0.) {
-			//	N.y = fbm(hit.origin * 2.02, 2.08, .5, .5);
-			//}
+			float rr = r + .075 * fbm(hit.origin * 4.07, 2.08, .5, .5);
+			float s = pulse(rr * 6.);
+			float ss = pulse(rr * 12.);
+			//N.y *= clamp(s, -1., 1.);
+			if (s > 0.) {
+				N = normalize(N + B);
+				if (ss > 0.) {
+					N = reflect(N, vec3(0, 1, 0));
+				}
+			//	N.y = 
+			}
 		}
+		//return N;
 		vec3 T = cross(B, N);
 		
 		vec3 H = normalize(V + L);
@@ -220,6 +217,7 @@ vec3 render(
 ){
 	const int steps = 20;
 	const float end = 20.;
+	platter_rot = rotate_around_y(u_time * 20.);
 
 	float t = 0.;
 	for (int i = 0; i < steps; i++) {
@@ -232,7 +230,7 @@ vec3 render(
 				t, // ray length at impact
 				int(d.y), // material id
 				vec3(0, 1, 0), // normal
-				p // point of impact				
+				mul(p, platter_rot) // point of impact				
 			_end;    
 			
 			return illuminate(ray.origin, h);
