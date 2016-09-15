@@ -86,9 +86,12 @@ vec2 sdf(_in(vec3) pos)
 {
 	const float thick = .1;
 	vec3 p = mul(pos, platter_rot);
-	
+
+	vec2 lead_in = vec2(
+		sd_y_cylinder(p, 6., thick - .05),
+		mat_dead_wax);
 	vec2 groove = vec2(
-		sd_y_cylinder(p, 6., thick),
+		sd_y_cylinder(p, 5.8, thick),
 		mat_groove);
 	vec2 dead_wax = vec2(
 		sd_y_cylinder(p, 2.5, thick),
@@ -101,19 +104,16 @@ vec2 sdf(_in(vec3) pos)
 		mat_logo);
 	float center_hole =
 		sd_y_cylinder(p, .25, thick * 4.);
-		
-	vec2 d1 = op_add(groove, dead_wax);
+
+	vec2 d0 = op_add(groove, lead_in);
+	vec2 d1 = op_add(d0, dead_wax);
 	vec2 d2 = op_add(label, logo);
 	vec2 d3 = op_add(d1, d2);
 	vec2 d4 = vec2(
 		op_sub(d3.x, center_hole),
 		d3.y);
-#if 0		
-	vec2 debug = vec2(
-		sd_sphere(p + vec3(4, 0, 0), 1),
-		mat_dead_wax);
-#endif
-	return d4;
+
+	return d3;
 }
 
 vec3 sdf_normal(_in(vec3) p)
