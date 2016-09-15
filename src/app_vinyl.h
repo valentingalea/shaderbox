@@ -158,16 +158,17 @@ vec3 illuminate(
 		vec3 B = hit.origin / r;
 		vec3 N = vec3(0, 1, 0);
 		if (hit.material_id == mat_groove) {
-			float rr = r +.0575 * fbm(hit.origin * 4.07, 2.08, .5, .5);
-			float s = pulse(rr * 24.);
-			float ss = pulse(rr * 48.);
+			float rr = r + .07575 *
+				noise_iq(hit.origin * 2.456);
+				//fbm(hit.origin * 4.07, 2.08, .5, .5);
+			float s = pulse(rr * 12.);
+			//float ss = pulse(rr * 48.);
 			//N.y *= clamp(s, -1., 1.);
 			if (s > 0.) {
 				N = normalize(N + B);
-				if (ss > 0.) {
+				//if (ss > 0.) {
 					N = reflect(N, vec3(0, 1, 0));
-				}
-			//	N.y = 
+				//}
 			}
 		}
 		//return N;
@@ -177,7 +178,7 @@ vec3 illuminate(
 		float dotLN = dot(L, N);
 		
 		const float ro_diff = 1.;
-		const float ro_spec = .0625;
+		const float ro_spec = .0725;
 		const float a_x = .025;
 		const float a_y = .5;
 		
