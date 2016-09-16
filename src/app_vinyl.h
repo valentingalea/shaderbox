@@ -23,7 +23,8 @@ vec3 background(_in(ray_t) ray)
 #define mat_dead_wax 2
 #define mat_label 3
 #define mat_logo 4
-#define mat_count (5)
+#define mat_shiny 5
+#define mat_count (6)
 
 void setup_mat(
 	_inout(material_t) mat,
@@ -51,6 +52,8 @@ void setup_scene()
 		vec3(.5, .5, .0), .0, .5);
 	setup_mat(materials[mat_logo],
 		vec3(0, 0, .7), .0, .5);
+	setup_mat(materials[mat_shiny],
+		vec3(.7, .7, .7), 1., .01);
 }
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
@@ -82,7 +85,7 @@ float sdf_logo(_in(vec3) pos, _in(float) thick)
 	return op_intersect(v, x);
 }
 
-vec2 sdf(_in(vec3) pos)
+vec2 sdf_platter(_in(vec3) pos)
 {
 	const float thick = .1;
 	vec3 p = mul(pos, platter_rot);
@@ -100,20 +103,29 @@ vec2 sdf(_in(vec3) pos)
 		sd_y_cylinder(p, 2., thick),
 		mat_label);
 	vec2 logo = vec2(
-		sdf_logo(p, thick - .05),
+		sdf_logo(p, thick),
 		mat_logo);
-	float center_hole =
-		sd_y_cylinder(p, .25, thick * 4.);
-
+	//float center_hole =
+	//	sd_y_cylinder(p, .25, thick * 4.);
+	float spc = sd_y_cylinder(p, .15, .8);
+	float sps = sd_sphere(p - vec3(0, .4, 0), .15);
+	vec2 spindle = vec2(
+		op_add(spc, sps), mat_shiny);
+	
 	vec2 d0 = op_add(groove, lead_in);
 	vec2 d1 = op_add(d0, dead_wax);
 	vec2 d2 = op_add(label, logo);
 	vec2 d3 = op_add(d1, d2);
-	vec2 d4 = vec2(
-		op_sub(d3.x, center_hole),
-		d3.y);
+	vec2 d4 = op_add(d3, spindle);
+	//	op_sub(d3.x, center_hole),
+	//	d3.y);
 
-	return d3;
+	return d4;
+}
+
+vec2 sdf(_in(vec3) pos)
+{
+	return sdf_platter(pos);
 }
 
 vec3 sdf_normal(_in(vec3) p)
@@ -147,13 +159,17 @@ vec3 illuminate(
 	return vec3(hit.normal);
 #endif
 
-	const vec3 L = normalize(mul(vec3(2, 4, -3), platter_rot));
-	const vec3 V = normalize(mul(eye, platter_rot) - hit.origin); // view direction
+	vec3 L = normalize(vec3(2, 4, -3));//, platter_rot));
+	vec3 V = normalize(eye - hit.origin); // view direction
 
 	material_t mat = get_material(hit.material_id);
 
 	if (hit.material_id == mat_groove ||
 	hit.material_id == mat_dead_wax) {
+		hit.origin = mul(hit.origin, platter_rot);
+		L = mul(L, platter_rot);
+		V = mul(V, platter_rot);
+		
 		float r = length(hit.origin);
 		vec3 B = hit.origin / r;
 		vec3 N = vec3(0, 1, 0);
@@ -204,7 +220,7 @@ vec3 illuminate(
 		return diffuse + specular;
 	} else {
 		hit.normal = sdf_normal(hit.origin);
-#if 1
+#if 0
 		return illum_blinn_phong(V, L, hit, mat);
 #else
 		return illum_cook_torrance(V, L, hit, mat);
@@ -216,7 +232,7 @@ vec3 render(
 	_in(ray_t) ray,
 	_in(vec3) point_cam
 ){
-	const int steps = 20;
+	const int steps = 80;
 	const float end = 20.;
 	platter_rot = rotate_around_y(u_time * 200.);
 
@@ -231,7 +247,7 @@ vec3 render(
 				t, // ray length at impact
 				int(d.y), // material id
 				vec3(0, 1, 0), // normal
-				mul(p, platter_rot) // point of impact				
+				p, // point of impact				
 			_end;    
 			
 			return illuminate(ray.origin, h);
