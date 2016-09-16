@@ -19,6 +19,9 @@ _mutable(material_t) materials[num_materials];
 material_t get_material(
 	_in(int) index
 ){
+#ifdef __cplusplus
+	return materials[index];
+#else
 	material_t mat;
 
 	for (int i = 0; i < num_materials; ++i) {
@@ -29,5 +32,5 @@ material_t get_material(
 	}
 
 	return mat;
+#endif
 }
-
