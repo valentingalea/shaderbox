@@ -94,16 +94,18 @@ vec2 sdf_platter(_in(vec3) pos)
 		sd_y_cylinder(p, 6., thick - .05),
 		mat_dead_wax);
 	vec2 groove = vec2(
-		sd_y_cylinder(p, 5.8, thick),
+		sd_y_cylinder(p, 5.95, thick),
 		mat_groove);
 	vec2 dead_wax = vec2(
 		sd_y_cylinder(p, 2.5, thick),
 		mat_dead_wax);
 	vec2 label = vec2(
-		sd_y_cylinder(p, 2., thick),
+		op_add(
+			sd_y_cylinder(p, 2., thick),
+			sd_y_cylinder(p, 1., thick + .05)),
 		mat_label);
 	vec2 logo = vec2(
-		sdf_logo(p, thick),
+		sdf_logo(p, thick - .0075),
 		mat_logo);
 	//float center_hole =
 	//	sd_y_cylinder(p, .25, thick * 4.);
@@ -177,7 +179,7 @@ vec3 illuminate(
 			float rr = r + .07575 *
 				noise_iq(hit.origin * 2.456);
 				//fbm(hit.origin * 4.07, 2.08, .5, .5);
-			float s = pulse(rr * 12.);
+			float s = pulse(rr * 20.);
 			//float ss = pulse(rr * 48.);
 			//N.y *= clamp(s, -1., 1.);
 			if (s > 0.) {
@@ -247,7 +249,7 @@ vec3 render(
 				t, // ray length at impact
 				int(d.y), // material id
 				vec3(0, 1, 0), // normal
-				p, // point of impact				
+				p // point of impact				
 			_end;    
 			
 			return illuminate(ray.origin, h);
