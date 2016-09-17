@@ -98,10 +98,7 @@ vec2 sdf_platter(_in(vec3) pos)
 	vec2 dead_wax = vec2(
 		sd_y_cylinder(p, 3., thick),
 		mat_dead_wax);
-	vec2 label = vec2(
-		op_add(
-			sd_y_cylinder(p, 2., thick),
-			sd_y_cylinder(p, 1., thick + .05)),
+	vec2 label = vec2(sd_y_cylinder(p, 2., thick),
 		mat_label);
 	vec2 logo = vec2(
 		sdf_logo(p, thick - .0075),
@@ -183,20 +180,14 @@ vec3 illuminate(
 				noise_iq(hit.origin * 2.456);
 				//fbm(hit.origin * 4.07, 2.08, .5, .5);
 			float s = pulse(rr * 20.);
-			//float ss = pulse(rr * 48.);
-			//N.y *= clamp(s, -1., 1.);
 			if (s > 0.) {
 				N = normalize(N + B);
-				//if (ss > 0.) {
-					N = reflect(N, vec3(0, 1, 0));
-				//}
+				N = reflect(N, vec3(0, 1, 0));
 			}
 		}
 		if (hit.material_id == mat_dead_wax) {
 			float s = saw(r * 4.);
-			if (s > .9) {
-				N = normalize(N + B);
-			}
+			N = normalize(N + B * (s > .9));
 		}
 		//return N;
 		vec3 T = cross(B, N);
@@ -231,6 +222,15 @@ vec3 illuminate(
 		return diffuse + specular;
 	} else {
 		hit.normal = sdf_normal(hit.origin);
+#if 1
+		if (hit.material_id == mat_label || hit.material_id == mat_logo) {
+			float r = length(hit.origin);
+			vec3 B = hit.origin / r;
+			float s = saw(r * .9);
+			hit.normal = normalize(hit.normal + B * (s > .975));
+		}
+#endif
+
 #if 0
 		return illum_blinn_phong(V, L, hit, mat);
 #else
