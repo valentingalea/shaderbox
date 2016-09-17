@@ -164,7 +164,7 @@ vec3 illuminate(
 	return vec3(hit.normal);
 #endif
 
-	vec3 L = normalize(vec3(2, 4, -3));//, platter_rot));
+	vec3 L = normalize(vec3(2, 4, -3));
 	vec3 V = normalize(eye - hit.origin); // view direction
 
 	material_t mat = get_material(hit.material_id);
@@ -245,7 +245,14 @@ vec3 render(
 ){
 	const int steps = 80;
 	const float end = 20.;
-	platter_rot = rotate_around_y(u_time * 200.);
+
+	float rot = u_time * 200.;
+	if (u_mouse.z > 0.) {
+		rot = u_mouse.y;
+	}
+	platter_rot = mul(
+		rotate_around_y(rot), 
+		rotate_around_x(sin(u_time) * .1));
 
 	float t = 0.;
 	for (int i = 0; i < steps; i++) {
