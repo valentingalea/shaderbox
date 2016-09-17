@@ -24,7 +24,6 @@ vec3 background(_in(ray_t) ray)
 #define mat_label 3
 #define mat_logo 4
 #define mat_shiny 5
-#define mat_count (6)
 
 void setup_mat(
 	_inout(material_t) mat,
@@ -94,10 +93,10 @@ vec2 sdf_platter(_in(vec3) pos)
 		sd_y_cylinder(p, 6., thick - .05),
 		mat_dead_wax);
 	vec2 groove = vec2(
-		sd_y_cylinder(p, 5.95, thick),
+		sd_y_cylinder(p, 5.9, thick),
 		mat_groove);
 	vec2 dead_wax = vec2(
-		sd_y_cylinder(p, 2.5, thick),
+		sd_y_cylinder(p, 3., thick),
 		mat_dead_wax);
 	vec2 label = vec2(
 		op_add(
@@ -122,7 +121,11 @@ vec2 sdf_platter(_in(vec3) pos)
 	//	op_sub(d3.x, center_hole),
 	//	d3.y);
 
-	return d4;
+	float defect1 = sd_sphere(p + vec3(6.05, 0, 0), .1);
+	float defect2 = sd_sphere(p + vec3(-6.05, 0, 0), .1);
+	float defect = op_add(defect1, defect2);
+
+	return vec2(op_sub(d4.x, defect), d4.y);
 }
 
 vec2 sdf(_in(vec3) pos)
@@ -187,6 +190,12 @@ vec3 illuminate(
 				//if (ss > 0.) {
 					N = reflect(N, vec3(0, 1, 0));
 				//}
+			}
+		}
+		if (hit.material_id == mat_dead_wax) {
+			float s = saw(r * 4.);
+			if (s > .9) {
+				N = normalize(N + B);
 			}
 		}
 		//return N;
