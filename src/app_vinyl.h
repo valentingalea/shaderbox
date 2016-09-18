@@ -2,8 +2,6 @@
 #include "util.h"
 #include "sdf.h"
 #include "material.h"
-#include "util_optics.h"
-#include "light.h"
 
 #include "noise_iq.h"
 #include "fbm.h"
@@ -248,14 +246,14 @@ vec3 illuminate(
 		//return N;
 		vec3 T = cross(B, N);
 		
-		vec3 H = normalize(V + L);
-		float dotLN = dot(L, N);
-		
 		const float ro_diff = 1.;
 		const float ro_spec = .0725;
 		const float a_x = .025;
 		const float a_y = .5;
 		
+		vec3 H = normalize(V + L);
+		float dotLN = dot(L, N);
+
 		vec3 diffuse = mat.base_color *
 			(ro_diff / PI) *
 			max(0., dotLN);
@@ -278,6 +276,7 @@ vec3 illuminate(
 		return diffuse + specular;
 	} else {
 		hit.normal = sdf_normal(hit.origin);
+
 #if 0
 		if (hit.material_id == mat_label || hit.material_id == mat_logo) {
 			float r = length(hit.origin);
@@ -286,12 +285,19 @@ vec3 illuminate(
 			hit.normal = normalize(hit.normal + B * float(s > .975));
 		}
 #endif
-
-#if 1
-		return illum_blinn_phong(V, L, hit, mat);
-#else
-		return illum_cook_torrance(V, L, hit, mat);
+		
+#ifdef SHADERTOY
+		if (hit.material_id == mat_shiny) {
+			vec3 refl = (reflect(V, hit.normal));
+			return textureCube(iChannel0, refl).rgb;
+		}
 #endif
+
+		vec3 diffuse = mat.base_color * max(0., dot(L, hit.normal));
+		vec3 H = normalize(V + L);
+		vec3 specular = pow(max(0., dot(H, hit.normal)), 50.)
+			* vec3(1, 1, 1);
+		return diffuse + specular;
 	}
 }
 
