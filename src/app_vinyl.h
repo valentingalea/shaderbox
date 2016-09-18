@@ -166,7 +166,14 @@ vec2 sdf(_in(vec3) p)
 		op_add(op_add(op_add(arm1, arm2), arm3), armb.x),
 		mat_shiny);
 
-	vec3 pp = mul(p - a3, mul(mul(rotate_around_y(-35.), rotate_around_z(-45.)), rotate_around_x(-20.)));
+	vec3 ang = vec3(20, 35, 45);
+#ifdef HLSL
+	ang *= -1.;
+#endif
+	vec3 pp = mul(p - a3,
+		mul(mul(rotate_around_y(ang.y),
+		rotate_around_z(ang.z)),
+		rotate_around_x(ang.x)));
 	vec2 cartrige = vec2(
 		sd_box(pp - vec3(.45, 0, 0), vec3(.5, .15, .15)),
 		mat_shiny);
@@ -280,7 +287,7 @@ vec3 illuminate(
 		}
 #endif
 
-#if 0
+#if 1
 		return illum_blinn_phong(V, L, hit, mat);
 #else
 		return illum_cook_torrance(V, L, hit, mat);
@@ -322,9 +329,11 @@ vec3 render(
 	const float end = 40.;
 
 	float rot = u_time * 200.;
+#ifdef SHADERTOY
 	if (u_mouse.z > 0.) {
 		rot = u_mouse.y;
 	}
+#endif
 	platter_rot = mul(
 		rotate_around_y(rot), 
 		rotate_around_x(sin(u_time) * .1));
