@@ -55,12 +55,12 @@ void setup_scene()
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
-#if 1
+#if 0
 	eye = vec3(0, 5.75, 6.75);
 	look_at = vec3(0, -2.5, 0);
 #else
-	eye = vec3(0, 0, 15);
-	look_at = vec3(0, 0, 0);
+	eye = vec3(-2, 1.5, 5.5);
+	look_at = vec3(-1.5, 0, 0);
 #endif
 }
 
@@ -140,6 +140,7 @@ vec2 sdf(_in(vec3) p)
 	vec2 plat = sdf_platter(p);
 
 	vec3 base_p = vec3(-7, 0, -5);
+/*
 	float platter = sd_y_cylinder(p, 6.25, 1.);
 	float base_0 = sd_y_cylinder(p - base_p, 3., .25);
 	float base_1 = op_sub(base_0, platter);
@@ -148,7 +149,7 @@ vec2 sdf(_in(vec3) p)
 	vec2 base_a = vec2(base_12, mat_shiny);
 	vec2 base_b = vec2(sd_y_cylinder(p - base_p, 0.5, 2.5), mat_shiny);
 	vec2 base = op_add(base_a, base_b);
-
+*/
 	const float D = .15;
 	const float H = 1.;
 	vec3 a1 = vec3(-6, H, -3);
@@ -164,6 +165,7 @@ vec2 sdf(_in(vec3) p)
 		op_add(op_add(op_add(arm1, arm2), arm3), armb.x),
 		mat_shiny);
 
+/*
 	vec3 ang = vec3(20, 35, 45);
 #ifdef HLSL
 	ang *= -1.;
@@ -175,10 +177,38 @@ vec2 sdf(_in(vec3) p)
 	vec2 cartrige = vec2(
 		sd_box(pp - vec3(.45, 0, 0), vec3(.5, .15, .15)),
 		mat_shiny);
+*/
 
-	vec2 tonearm = op_add(op_add(base, arm), cartrige);
+	vec3 arm_fwd = normalize(a3 - a33);
+	vec3 arm_up = vec3(0, 1, 0);
+	vec3 arm_right = cross(arm_fwd, arm_up);
+	mat3 arm_xform = mat3(arm_fwd, arm_up,
+	arm_right);
+	
+	vec3 clr_p = p - a3;
+	float clr_r = D * 1.5;
+	float collar = sd_cylinder(clr_p,
+		vec3(0), vec3(0) + arm_fwd * .05,
+		clr_r);
+		
+	const float fl_w = .045;
+	const float fl_h = .020;
+	const float fl_len1 = clr_r * 2.;
+	vec3 pp = mul(clr_p - vec3(0, 0, fl_len1),
+		 mul(rotate_around_x(30), arm_xform));
+	float fl1 = sd_box(pp,
+		vec3(fl_w, fl_h, fl_len1));
+	float finger_lift = fl1;
+		
+	vec2 cartrige = vec2(
+		op_add(collar, finger_lift),
+		mat_shiny);
 
-	return op_add(plat, tonearm);
+	vec2 tonearm = op_add(
+	arm, //op_add(base, arm),
+	cartrige);
+
+	return tonearm;//op_add(plat, tonearm);
 }
 
 vec3 sdf_normal(_in(vec3) p)
@@ -359,7 +389,7 @@ vec3 render(
 			_end;    
 		
 			float sh = 1.;
-#if 1
+#if 0
 			ray_t sh_ray = _begin(ray_t)
 				p + sun_dir * 0.05, sun_dir
 				_end;
