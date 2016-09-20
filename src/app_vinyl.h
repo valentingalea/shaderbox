@@ -193,11 +193,11 @@ vec2 sdf(_in(vec3) p)
 	// combining the arm one plus a new rotation
 	mat3 fl_rot =
 		mul(arm_xform, rotate_around_x(45.));
-	vec3 pp = mul(clr_p -
+	vec3 fl_p = mul(clr_p -
 		arm_right * clr_r -
 		arm_up * clr_r,
 		fl_rot);
-	float fl1 = sd_box(pp,
+	float fl1 = sd_box(fl_p,
 		vec3(fl_w, fl_h, fl_len1));
 
 	// the second fl part is positioned
@@ -205,17 +205,38 @@ vec2 sdf(_in(vec3) p)
 	// new local transform space
 	mat3 fl_rot2 = rotate_around_x(-45.);
 	float fl2 = sd_box(
-		mul(pp - vec3(0, 0, fl_len1), fl_rot2) - vec3(0, 0, fl_len2),
+		mul(fl_p - vec3(0, 0, fl_len1), fl_rot2)
+			 - vec3(0, 0, fl_len2),
 		vec3(fl_w, fl_h, fl_len2));
 	float finger_lift = op_add(fl1, fl2);
 
-	vec2 cartrige = vec2(
-		op_add(collar,
-			finger_lift),
+	vec2 headshell = vec2(
+		op_add(collar, finger_lift),
+		mat_shiny);
+	
+	// the cartridge 'ctg'
+	const float ctg_w = .075;
+	const float ctg_h = .075;
+	float ctg_len1 = .4;
+	float ctg_len2 = .6;
+	
+	vec3 ctg_p = mul(clr_p, arm_xform);
+	float ctg1 = sd_box(ctg_p,
+		vec3(ctg_len1, ctg_h, ctg_w));
+		
+	mat3 ctg_rot = rotate_around_z(30.);
+	float ctg2 = sd_box(
+		mul(ctg_p - vec3(ctg_len1 - .05, 0, 0), ctg_rot)
+			- vec3(ctg_len2, 0, 0),
+		vec3(ctg_len2, ctg_h, ctg_w));
+			
+	vec2 cartridge = vec2(
+		op_add(ctg1, ctg2),
 		mat_shiny);
 
 #ifdef JUST_TONE_ARM
-	return op_add(arm, cartrige);
+	return op_add(arm,
+		op_add(headshell, cartridge));
 #else
 	vec2 plat = sdf_platter(p);
 	vec2 tonearm =
