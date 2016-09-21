@@ -1,4 +1,4 @@
-.#include "def.h"
+#include "def.h"
 #include "util.h"
 #include "sdf.h"
 #include "material.h"
@@ -138,7 +138,7 @@ float sd_capsule(vec3 p, vec3 a, vec3 b, float r) {
 vec2 sdf(_in(vec3) p)
 {
 	vec3 base_p = vec3(-7, 0, -5);
-#define JUST_TONE_ARM
+//#define JUST_TONE_ARM
 #ifndef JUST_TONE_ARM
 	float platter = sd_y_cylinder(p, 6.25, 1.);
 	float base_0 = sd_y_cylinder(p - base_p, 3., .25);
@@ -160,8 +160,10 @@ vec2 sdf(_in(vec3) p)
 	float arm2 = sd_capsule(p, a1, a11, D);
 	float arm3 = sd_capsule(p, a33, a3, D);
 	vec2 armb = sd_bezier(a11, a2, a33, p, D);
+	float arm_link1 = op_add(arm1, arm2);
+	float arm_link2 = op_add(arm_link1, arm3);
 	vec2 arm = vec2(
-		op_add(op_add(op_add(arm1, arm2), arm3), armb.x),
+		op_add(arm_link2, armb.x),
 		mat_shiny);
 
 	// construct a rotation matrix
@@ -219,25 +221,32 @@ vec2 sdf(_in(vec3) p)
 	const float ctg_h = .075;
 	float ctg_len1 = .4;
 	float ctg_len2 = .6;
-	
+
 	vec3 ctg_p = mul(clr_p, arm_xform);
 	float ctg1 = sd_box(ctg_p,
 		vec3(ctg_len1, ctg_h, ctg_w));
-		
+
 	mat3 ctg_rot = rotate_around_z(30.);
 	vec3 ctg2_p =
-		mul(ctg_p - vec3(ctg_len1 - .05, 0, 0), ctg_rot)
-			- vec3(ctg_len2, 0, 0);
+		mul(ctg_p - vec3(ctg_len1, 0, 0), ctg_rot)
+			- vec3(ctg_len2 - 0.03, -.01, 0);
 	float ctg2 = sd_box(
 		ctg2_p,
 		vec3(ctg_len2, ctg_h, ctg_w));
-		
-	float cut = sd_box(
-		mul(ctg2_p, rotate_around_x(30.)) - vec3(0,0,.5),
-		vec3(ctg_len2, ctg_h, ctg_w));
-			
+
+	float cut = sd_box(mul(
+			mul(ctg2_p, rotate_around_x(10.)) - vec3(0, .05, .175),
+			rotate_around_y(-5.)),
+		vec3(ctg_len2 * 2., ctg_h * 2., ctg_w * 2.));
+	float cut2 = sd_box(
+		mul(ctg2_p - vec3(.3, .25, 0),
+			rotate_around_z(10.)),
+		vec3(.4, .2, .3));
+
+	float ctg12 = op_add(ctg1, ctg2);
+	float ctg12c = op_sub(ctg12, cut);
 	vec2 cartridge = vec2(
-		op_add(ctg2, cut),
+		op_sub(ctg12c, cut2),
 		mat_shiny);
 
 #ifdef JUST_TONE_ARM
@@ -245,9 +254,9 @@ vec2 sdf(_in(vec3) p)
 		op_add(headshell, cartridge));
 #else
 	vec2 plat = sdf_platter(p);
-	vec2 tonearm =
-		op_add(op_add(base, arm),
-			cartridge);
+	vec2 tone1 = op_add(base, arm);
+	vec2 tone2 = op_add(headshell, cartridge);
+	vec2 tonearm = op_add(tone1, tone2);
 	return op_add(plat, tonearm);
 #endif
 }
@@ -402,7 +411,12 @@ vec3 render(
 	_in(ray_t) ray,
 	_in(vec3) point_cam
 ){
-	const int steps = 80;
+	const int steps = 
+#ifdef __cplusplus
+		60
+#else
+		180;
+#endif
 	const float end = 40.;
 
 	float rot = u_time * 200.;
