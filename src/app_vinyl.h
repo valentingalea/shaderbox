@@ -1,4 +1,4 @@
-#include "def.h"
+.#include "def.h"
 #include "util.h"
 #include "sdf.h"
 #include "material.h"
@@ -55,7 +55,7 @@ void setup_scene()
 
 void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 {
-#if 0
+#if 1
 	eye = vec3(0, 5.75, 6.75);
 	look_at = vec3(0, -2.5, 0);
 #else
@@ -225,13 +225,19 @@ vec2 sdf(_in(vec3) p)
 		vec3(ctg_len1, ctg_h, ctg_w));
 		
 	mat3 ctg_rot = rotate_around_z(30.);
-	float ctg2 = sd_box(
+	vec3 ctg2_p =
 		mul(ctg_p - vec3(ctg_len1 - .05, 0, 0), ctg_rot)
-			- vec3(ctg_len2, 0, 0),
+			- vec3(ctg_len2, 0, 0);
+	float ctg2 = sd_box(
+		ctg2_p,
+		vec3(ctg_len2, ctg_h, ctg_w));
+		
+	float cut = sd_box(
+		mul(ctg2_p, rotate_around_x(30.)) - vec3(0,0,.5),
 		vec3(ctg_len2, ctg_h, ctg_w));
 			
 	vec2 cartridge = vec2(
-		op_add(ctg1, ctg2),
+		op_add(ctg2, cut),
 		mat_shiny);
 
 #ifdef JUST_TONE_ARM
@@ -241,8 +247,7 @@ vec2 sdf(_in(vec3) p)
 	vec2 plat = sdf_platter(p);
 	vec2 tonearm =
 		op_add(op_add(base, arm),
-			cartrige);
-
+			cartridge);
 	return op_add(plat, tonearm);
 #endif
 }
