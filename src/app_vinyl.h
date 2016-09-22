@@ -138,19 +138,19 @@ float sd_capsule(vec3 p, vec3 a, vec3 b, float r) {
 vec2 sdf(_in(vec3) p)
 {
 	vec3 base_p = vec3(-7, 0, -5);
-//#define JUST_TONE_ARM
+	//#define JUST_TONE_ARM
 #ifndef JUST_TONE_ARM
 	float platter = sd_y_cylinder(p, 6.25, 1.);
 	float base_0 = sd_y_cylinder(p - base_p, 3., .25);
 	float base_1 = op_sub(base_0, platter);
-	float base_2 = sd_y_cylinder(p - base_p, 1.15, 1.05);
+	float base_2 = sd_y_cylinder(p - base_p, 1.25, 1.);
 	float base_12 = op_add(base_1, base_2);
 	vec2 base_a = vec2(base_12, mat_shiny);
 	vec2 base_b = vec2(sd_y_cylinder(p - base_p, 0.5, 2.5), mat_shiny);
 	vec2 base = op_add(base_a, base_b);
 #endif
-	const float D = .15;
-	const float H = 1.;
+	const float D = .1;
+	const float H = .8;
 	vec3 a1 = vec3(-6, H, -3);
 	vec3 a11 = vec3(-4.25, H, 2);
 	vec3 a2 = vec3(-4.1, H, 2.45);
@@ -180,7 +180,8 @@ vec2 sdf(_in(vec3) p)
 	vec3 clr_p = p - a3;
 	float clr_r = D * 1.5;
 	float collar = sd_cylinder(clr_p,
-		vec3(0, 0, 0), vec3(0, 0, 0) + arm_fwd * .05,
+		vec3(0, 0, 0),
+		vec3(0, 0, 0) + arm_fwd * .05,
 		clr_r);
 
 	// finger lift (or grip) 'fl'
@@ -208,38 +209,38 @@ vec2 sdf(_in(vec3) p)
 	mat3 fl_rot2 = rotate_around_x(-45.);
 	float fl2 = sd_box(
 		mul(fl_p - vec3(0, 0, fl_len1), fl_rot2)
-			 - vec3(0, 0, fl_len2),
+		- vec3(0, 0, fl_len2),
 		vec3(fl_w, fl_h, fl_len2));
 	float finger_lift = op_add(fl1, fl2);
 
 	vec2 headshell = vec2(
 		op_add(collar, finger_lift),
 		mat_shiny);
-	
+
 	// the cartridge 'ctg'
-	const float ctg_w = .075;
-	const float ctg_h = .075;
-	float ctg_len1 = .4;
-	float ctg_len2 = .6;
+	const float ctg_w = .05;
+	const float ctg_h = .05;
+	float ctg_len1 = .3;
+	float ctg_len2 = .5;
 
 	vec3 ctg_p = mul(clr_p, arm_xform);
 	float ctg1 = sd_box(ctg_p,
 		vec3(ctg_len1, ctg_h, ctg_w));
 
-	mat3 ctg_rot = rotate_around_z(30.);
+	mat3 ctg_rot = rotate_around_z(40.);
 	vec3 ctg2_p =
 		mul(ctg_p - vec3(ctg_len1, 0, 0), ctg_rot)
-			- vec3(ctg_len2 - 0.03, -.01, 0);
+		- vec3(ctg_len2 - 0.03, -.01, 0);
 	float ctg2 = sd_box(
 		ctg2_p,
 		vec3(ctg_len2, ctg_h, ctg_w));
 
 	float cut = sd_box(mul(
-			mul(ctg2_p, rotate_around_x(10.)) - vec3(0, .05, .175),
-			rotate_around_y(-5.)),
-		vec3(ctg_len2 * 2., ctg_h * 2., ctg_w * 2.));
+		mul(ctg2_p, rotate_around_x(10.)) - vec3(0, .05, .175),
+		rotate_around_y(-5.)),
+		vec3(ctg_len2 * 2., ctg_h * 3., ctg_w * 3.2));
 	float cut2 = sd_box(
-		mul(ctg2_p - vec3(.3, .25, 0),
+		mul(ctg2_p - vec3(.3, .2, 0),
 			rotate_around_z(10.)),
 		vec3(.4, .2, .3));
 
@@ -444,7 +445,7 @@ vec3 render(
 			_end;    
 		
 			float sh = 1.;
-#if 0
+#if 1
 			ray_t sh_ray = _begin(ray_t)
 				p + sun_dir * 0.05, sun_dir
 				_end;
