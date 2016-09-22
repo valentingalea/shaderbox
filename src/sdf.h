@@ -94,8 +94,8 @@ float sd_y_cylinder(
 
 float sd_cylinder(
 	_in(vec3) P,
-	_in(vec3) P0, // start point
-	_in(vec3) P1, // end point
+	_in(vec3) P0, // start point (relative to 'p')
+	_in(vec3) P1, // end point (relative to 'p')
 	_in(float) R  // thickness
 ){
 	// distance to segment -- http://geomalgorithms.com/a02-_lines.html
@@ -111,7 +111,7 @@ float sd_cylinder(
 // 3D Bezier curved cylinder
 // original by http://research.microsoft.com/en-us/um/people/hoppe/ravg.pdf
 // adapted by iq https://www.shadertoy.com/view/ldj3Wh
-float det(
+float det2(
 	_in(vec2) a,
 	_in(vec2) b
 ){
@@ -122,9 +122,9 @@ vec3 sd_bezier_get_closest(
 	_in(vec2) b1,
 	_in(vec2) b2
 ){
-	float a = det(b0, b2);
-	float b = 2.0*det(b1, b0);
-	float d = 2.0*det(b2, b1);
+	float a = det2(b0, b2);
+	float b = 2.0*det2(b1, b0);
+	float d = 2.0*det2(b2, b1);
 	float f = b*d - a*a;
 	vec2  d21 = b2 - b1;
 	vec2  d10 = b1 - b0;
@@ -132,8 +132,8 @@ vec3 sd_bezier_get_closest(
 	vec2  gf = 2.0*(b*d21 + d*d10 + a*d20); gf = vec2(gf.y, -gf.x);
 	vec2  pp = -f*gf / dot(gf, gf);
 	vec2  d0p = b0 - pp;
-	float ap = det(d0p, d20);
-	float bp = 2.0*det(d10, d0p);
+	float ap = det2(d0p, d20);
+	float bp = 2.0*det2(d10, d0p);
 	float t = clamp((ap + bp) / (2.0*a + b + d), 0.0, 1.0);
 	return vec3(mix(mix(b0, b1, t), mix(b1, b2, t), t), t);
 }
@@ -158,3 +158,14 @@ vec2 sd_bezier(
 	return vec2(0.85*(sqrt(dot(cp.xy, cp.xy) + p3.z*p3.z) - thickness), cp.z);
 }
 
+// adapted from http://mercury.sexy/hg_sdf/
+float sd_capsule(
+	_in(vec3) p,
+	_in(vec3) a,
+	_in(vec3) b,
+	_in(float) r
+){
+	vec3 ab = b - a;
+	float t = clamp(dot(p - a, ab) / dot(ab, ab), 0., 1.);
+	return length((ab*t + a) - p) - r;
+}

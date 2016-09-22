@@ -53,8 +53,10 @@ void setup_scene()
 		vec3(.7, .7, .7), 1., .01);
 }
 
-void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
-{
+void setup_camera(
+	_inout(vec3) eye,
+	_inout(vec3) look_at
+){
 #if 1
 	eye = vec3(0, 5.75, 6.75);
 	look_at = vec3(0, -2.5, 0);
@@ -66,8 +68,10 @@ void setup_camera(_inout(vec3) eye, _inout(vec3) look_at)
 
 _mutable(mat3) platter_rot;
 
-float sdf_logo(_in(vec3) pos, _in(float) thick)
-{
+float sdf_logo(
+	_in(vec3) pos,
+	_in(float) thick
+){
 	vec3 b = vec3(.25, thick, 1.2);
 	vec3 d = vec3(.7, 0, 0);
 	
@@ -100,8 +104,6 @@ vec2 sdf_platter(_in(vec3) p)
 	vec2 logo = vec2(
 		sdf_logo(p, thick - .0175),
 		mat_logo);
-	//float center_hole =
-	//	sd_y_cylinder(p, .25, thick * 4.);
 	float spc = sd_y_cylinder(p, .10, .6);
 	float sps = sd_sphere(p - vec3(0, .3, 0), .10);
 	vec2 spindle = vec2(
@@ -112,26 +114,14 @@ vec2 sdf_platter(_in(vec3) p)
 	vec2 d2 = op_add(label, logo);
 	vec2 d3 = op_add(d1, d2);
 	vec2 d4 = op_add(d3, spindle);
-	//	op_sub(d3.x, center_hole),
-	//	d3.y);
 
+	// cut some holes at the edges of the disk
+	// to make the rotation more visible
 	float defect1 = sd_sphere(p + vec3(6.05, 0, 0), .1);
 	float defect2 = sd_sphere(p + vec3(-6.05, 0, 0), .1);
 	float defect = op_add(defect1, defect2);
 
 	return vec2(op_sub(d4.x, defect), d4.y);
-}
-
-// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
-float fLineSegment(vec3 p, vec3 a, vec3 b) {
-	vec3 ab = b - a;
-	float t = clamp(dot(p - a, ab) / dot(ab, ab), 0., 1.);
-	return length((ab*t + a) - p);
-}
-
-// Capsule version 2: between two end points <a> and <b> with radius r 
-float sd_capsule(vec3 p, vec3 a, vec3 b, float r) {
-	return fLineSegment(p, a, b) - r;
 }
 
 vec2 sdf_tonearm(_in(vec3) pos)
@@ -151,17 +141,17 @@ vec2 sdf_tonearm(_in(vec3) pos)
 	vec3 p = mul(pos, rotate_around_x(
 		sin(u_time * 3.6758) * .1));
 
-	const float D = .1;
+	const float R = .1;
 	const float H = .8;
 	vec3 a1 = vec3(-6, H, -3);
 	vec3 a11 = vec3(-4.25, H, 2);
 	vec3 a2 = vec3(-4.1, H, 2.45);
 	vec3 a33 = vec3(-3.5, H, 3);
 	vec3 a3 = vec3(-2, H, 4);
-	float arm1 = sd_capsule(p, base_p + vec3(-1, H, -2), a1, D);
-	float arm2 = sd_capsule(p, a1, a11, D);
-	float arm3 = sd_capsule(p, a33, a3, D);
-	vec2 armb = sd_bezier(a11, a2, a33, p, D);
+	float arm1 = sd_capsule(p, base_p + vec3(-1, H, -2), a1, R);
+	float arm2 = sd_capsule(p, a1, a11, R);
+	float arm3 = sd_capsule(p, a33, a3, R);
+	vec2 armb = sd_bezier(a11, a2, a33, p, R);
 	float arm_link1 = op_add(arm1, arm2);
 	float arm_link2 = op_add(arm_link1, arm3);
 	vec2 arm = vec2(
@@ -180,7 +170,7 @@ vec2 sdf_tonearm(_in(vec3) pos)
 
 	// collar 'clr' (or flange)
 	vec3 clr_p = p - a3;
-	float clr_r = D * 1.5;
+	float clr_r = R * 1.5;
 	float collar = sd_cylinder(clr_p,
 		vec3(0, 0, 0),
 		vec3(0, 0, 0) + arm_fwd * .05,
@@ -228,7 +218,6 @@ vec2 sdf_tonearm(_in(vec3) pos)
 	vec3 ctg_p = mul(clr_p, arm_xform);
 	float ctg1 = sd_box(ctg_p,
 		vec3(ctg_len1, ctg_h, ctg_w));
-
 	mat3 ctg_rot = rotate_around_z(44.);
 	vec3 ctg2_p =
 		mul(ctg_p - vec3(ctg_len1, 0, 0), ctg_rot)
@@ -237,6 +226,8 @@ vec2 sdf_tonearm(_in(vec3) pos)
 		ctg2_p,
 		vec3(ctg_len2, ctg_h, ctg_w));
 
+	// a series of boxes that will be used 
+	// to carve out the shape of the 'needle'
 	float cut = sd_box(mul(
 		mul(ctg2_p, rotate_around_x(10.)) - vec3(0, .05, .175),
 		rotate_around_y(-5.)),
@@ -302,7 +293,7 @@ vec3 illuminate(
 #endif
 
 	vec3 L = sun_dir;
-	vec3 V = normalize(eye - hit.origin); // view direction
+	vec3 V = normalize(eye - hit.origin);
 
 	material_t mat = get_material(hit.material_id);
 
@@ -417,9 +408,9 @@ vec3 render(
 	_in(ray_t) ray,
 	_in(vec3) point_cam
 ){
-	const int steps = 
+	const int steps =
 #ifdef __cplusplus
-		60
+		60;
 #else
 		180;
 #endif
@@ -427,6 +418,7 @@ vec3 render(
 
 	float rot = u_time * 200.;
 #ifdef SHADERTOY
+	// scratching support :)
 	if (u_mouse.z > 0.) {
 		rot = u_mouse.y;
 	}
