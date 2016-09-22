@@ -82,10 +82,9 @@ float sdf_logo(_in(vec3) pos, _in(float) thick)
 	return op_intersect(v, x);
 }
 
-vec2 sdf_platter(_in(vec3) pos)
+vec2 sdf_platter(_in(vec3) p)
 {
 	const float thick = .1;
-	vec3 p = mul(pos, platter_rot);
 
 	vec2 lead_in = vec2(
 		sd_y_cylinder(p, 6., thick - .05),
@@ -135,20 +134,23 @@ float sd_capsule(vec3 p, vec3 a, vec3 b, float r) {
 	return fLineSegment(p, a, b) - r;
 }
 
-vec2 sdf(_in(vec3) p)
+vec2 sdf_tonearm(_in(vec3) pos)
 {
 	vec3 base_p = vec3(-7, 0, -5);
-	//#define JUST_TONE_ARM
-#ifndef JUST_TONE_ARM
-	float platter = sd_y_cylinder(p, 6.25, 1.);
-	float base_0 = sd_y_cylinder(p - base_p, 3., .25);
+
+	float platter = sd_y_cylinder(pos, 6.25, 1.);
+	float base_0 = sd_y_cylinder(pos - base_p, 3., .25);
 	float base_1 = op_sub(base_0, platter);
-	float base_2 = sd_y_cylinder(p - base_p, 1.25, 1.);
+	float base_2 = sd_y_cylinder(pos - base_p, 1.25, 1.);
 	float base_12 = op_add(base_1, base_2);
 	vec2 base_a = vec2(base_12, mat_shiny);
-	vec2 base_b = vec2(sd_y_cylinder(p - base_p, 0.5, 2.5), mat_shiny);
+	vec2 base_b = vec2(sd_y_cylinder(pos - base_p, 0.5, 2.5), mat_shiny);
 	vec2 base = op_add(base_a, base_b);
-#endif
+
+	// slight wobble to mimic needle going up/down
+	vec3 p = mul(pos, rotate_around_x(
+		sin(u_time * 3.6758) * .1));
+
 	const float D = .1;
 	const float H = .8;
 	vec3 a1 = vec3(-6, H, -3);
@@ -227,7 +229,7 @@ vec2 sdf(_in(vec3) p)
 	float ctg1 = sd_box(ctg_p,
 		vec3(ctg_len1, ctg_h, ctg_w));
 
-	mat3 ctg_rot = rotate_around_z(40.);
+	mat3 ctg_rot = rotate_around_z(44.);
 	vec3 ctg2_p =
 		mul(ctg_p - vec3(ctg_len1, 0, 0), ctg_rot)
 		- vec3(ctg_len2 - 0.03, -.01, 0);
@@ -250,16 +252,19 @@ vec2 sdf(_in(vec3) p)
 		op_sub(ctg12c, cut2),
 		mat_shiny);
 
-#ifdef JUST_TONE_ARM
-	return op_add(arm,
-		op_add(headshell, cartridge));
-#else
-	vec2 plat = sdf_platter(p);
 	vec2 tone1 = op_add(base, arm);
 	vec2 tone2 = op_add(headshell, cartridge);
-	vec2 tonearm = op_add(tone1, tone2);
-	return op_add(plat, tonearm);
-#endif
+	return op_add(tone1, tone2);
+}
+
+vec2 sdf(_in(vec3) pos)
+{
+	vec3 p = mul(pos, platter_rot);
+	vec2 plat = sdf_platter(p);
+
+	vec2 arm = sdf_tonearm(pos);
+
+	return op_add(plat, arm);
 }
 
 vec3 sdf_normal(_in(vec3) p)
@@ -285,7 +290,7 @@ float pulse(_in(float) x)
 	return saw(x + .5) - saw(x);
 }
 
-_constant(vec3) sun_dir = //normalize(vec3(2, 4, -3));
+_mutable(vec3) sun_dir = 
 	normalize(vec3(-1, 4, -3));
 
 vec3 illuminate(
