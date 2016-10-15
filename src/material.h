@@ -19,7 +19,7 @@ _mutable(material_t) materials[num_materials];
 material_t get_material(
 	_in(int) index
 ){
-#ifdef __cplusplus
+#if defined(HLSL) && defined(__cplusplus)
 	return materials[index];
 #else
 	material_t mat;
