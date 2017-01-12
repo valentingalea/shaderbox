@@ -299,8 +299,8 @@ vec3 render(
 	const float t = orig.w;
 	
 	const vec3 fog_color = vec3(1, 1, 1);
-	const float density = .1;
-	const float falloff = .5;
+	const float density = fog_density;
+	const float falloff = fog_falloff;
 	
 	float fog_factor =
 		density * exp(-ray.origin.y * falloff)

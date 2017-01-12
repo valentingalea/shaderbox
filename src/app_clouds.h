@@ -1,4 +1,3 @@
-#define APP_CLOUDS
 #include "def.h"
 #include "util.h"
 #include "intersect.h"
@@ -6,7 +5,7 @@
 #define hg_g (.2)
 #include "volumetric.h"
 
-#define SKY_SPHERE
+//#define SKY_SPHERE
 #define USE_NOISE_TEX
 
 // ----------------------------------------------------------------------------

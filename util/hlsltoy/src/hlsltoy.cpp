@@ -370,7 +370,12 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 //
 	ID3D11PixelShader* pPS = NULL;
 	SCOPE_EXIT(SafeRelease(pPS));
-	D3D_SHADER_MACRO PSShaderMacros[] = { { "HLSL", "5.0" },{ "HLSLTOY", "1.0" }, { 0, 0 } };
+	D3D_SHADER_MACRO PSShaderMacros[] = {
+		{ "HLSL", "5.0" },
+		{ "HLSLTOY", "1.0" },
+#define APP_SDF_AO
+		{ "APP_SDF_AO", "1.0" },
+		{ 0, 0 } };
 	hr = D3DCompileFromFile(szArglist[1], PSShaderMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", flags, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
 	{
@@ -386,7 +391,6 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 // Uniforms buffers
 //
 #define HLSLTOY
-#define APP_CLOUDS
 
 #define vec2 DirectX::XMFLOAT2
 #define vec3 DirectX::XMFLOAT3A
@@ -402,17 +406,15 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	hr = pd3dDevice->CreateBuffer(&uniformBuffDesc, &pData, &pUniformBuff);
 	CHECK(hr, "CreateBuffer for main vars failed");
 
-#ifdef APP_CLOUDS
-	clouds_uniform_buffer_t clouds_settings_buff;
-	D3D11_BUFFER_DESC clouds_settings_buff_descript = { sizeof(clouds_settings_buff), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
-	ID3D11Buffer* clouds_settings_ptr = NULL;
-	SCOPE_EXIT(SafeRelease(clouds_settings_ptr));
-	D3D11_SUBRESOURCE_DATA clouds_settings_sub_res = { &clouds_settings_buff, 0, 0 };
-	hr = pd3dDevice->CreateBuffer(&clouds_settings_buff_descript, &clouds_settings_sub_res, &clouds_settings_ptr);
+	aux_uniform_buffer_t aux_settings_buff;
+	D3D11_BUFFER_DESC aux_buff_descript = { sizeof(aux_settings_buff), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
+	ID3D11Buffer* aux_settings_ptr = NULL;
+	SCOPE_EXIT(SafeRelease(aux_settings_ptr));
+	D3D11_SUBRESOURCE_DATA aux_settings_sub_res = { &aux_settings_buff, 0, 0 };
+	hr = pd3dDevice->CreateBuffer(&aux_buff_descript, &aux_settings_sub_res, &aux_settings_ptr);
 	CHECK(hr, "CreateBuffer for the clouds app failed");
 
-	pImmediateContext->PSSetConstantBuffers(1, 1, &clouds_settings_ptr);
-#endif
+	pImmediateContext->PSSetConstantBuffers(1, 1, &aux_settings_ptr);
 
 //
 // Bind stuff to stages
@@ -453,26 +455,30 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		{
 			ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 #ifdef APP_CLOUDS
-			ImGui::InputFloat3("Wind Direction", reinterpret_cast<float *>(&clouds_settings_buff.wind_dir));
+			ImGui::InputFloat3("Wind Direction", reinterpret_cast<float *>(&aux_settings_buff.wind_dir));
 
 			ImGui::Spacing();
-			ImGui::InputFloat3("Sun Direction", reinterpret_cast<float *>(&clouds_settings_buff.sun_dir));
-			ImGui::InputFloat3("Sun Colour", reinterpret_cast<float *>(&clouds_settings_buff.sun_color));
-			ImGui::SliderFloat("Sun Power", &clouds_settings_buff.sun_power, 0, 12);
+			ImGui::InputFloat3("Sun Direction", reinterpret_cast<float *>(&aux_settings_buff.sun_dir));
+			ImGui::InputFloat3("Sun Colour", reinterpret_cast<float *>(&aux_settings_buff.sun_color));
+			ImGui::SliderFloat("Sun Power", &aux_settings_buff.sun_power, 0, 12);
 
 			ImGui::Spacing();
-			ImGui::InputFloat("Sky Radius", &clouds_settings_buff.atm_radius, 100., 1000.);
-			ImGui::InputFloat("Sky Height", &clouds_settings_buff.atm_ground_y, 50., 100.);
+			ImGui::InputFloat("Sky Radius", &aux_settings_buff.atm_radius, 100., 1000.);
+			ImGui::InputFloat("Sky Height", &aux_settings_buff.atm_ground_y, 50., 100.);
 
 			ImGui::Spacing();
-			ImGui::InputFloat("Scaterring Coeff", &clouds_settings_buff.sigma_scattering, .05, .1);
-			ImGui::SliderFloat("Coverage", &clouds_settings_buff.cld_coverage, 0., 1.);
-			ImGui::SliderFloat("Thickness", &clouds_settings_buff.cld_thick, 10., 200.);
+			ImGui::InputFloat("Scaterring Coeff", &aux_settings_buff.sigma_scattering, .05, .1);
+			ImGui::SliderFloat("Coverage", &aux_settings_buff.cld_coverage, 0., 1.);
+			ImGui::SliderFloat("Thickness", &aux_settings_buff.cld_thick, 10., 200.);
 
 			ImGui::Spacing();
-			ImGui::SliderInt("Ray March Steps", &clouds_settings_buff.cld_march_steps, 10, 150);
-			ImGui::SliderInt("Light March Steps", &clouds_settings_buff.illum_march_steps, 1, 15);
-			ImGui::Text("dt %f", clouds_settings_buff.cld_thick / clouds_settings_buff.cld_march_steps);
+			ImGui::SliderInt("Ray March Steps", &aux_settings_buff.cld_march_steps, 10, 150);
+			ImGui::SliderInt("Light March Steps", &aux_settings_buff.illum_march_steps, 1, 15);
+			ImGui::Text("dt %f", aux_settings_buff.cld_thick / aux_settings_buff.cld_march_steps);
+#endif
+#ifdef APP_SDF_AO
+			ImGui::SliderFloat("Fog Density", &aux_settings_buff.fog_density, 0., 1.);
+			ImGui::SliderFloat("Fog Falloff", &aux_settings_buff.fog_falloff, 0., 1.);
 #endif
 		}
 
@@ -494,13 +500,11 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 		memcpy(mappedResource.pData, &PSConstBuff, sizeof(PSConstBuff));
 		pImmediateContext->Unmap(pUniformBuff, 0);
 
-#ifdef APP_CLOUDS
-		hr = pImmediateContext->Map(clouds_settings_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		hr = pImmediateContext->Map(aux_settings_ptr, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 		_ASSERT(SUCCEEDED(hr));
 		// must be careful not to read from data, only write
-		memcpy(mappedResource.pData, &clouds_settings_buff, sizeof(clouds_settings_buff));
-		pImmediateContext->Unmap(clouds_settings_ptr, 0);
-#endif
+		memcpy(mappedResource.pData, &aux_settings_buff, sizeof(aux_settings_buff));
+		pImmediateContext->Unmap(aux_settings_ptr, 0);
 	} while (true);
 
 	return ERROR_SUCCESS;
