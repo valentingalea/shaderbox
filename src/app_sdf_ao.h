@@ -288,19 +288,26 @@ vec3 render(
 	_in(ray_t) ray,
 	_in(vec3) point_cam
 ){
-	vec4 orig = render_impl(ray, point_cam);
-	const float dist = orig.w;
+// apply fog
+	// theory: http://iquilezles.org/www/articles/fog/fog.htm
+	// proof: https://sandbox.open.wolframcloud.com/
+	// d[y_] := dens Exp[-falloff y]
+	// ray[t_] := orig + t dir
+	// Integrate[d[ray[t]], {t, 0, T}]
 	
-	const vec3 fog_clr = vec3(1, 1, 1);
-	const float fog_dens_z = .55;
-	const float fog_dens_y = .25;
+	vec4 orig = render_impl(ray, point_cam);
+	const float t = orig.w;
+	
+	const vec3 fog_color = vec3(1, 1, 1);
+	const float density = .1;
+	const float falloff = .5;
 	
 	float fog_factor =
-		fog_dens_y * exp(-ray.origin.y * fog_dens_z)
-		* (1. - exp(-dist * ray.direction.y * fog_dens_z))
-		/ (ray.direction.y);// * fog_dens_z);
+		density * exp(-ray.origin.y * falloff)
+		* (1. - exp(- t * ray.direction.y * falloff))
+		/ (ray.direction.y * falloff);
 
-	return mix(orig.rgb, fog_clr, fog_factor);
+	return abs(mix(orig.rgb, fog_color, fog_factor));
 }
 
 #define FOV 1. // 45 degrees
