@@ -242,7 +242,7 @@ vec3 illuminate(
 	return accum * mat_c;
 }
 
-vec3 render(
+vec4 render_impl(
 	_in(ray_t) ray,
 	_in(vec3) point_cam
 ){
@@ -273,13 +273,34 @@ vec3 render(
 			sh = sdf_shadow (sh_ray);
 #endif           
 			
-			return illuminate(ray.origin, h, ao, sh);
+			return vec4(
+				illuminate(ray.origin, h, ao, sh),
+				t);
 		}
 
 		t += d.x;
 	}
 
-	return background(ray);
+	return vec4(background(ray), t);
+}
+
+vec3 render(
+	_in(ray_t) ray,
+	_in(vec3) point_cam
+){
+	vec4 orig = render_impl(ray, point_cam);
+	const float dist = orig.w;
+	
+	const vec3 fog_clr = vec3(1, 1, 1);
+	const float fog_dens_z = .55;
+	const float fog_dens_y = .25;
+	
+	float fog_factor =
+		fog_dens_y * exp(-ray.origin.y * fog_dens_z)
+		* (1. - exp(-dist * ray.direction.y * fog_dens_z))
+		/ (ray.direction.y);// * fog_dens_z);
+
+	return mix(orig.rgb, fog_clr, fog_factor);
 }
 
 #define FOV 1. // 45 degrees
