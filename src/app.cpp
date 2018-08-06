@@ -88,7 +88,8 @@ namespace glsl_sandbox
 #elif defined(APP_SDF_AO)
 #include "app_sdf_ao.h"
 #elif defined(APP_CLOUDS)
-#include "app_clouds.h"
+//#include "app_clouds.h"
+#include "app_clouds_best.h"
 #elif defined(APP_ATMOSPHERE)
 #include "app_atmosphere.h"
 #elif defined(APP_2D)
