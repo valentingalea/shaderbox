@@ -4,10 +4,11 @@
 # $< the name of the related file that caused the action.
 # $* the prefix shared by target and dependent files.
 
-all: vinyl
+all: planet
+CXXFLAGS += -Ofast -march=native -funroll-loops
 
 OUT = shaderbox
-SIZE = -DSCREEN_WIDTH=300 -DSCREEN_HEIGHT=300
+SIZE = -DSCREEN_WIDTH=100 -DSCREEN_HEIGHT=100
 	
 raytracer: raytracer.o
 	$(CXX) $(CXXFLAGS) -o $(OUT) raytracer.o $(LFLAGS) $(LIBS)
