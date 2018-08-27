@@ -4,12 +4,8 @@
 // ----------------------------------------------------------------------------
 
 void mainImage(
-	_out(vec4) fragColor,
-#ifdef SHADERTOY
-	vec2 fragCoord
-#else
-	_in(vec2) fragCoord
-#endif
+	out vec4 fragColor,
+	 in vec2 fragCoord
 ){
 	// The pipeline transform
 	//

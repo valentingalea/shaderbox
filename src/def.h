@@ -42,7 +42,7 @@ precision mediump float;
 #endif
 
 #ifdef HLSLTOY
-void mainImage(_out(float4) fragColor, _in(float2) fragCoord);
+void mainImage(out float4 fragColor, in float2 fragCoord);
 float4 main(float4 uv : SV_Position) : SV_Target{ float4 col; mainImage(col, uv.xy); return col; }
 #endif
 

@@ -667,12 +667,8 @@ vec3 render(
 // ----------------------------------------------------------------------------
 
 void mainImage(
-	_out(vec4) fragColor,
-#ifdef SHADERTOY
-	vec2 fragCoord
-#else
-	_in(vec2) fragCoord
-#endif
+	out vec4 fragColor,
+	 in vec2 fragCoord
 ) {
 	// assuming screen width is larger than height 
 	vec2 aspect_ratio = vec2(u_res.x / u_res.y, 1);

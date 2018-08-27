@@ -1,6 +1,6 @@
 #include "def.h"
 
-#define USE_TEXTURE
+//#define USE_TEXTURE
 
 #ifdef USE_TEXTURE
 #ifdef __cplusplus
@@ -14,8 +14,7 @@
 	SamplerState u_sampler0 : register(s0);
 #endif
 #else
-#include "noise_iq.h"
-#include "fbm.h"
+#include "util.h"
 #endif
 
 
@@ -29,8 +28,7 @@ vec4 sample (
 	return texture(u_tex0, uv);
 #endif
 #else
-	float n = fbm (vec3(uv, 1.));
-	return vec4 (n, n, n, 1.);
+	return vec4(checkboard_pattern(uv, 2.));
 #endif
 }
 
@@ -69,8 +67,8 @@ float tent_filter ( // -1 to 1, peak at 0
 }
 
 void mainImage(
-	_out(vec4) fragColor,
-	_in(vec2) fragCoord
+	out vec4 fragColor,
+	 in vec2 fragCoord
 ){
 	vec2 uv = fragCoord / u_res.xy;
 	
