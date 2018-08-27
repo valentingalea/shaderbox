@@ -6,7 +6,7 @@
 #include "volumetric.h"
 
 //#define SKY_SPHERE
-#define USE_NOISE_TEX
+//#define USE_NOISE_TEX
 
 // ----------------------------------------------------------------------------
 // Scene

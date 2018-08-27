@@ -9,11 +9,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\src\app.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <Filter Include="Source Files\SDL_app">
+      <UniqueIdentifier>{a82c59a1-62be-4430-97aa-f05731f941db}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\app_egg.h">
@@ -88,10 +86,24 @@
     <ClInclude Include="..\src\app_vinyl.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\app_clouds_best.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\vml\test\SDL_app\SDL_app.h">
+      <Filter>Source Files\SDL_app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\lib\vml\test\shader\sandbox.h">
+      <Filter>Source Files\SDL_app</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\src\Makefile">
       <Filter>Source Files</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\lib\vml\test\SDL_app\SDL_app.cpp">
+      <Filter>Source Files\SDL_app</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

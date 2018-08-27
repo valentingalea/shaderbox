@@ -649,6 +649,9 @@ vec3 render(
 	_in(vec3) point_cam
 ) {
 	vec3 sky = render_sky_color(eye_ray.direction);
+#ifdef HLSL
+	[flatten]
+#endif
 	if (dot(eye_ray.direction, vec3(0, 1, 0)) < 0.05) return sky;
 
 	vec4 cld = render_clouds(eye_ray);

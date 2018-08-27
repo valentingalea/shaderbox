@@ -23,7 +23,10 @@ ScopeExit<F> MakeScopeExit(F f) {
 #include <CRTDBG.H>
 #include <cstdio>
 #include <chrono>
+
+#ifdef USE_TEXTURES
 #include "../../../lib/DirectXTex/DirectXTex/DirectXTex.h"
+#endif
 
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include <imgui.h>
@@ -85,6 +88,7 @@ ID3D11Texture2D* CreateTextureCheckboard(ID3D11Device *pd3dDevice, UINT w, UINT 
 
 ID3D11ShaderResourceView* CreateNoiseTexture(ID3D11Device *pd3dDevice, LPCWSTR lpszPath)
 {
+#ifdef USE_TEXTURES
 	using namespace DirectX;
 
 	TexMetadata mdata;
@@ -106,6 +110,9 @@ ID3D11ShaderResourceView* CreateNoiseTexture(ID3D11Device *pd3dDevice, LPCWSTR l
 	_ASSERT(SUCCEEDED(hr));
 
 	return pView;
+#else
+	return nullptr;
+#endif
 }
 
 POINT sMouseButtons = { 0, 0 };
@@ -373,8 +380,8 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	D3D_SHADER_MACRO PSShaderMacros[] = {
 		{ "HLSL", "5.0" },
 		{ "HLSLTOY", "1.0" },
-#define APP_SDF_AO
-		{ "APP_SDF_AO", "1.0" },
+#define APP_CLOUDS
+		{ "APP_CLOUDS", "1.0" },
 		{ 0, 0 } };
 	hr = D3DCompileFromFile(szArglist[1], PSShaderMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", flags, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))

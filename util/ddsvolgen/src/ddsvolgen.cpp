@@ -18,47 +18,46 @@ struct DDS
 };
 
 // ----------------------------------------------------------------------------
-// CxxSwizzle support
+// VML support
 // ----------------------------------------------------------------------------
 #pragma warning(disable: 4244) // disable return implicit conversion warning
 #pragma warning(disable: 4305) // disable truncation warning
 
-#include <swizzle/glsl/naive/vector.h>
-#include <swizzle/glsl/naive/matrix.h>
-#include <swizzle/glsl/texture_functions.h>
-#include <swizzle/glsl/vector_functions.h>
+#include <vml/vector.h>
+#include <vml/matrix.h>
+#include <vml/vector_functions.h>
 
-typedef float real_t;
-typedef swizzle::glsl::naive::vector< int, 2 > ivec2;
-typedef swizzle::glsl::naive::vector< real_t, 2 > vec2;
-typedef swizzle::glsl::naive::vector< real_t, 3 > vec3;
-typedef swizzle::glsl::naive::vector< real_t, 4 > vec4;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 2, 2> mat2;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 3, 3> mat3;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, real_t, 4, 4> mat4;
+using  vec4 = vml::vector<float, 0, 1, 2, 3>;
+using  vec3 = vml::vector<float, 0, 1, 2>;
+using  vec2 = vml::vector<float, 0, 1>;
+using   _01 = vml::indices_pack<0, 1>;
+using  _012 = vml::indices_pack<0, 1, 2>;
+using _0123 = vml::indices_pack<0, 1, 2, 3>;
+using  mat2 = vml::matrix<float, vml::vector, _01, _01>;
+using  mat3 = vml::matrix<float, vml::vector, _012, _012>;
+using  mat4 = vml::matrix<float, vml::vector, _0123, _0123>;
 
 // ----------------------------------------------------------------------------
 // GLSL layer
 // ----------------------------------------------------------------------------
 #include "../../../src/def.h"
 #include "../../../src/util.h"
-
-#include "../../../lib/ashima-noise/src/common.glsl"
-#include "../../../lib/ashima-noise/src/classicnoise3d.glsl"
-#include "../../../lib/ashima-noise/src/noise3d.glsl"
-#include "../../../lib/ashima-noise/src/cellular3d.glsl"
+//#include "../../../lib/ashima-noise/src/common.glsl"
+//#include "../../../lib/ashima-noise/src/classicnoise3d.glsl"
+//#include "../../../lib/ashima-noise/src/noise3d.glsl"
+//#include "../../../lib/ashima-noise/src/cellular3d.glsl"
 #include "../../../src/noise_worley.h"
-
 #include "../../../src/fbm.h"
 
 DECL_FBM_FUNC_TILE(fbm_worley_tile, 4, (1. - (noise_w(p, L).r + .25)))
-DECL_FBM_FUNC_TILE(fbm_perlin_tile, 4, abs(pcnoise(p, L)))
+//DECL_FBM_FUNC_TILE(fbm_perlin_tile, 4, abs(pcnoise(p, L)))
 
 float fbm_dds(vec3 &pos)
 {
-	float p = fbm_perlin_tile(pos, 2., 1., .5);
-	float w = 1. - fbm_worley_tile(pos, 4., 1., .5);
-	return remap(p, -w, 1., 0., 1.);
+//	float p = fbm_perlin_tile(pos, 2., 1., .5);
+//	float w = 1. - fbm_worley_tile(pos, 4., 1., .5);
+//	return remap(p, -w, 1., 0., 1.);
+	return fbm_worley_tile(pos, 2., 1., .5);
 }
 
 // ----------------------------------------------------------------------------
