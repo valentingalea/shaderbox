@@ -28,7 +28,8 @@ vec4 sample (
 	return texture(u_tex0, uv);
 #endif
 #else
-	return vec4(checkboard_pattern(uv, 2.));
+	float cb = checkboard_pattern(uv, 2.);
+	return vec4(cb, cb, cb, 1);
 #endif
 }
 

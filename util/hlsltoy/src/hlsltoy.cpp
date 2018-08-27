@@ -345,8 +345,10 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	ID3D10Blob* pBlob = NULL;
 	SCOPE_EXIT(SafeRelease(pErrorBlob));
 	SCOPE_EXIT(SafeRelease(pBlob));
-	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_IEEE_STRICTNESS | D3DCOMPILE_WARNINGS_ARE_ERRORS |
+	UINT flags = 0 |
 #ifdef _DEBUG
+		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_IEEE_STRICTNESS |
+		D3DCOMPILE_WARNINGS_ARE_ERRORS |
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION
 #else
 		D3DCOMPILE_OPTIMIZATION_LEVEL3
@@ -380,8 +382,8 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	D3D_SHADER_MACRO PSShaderMacros[] = {
 		{ "HLSL", "5.0" },
 		{ "HLSLTOY", "1.0" },
-#define APP_CLOUDS
-		{ "APP_CLOUDS", "1.0" },
+//#define APP_CLOUDS
+//		{ "APP_CLOUDS", "1.0" },
 		{ 0, 0 } };
 	hr = D3DCompileFromFile(szArglist[1], PSShaderMacros, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", flags, 0, &pBlob, &pErrorBlob);
 	if (FAILED(hr))
@@ -419,7 +421,7 @@ int __stdcall WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lp
 	SCOPE_EXIT(SafeRelease(aux_settings_ptr));
 	D3D11_SUBRESOURCE_DATA aux_settings_sub_res = { &aux_settings_buff, 0, 0 };
 	hr = pd3dDevice->CreateBuffer(&aux_buff_descript, &aux_settings_sub_res, &aux_settings_ptr);
-	CHECK(hr, "CreateBuffer for the clouds app failed");
+	CHECK(hr, "CreateBuffer for aux vars failed");
 
 	pImmediateContext->PSSetConstantBuffers(1, 1, &aux_settings_ptr);
 

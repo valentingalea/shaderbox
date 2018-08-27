@@ -247,7 +247,7 @@ vec3 render(
 	final_color = mix(final_color, BAR_COLOR, bar_factor * depth_factor);
 #endif
 
-	return final_color;
+	return abs(final_color);
 }
 
 #define FOV 1. // 45 degrees

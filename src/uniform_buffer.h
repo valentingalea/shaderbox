@@ -36,7 +36,7 @@ _end_ubuffer;
 #endif
 #endif
 
-#ifdef APP_CLOUDS
+#if defined(APP_CLOUDS)
 _begin_ubuffer(aux_uniform_buffer_t, b1)
 	_uniform(vec3,	wind_dir,			vec3(0, 0, .2))		_pack(c0);
 	_uniform(vec3,	sun_dir,			vec3(0, 0, -1))		_pack(c1);
@@ -53,11 +53,12 @@ _begin_ubuffer(aux_uniform_buffer_t, b1)
 	_uniform(float, atm_radius,			(5000.))			_pack(c4.z);
 	_uniform(float, atm_ground_y,		(4750.))			_pack(c4.w);
 _end_ubuffer;
-#endif
-
-#ifdef APP_SDF_AO
+#elif defined(APP_SDF_AO)
 _begin_ubuffer(aux_uniform_buffer_t, b1)
 	_uniform(float, fog_density, (.1)) _pack(c0.x);
 	_uniform(float, fog_falloff, (.5)) _pack(c0.y);
+_end_ubuffer;
+#else
+_begin_ubuffer(aux_uniform_buffer_t, b1)
 _end_ubuffer;
 #endif
