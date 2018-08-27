@@ -18,7 +18,7 @@ OUT = shaderbox
 app: app.o
 	$(CXX) $(CXXFLAGS) -o $(OUT) app.o $(LIBS)
 app.o: ../lib/vml/test/SDL_app/SDL_app.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o app.o $<
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(APP) -c -o app.o $<
 
 clean:
 	rm *.o
