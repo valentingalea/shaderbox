@@ -4,3 +4,6 @@
 [submodule "lib/imgui"]
 	path = lib/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "lib/vml"]
+	path = lib/vml
+	url = https://github.com/valentingalea/vml
