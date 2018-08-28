@@ -4,11 +4,9 @@
 Various experiments with raytracing and
 raymarching done only in pixel (fragment) shaders.
 
-Written in GLSL but supports C++ and HLSL
-using preprocessor macro tricks.
-The C++11 work is made possible by the
-wonderful CxxSwizzle library.
-(https://github.com/gwiazdorrr/CxxSwizzle)
+Written in **GLSL** but supports **C++** and **HLSL** using preprocessor macro tricks.
+
+C++ is possible due to my other library: [VML](https://github.com/valentingalea/vml)
 
 ## Projects
 The various submodules are enabled via global defines:
@@ -16,17 +14,21 @@ The various submodules are enabled via global defines:
 Project define | Description                                        | Live on shadertoy.com
 ---------------|----------------------------------------------------|-------------------------
 APP_PLANET     | stylized procedural terrain and clouds             | https://www.shadertoy.com/view/ldyXRw
-APP_ATMOSPHERE | study of Rayleigh/Mie air scattering               | https://www.shadertoy.com/view/XtBXDz
 APP_CLOUDS     | study of volumetric clouds                         | https://www.shadertoy.com/view/XtBXDw
+APP_VINYL      | vinyl turntable animation                          | https://www.shadertoy.com/view/XtG3DD
 APP_EGG        | signed distance field raymarcher animation         | https://www.shadertoy.com/view/MlsGDf
 APP_RAYTRACER  | simple PBR raytracer with reflection               | https://www.shadertoy.com/view/Xl2XW1
-APP_SDF_AO     | test for ambient occlusion with distance fields    | https://www.shadertoy.com/view/XtBGDW
+APP_ATMOSPHERE | study of Rayleigh/Mie air scattering               | https://www.shadertoy.com/view/XtBXDz
 
-## Support
-* Visual Studio C++ 2015. Has a dependency on SDL 1.2 (included).
-* [C4droid](https://play.google.com/store/apps/details?id=com.n0n3m4.droidc&hl=en_GB) on Android.
-* any GLSL ES environment. Tested on [Shadertoy](https://www.shadertoy.com/) and [GLSL Sandbox](http://glslsandbox.com/).
-* any DirectX 11 HLSL environment. Tested with included hlsltoy utility. Has a dependency on _DirectXTex_ library (external repository reference).
+## Compiler Support
+* Visual Studio C++ 2017 (15.5) +
+* GCC 6.x +
+* clang 3.6 +
+
+## Environment Support
+* Android - [C4droid](https://play.google.com/store/apps/details?id=com.n0n3m4.droidc&hl=en_GB)
+* Web - [Shadertoy](https://www.shadertoy.com/) and [GLSL Sandbox](http://glslsandbox.com/)
+* Desktop - any DirectX 11 HLSL environment; tested with included _hlsltoy_ utility 
 
 ## Features
 Over time various things were added and some
@@ -38,10 +40,9 @@ can be extracted and used separately.
 * 2D two bone IK solver
 * a library of different noise functions
 * Rayleigh/Mie atmospheric scattering solver
-* primitive animated GIF output
 
 ## Utilities
-The util/ folder contains separate, independent projects:
+The `util/` folder contains separate, independent projects:
 
 Project   | Description
 ----------|-----------------------------------------------------------------------------------
