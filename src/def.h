@@ -4,8 +4,8 @@
 #define _out(T) T &
 #define _begin(type) type {
 #define _end }
-#define _mutable(T) T
-#define _constant(T) const T
+#define _mutable(T) thread_local T
+#define _constant(T) const thread_local T
 #define mul(a, b) (a) * (b)
 #endif
 
