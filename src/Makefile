@@ -6,7 +6,8 @@
 
 all: app
 
-APP = -DAPP_CLOUDS
+APP = -DAPP_PLANET
+SIZE = -DSCR_W8=240 -DSCR_H8=240
 
 CXXFLAGS += -Wall -std=c++17 -DC4DROID -fsingle-precision-constant
 CXXFLAGS += -Ofast -march=native -funroll-loops
@@ -18,7 +19,7 @@ OUT = shaderbox
 app: app.o
 	$(CXX) $(CXXFLAGS) -o $(OUT) app.o $(LIBS)
 app.o: ../lib/vml/test/SDL_app/SDL_app.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $(APP) -c -o app.o $<
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(APP) $(SIZE) -c -o app.o $<
 
 clean:
 	rm *.o
