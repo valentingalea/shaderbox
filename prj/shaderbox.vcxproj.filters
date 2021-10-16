@@ -9,8 +9,8 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\SDL_app">
-      <UniqueIdentifier>{a82c59a1-62be-4430-97aa-f05731f941db}</UniqueIdentifier>
+    <Filter Include="Source Files\vml%28external%29">
+      <UniqueIdentifier>{8a4efd42-e905-4f16-9b4a-c246ce0e7357}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -89,11 +89,8 @@
     <ClInclude Include="..\src\app_clouds_best.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\lib\vml\test\SDL_app\SDL_app.h">
-      <Filter>Source Files\SDL_app</Filter>
-    </ClInclude>
-    <ClInclude Include="..\lib\vml\test\shader\sandbox.h">
-      <Filter>Source Files\SDL_app</Filter>
+    <ClInclude Include="..\..\vml\test\SDL_app\SDL_app.h">
+      <Filter>Source Files\vml%28external%29</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -102,8 +99,8 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\lib\vml\test\SDL_app\SDL_app.cpp">
-      <Filter>Source Files\SDL_app</Filter>
+    <ClCompile Include="..\..\vml\test\SDL_app\SDL_app.cpp">
+      <Filter>Source Files\vml%28external%29</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
