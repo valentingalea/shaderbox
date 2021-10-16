@@ -7,6 +7,7 @@ raymarching done only in pixel (fragment) shaders.
 Written in **GLSL** but supports **C++** and **HLSL** using preprocessor macro tricks.
 
 C++ is possible due to my other library: [VML](https://github.com/valentingalea/vml)
+(NOTE: needs to be placed outside this repo, in the same parent folder)
 
 ## Projects
 The various submodules are enabled via global defines:
